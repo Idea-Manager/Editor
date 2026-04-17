@@ -1,0 +1,5 @@
+---
+alwaysApply: true
+---
+Create global style file with set of global variables for Fonts, Colors, etc.
+If you need to set font or color use global one, if no appropriate - feel free to add new one.

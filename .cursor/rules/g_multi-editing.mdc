@@ -1,0 +1,4 @@
+---
+alwaysApply: true
+---
+All features especially core one - keep in mind that in future editor in both modes should be able to extend with feature of multi editing and using CRDTs (Conflict-free Replicated Data Types) with separate BE application outscope of this repo.
