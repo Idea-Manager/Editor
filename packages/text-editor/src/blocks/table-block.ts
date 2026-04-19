@@ -4,17 +4,20 @@ import type { BlockDefinition } from './block-definition';
 import type { RenderContext } from '../engine/render-context';
 import type { EditorContext } from '../engine/editor-context';
 import { generateId } from '@core/id';
-import { renderInline } from '../inline/inline-renderer';
+import { createDefaultCellBlocks } from './table-cell-defaults';
+import { cloneBlockNodeDeep } from '../engine/document-snapshot';
+import { deserializeCellBlocks } from './cell-block-deserialize';
+import { appendRenderedBlockList } from '../renderer/block-renderer';
 
 const DEFAULT_COLS = 3;
 const DEFAULT_ROWS = 3;
 const DEFAULT_COL_WIDTH = 120;
-const MIN_COL_WIDTH = 40;
+const MIN_COL_WEIGHT = 8;
 
 function createCell(): TableCell {
   return {
     id: generateId('cell'),
-    content: [{ id: generateId('txt'), type: 'text', data: { text: '', marks: [] } }],
+    blocks: createDefaultCellBlocks(),
     colspan: 1,
     rowspan: 1,
     absorbed: false,
@@ -29,6 +32,11 @@ function createRow(colCount: number): TableRow {
   };
 }
 
+function columnTemplatePercent(weights: number[]): string {
+  const sum = weights.reduce((a, b) => a + b, 0) || 1;
+  return weights.map(w => `${(w / sum) * 100}%`).join(' ');
+}
+
 export class TableBlock implements BlockDefinition<TableData> {
   readonly type = 'table';
   readonly labelKey = 'block.table';
@@ -41,116 +49,127 @@ export class TableBlock implements BlockDefinition<TableData> {
     };
   }
 
-  render(node: BlockNode<TableData>, _ctx: RenderContext): HTMLElement {
+  render(node: BlockNode<TableData>, ctx: RenderContext): HTMLElement {
+    const registry = ctx.blockRegistry;
+    if (!registry) {
+      throw new Error('TableBlock.render requires blockRegistry on RenderContext');
+    }
+
     const wrapper = document.createElement('div');
     wrapper.setAttribute('data-block-id', node.id);
     wrapper.classList.add('idea-block', 'idea-block--table');
 
-    const tableEl = document.createElement('table');
-    tableEl.classList.add('idea-table-block');
+    const grid = document.createElement('div');
+    grid.classList.add('idea-table-block');
 
-    const colgroupEl = document.createElement('colgroup');
-    for (const w of node.data.columnWidths) {
-      const col = document.createElement('col');
-      col.style.width = `${w}px`;
-      colgroupEl.appendChild(col);
-    }
-    tableEl.appendChild(colgroupEl);
+    const numRows = node.data.rows.length;
+    const numCols = node.data.columnWidths.length;
+    const weights = node.data.columnWidths;
 
-    const tbody = document.createElement('tbody');
+    grid.style.display = 'grid';
+    grid.style.width = '100%';
+    grid.style.gridTemplateColumns = columnTemplatePercent(weights);
+    grid.style.gridTemplateRows = `repeat(${numRows}, auto)`;
 
-    for (const row of node.data.rows) {
-      const tr = document.createElement('tr');
-      tr.setAttribute('data-row-id', row.id);
+    const resizerTargets: { el: HTMLElement; boundaryCol: number }[] = [];
 
-      for (const cell of row.cells) {
-        if (cell.absorbed) continue;
+    for (let r = 0; r < numRows; r++) {
+      let col = 0;
+      for (const cell of node.data.rows[r].cells) {
+        if (cell.absorbed) {
+          col++;
+          continue;
+        }
 
-        const td = document.createElement('td');
-        td.setAttribute('data-cell-id', cell.id);
-        td.setAttribute('contenteditable', 'true');
-        td.classList.add('idea-table-cell');
+        const cellEl = document.createElement('div');
+        cellEl.setAttribute('data-cell-id', cell.id);
+        cellEl.classList.add('idea-table-cell');
+        cellEl.style.gridColumn = `${col + 1} / span ${cell.colspan}`;
+        cellEl.style.gridRow = `${r + 1} / span ${cell.rowspan}`;
 
-        if (cell.colspan > 1) td.colSpan = cell.colspan;
-        if (cell.rowspan > 1) td.rowSpan = cell.rowspan;
-
-        td.style.borderTop = cell.style.borderTop ? '1px solid #d4d4d4' : 'none';
-        td.style.borderRight = cell.style.borderRight ? '1px solid #d4d4d4' : 'none';
-        td.style.borderBottom = cell.style.borderBottom ? '1px solid #d4d4d4' : 'none';
-        td.style.borderLeft = cell.style.borderLeft ? '1px solid #d4d4d4' : 'none';
+        cellEl.style.borderTop = cell.style.borderTop ? '1px solid #d4d4d4' : 'none';
+        cellEl.style.borderRight = cell.style.borderRight ? '1px solid #d4d4d4' : 'none';
+        cellEl.style.borderBottom = cell.style.borderBottom ? '1px solid #d4d4d4' : 'none';
+        cellEl.style.borderLeft = cell.style.borderLeft ? '1px solid #d4d4d4' : 'none';
 
         if (cell.style.background) {
-          td.style.backgroundColor = cell.style.background;
+          cellEl.style.backgroundColor = cell.style.background;
         }
 
-        if (cell.content.length > 0) {
-          td.appendChild(renderInline(cell.content));
-        }
+        const inner = document.createElement('div');
+        inner.classList.add('idea-table-cell__inner');
+        appendRenderedBlockList(registry, cell.blocks, inner, ctx);
+        cellEl.appendChild(inner);
 
-        td.addEventListener('keydown', (e) => {
-          if (e.key === 'Tab') {
-            e.preventDefault();
-            e.stopPropagation();
-            this.navigateCell(wrapper, cell.id, e.shiftKey ? 'prev' : 'next');
+        if (r === 0) {
+          const cEnd = col + cell.colspan - 1;
+          if (cEnd < numCols - 1) {
+            resizerTargets.push({ el: cellEl, boundaryCol: cEnd });
           }
-        });
+        }
 
-        tr.appendChild(td);
+        grid.appendChild(cellEl);
+        col += cell.colspan;
       }
-
-      tbody.appendChild(tr);
     }
 
-    tableEl.appendChild(tbody);
+    this.attachColumnResize(grid, node, resizerTargets);
+    this.attachCellSelection(grid, node);
 
-    this.attachColumnResize(tableEl, node);
-    this.attachCellSelection(tableEl, node);
-
-    wrapper.appendChild(tableEl);
+    wrapper.appendChild(grid);
     return wrapper;
   }
 
-  private navigateCell(wrapper: HTMLElement, currentCellId: string, direction: 'next' | 'prev'): void {
-    const cells = Array.from(wrapper.querySelectorAll<HTMLElement>('td[data-cell-id]'));
-    const idx = cells.findIndex(c => c.getAttribute('data-cell-id') === currentCellId);
-    if (idx === -1) return;
-
-    const targetIdx = direction === 'next' ? idx + 1 : idx - 1;
-    if (targetIdx >= 0 && targetIdx < cells.length) {
-      const target = cells[targetIdx];
-      target.focus();
-      const range = document.createRange();
-      const sel = window.getSelection();
-      if (target.firstChild) {
-        range.selectNodeContents(target);
-        range.collapse(false);
-      } else {
-        range.setStart(target, 0);
-        range.collapse(true);
-      }
-      sel?.removeAllRanges();
-      sel?.addRange(range);
-    }
-  }
-
-  private attachColumnResize(table: HTMLTableElement, node: BlockNode<TableData>): void {
-    const cols = table.querySelectorAll('col');
-    const headerCells = table.querySelectorAll('tbody tr:first-child td');
-
-    headerCells.forEach((cell, colIdx) => {
+  private attachColumnResize(
+    gridEl: HTMLElement,
+    node: BlockNode<TableData>,
+    resizerTargets: { el: HTMLElement; boundaryCol: number }[],
+  ): void {
+    for (const { el: cellEl, boundaryCol: i } of resizerTargets) {
       const resizer = document.createElement('div');
       resizer.classList.add('idea-table-col-resizer');
+      resizer.setAttribute('contenteditable', 'false');
+      resizer.tabIndex = -1;
+      resizer.setAttribute('aria-hidden', 'true');
 
       let startX = 0;
-      let startWidth = 0;
+      let startWeights: number[] = [];
 
       const onMouseMove = (e: MouseEvent) => {
-        const diff = e.clientX - startX;
-        const newWidth = Math.max(MIN_COL_WIDTH, startWidth + diff);
-        node.data.columnWidths[colIdx] = newWidth;
-        if (cols[colIdx]) {
-          (cols[colIdx] as HTMLElement).style.width = `${newWidth}px`;
+        const diffPx = e.clientX - startX;
+        const W = gridEl.getBoundingClientRect().width || 1;
+        const weights = node.data.columnWidths;
+        const n = weights.length;
+        const total = startWeights.reduce((a, b) => a + b, 0) || 1;
+        const dW = (diffPx / W) * total;
+
+        if (i < 0 || i >= n - 1) return;
+
+        const rightSum = startWeights.slice(i + 1).reduce((a, b) => a + b, 0);
+        if (rightSum <= 0) return;
+
+        const newW = [...startWeights];
+        newW[i] = startWeights[i] + dW;
+        for (let j = i + 1; j < n; j++) {
+          newW[j] = startWeights[j] - dW * (startWeights[j] / rightSum);
         }
+
+        for (let j = i + 1; j < n; j++) {
+          if (newW[j] < MIN_COL_WEIGHT) {
+            const deficit = MIN_COL_WEIGHT - newW[j];
+            newW[j] = MIN_COL_WEIGHT;
+            newW[i] -= deficit;
+          }
+        }
+        if (newW[i] < MIN_COL_WEIGHT) {
+          newW[i] = MIN_COL_WEIGHT;
+        }
+
+        for (let k = 0; k < n; k++) {
+          node.data.columnWidths[k] = newW[k];
+        }
+
+        gridEl.style.gridTemplateColumns = columnTemplatePercent(node.data.columnWidths);
       };
 
       const onMouseUp = () => {
@@ -163,18 +182,18 @@ export class TableBlock implements BlockDefinition<TableData> {
         e.preventDefault();
         e.stopPropagation();
         startX = e.clientX;
-        startWidth = node.data.columnWidths[colIdx];
+        startWeights = [...node.data.columnWidths];
         resizer.classList.add('idea-table-col-resizer--active');
         document.addEventListener('mousemove', onMouseMove);
         document.addEventListener('mouseup', onMouseUp);
       });
 
-      (cell as HTMLElement).style.position = 'relative';
-      cell.appendChild(resizer);
-    });
+      cellEl.style.position = 'relative';
+      cellEl.appendChild(resizer);
+    }
   }
 
-  private attachCellSelection(table: HTMLTableElement, node: BlockNode<TableData>): void {
+  private attachCellSelection(grid: HTMLElement, node: BlockNode<TableData>): void {
     let selecting = false;
     let startCellId = '';
     let currentCellId = '';
@@ -189,7 +208,7 @@ export class TableBlock implements BlockDefinition<TableData> {
     };
 
     const clearSelection = () => {
-      table.querySelectorAll('.idea-table-cell--selected').forEach(el => {
+      grid.querySelectorAll('.idea-table-cell--selected').forEach(el => {
         el.classList.remove('idea-table-cell--selected');
       });
     };
@@ -209,13 +228,13 @@ export class TableBlock implements BlockDefinition<TableData> {
         for (let c = minC; c <= maxC; c++) {
           const cell = node.data.rows[r].cells[c];
           if (cell.absorbed) continue;
-          const td = table.querySelector(`[data-cell-id="${cell.id}"]`);
-          td?.classList.add('idea-table-cell--selected');
+          const cellEl = grid.querySelector(`[data-cell-id="${cell.id}"]`);
+          cellEl?.classList.add('idea-table-cell--selected');
         }
       }
     };
 
-    table.addEventListener('mousedown', (e) => {
+    grid.addEventListener('mousedown', (e) => {
       const target = (e.target as HTMLElement).closest<HTMLElement>('[data-cell-id]');
       if (!target) return;
       if ((e.target as HTMLElement).classList.contains('idea-table-col-resizer')) return;
@@ -226,7 +245,7 @@ export class TableBlock implements BlockDefinition<TableData> {
       clearSelection();
     });
 
-    table.addEventListener('mousemove', (e) => {
+    grid.addEventListener('mousemove', (e) => {
       if (!selecting) return;
       const target = (e.target as HTMLElement).closest<HTMLElement>('[data-cell-id]');
       if (!target) return;
@@ -242,7 +261,7 @@ export class TableBlock implements BlockDefinition<TableData> {
       selecting = false;
     };
 
-    table.addEventListener('mouseup', onMouseUp);
+    grid.addEventListener('mouseup', onMouseUp);
     document.addEventListener('mouseup', onMouseUp);
   }
 
@@ -256,10 +275,7 @@ export class TableBlock implements BlockDefinition<TableData> {
           id: r.id,
           cells: r.cells.map(c => ({
             ...c,
-            content: c.content.map(run => ({
-              ...run,
-              data: { ...run.data, marks: [...run.data.marks] },
-            })),
+            blocks: c.blocks.map(cloneBlockNodeDeep),
             style: { ...c.style },
           })),
         })),
@@ -271,6 +287,8 @@ export class TableBlock implements BlockDefinition<TableData> {
 
   deserialize(raw: unknown): BlockNode<TableData> {
     const obj = raw as BlockNode<TableData>;
+    type LegacyCell = TableCell & { content?: TextRun[] };
+
     return {
       id: obj.id,
       type: 'table',
@@ -278,16 +296,9 @@ export class TableBlock implements BlockDefinition<TableData> {
         columnWidths: [...(obj.data?.columnWidths ?? [DEFAULT_COL_WIDTH, DEFAULT_COL_WIDTH, DEFAULT_COL_WIDTH])],
         rows: (obj.data?.rows ?? []).map((r: TableRow) => ({
           id: r.id,
-          cells: r.cells.map((c: TableCell) => ({
+          cells: r.cells.map((c: LegacyCell) => ({
             id: c.id,
-            content: (c.content ?? []).map((run: TextRun) => ({
-              id: run.id,
-              type: 'text' as const,
-              data: {
-                text: run.data?.text ?? '',
-                marks: [...(run.data?.marks ?? [])],
-              },
-            })),
+            blocks: deserializeCellBlocks(c.blocks, c.content),
             colspan: c.colspan ?? 1,
             rowspan: c.rowspan ?? 1,
             absorbed: c.absorbed ?? false,

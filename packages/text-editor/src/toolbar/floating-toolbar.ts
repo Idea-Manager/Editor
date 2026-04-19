@@ -6,6 +6,7 @@ import { InlineMarkManager } from '../inline/inline-mark-manager';
 import { ChangeBlockTypeCommand } from '../engine/commands/change-block-type-command';
 import { SetAlignCommand, type Alignment } from '../engine/commands/set-align-command';
 import { createIcon } from '../../../../src/util/icon';
+import { getBlockById } from '../engine/block-locator';
 
 const MARK_BUTTONS: { mark: InlineMark; icon: string }[] = [
   { mark: 'bold', icon: 'format_bold' },
@@ -158,9 +159,7 @@ export class FloatingToolbar {
     }
 
     const sel = this.ctx.selectionManager.get();
-    const block = sel
-      ? this.ctx.document.children.find(b => b.id === sel.anchorBlockId)
-      : null;
+    const block = sel ? getBlockById(this.ctx.document, sel.anchorBlockId) : null;
 
     if (block && CONVERTIBLE_BLOCK_TYPES.includes(block.type)) {
       const sep2 = document.createElement('div');
@@ -200,7 +199,7 @@ export class FloatingToolbar {
     const sel = this.ctx.selectionManager.get();
     if (!sel) return;
 
-    const block = this.ctx.document.children.find(b => b.id === sel.anchorBlockId);
+    const block = getBlockById(this.ctx.document, sel.anchorBlockId);
     if (!block) return;
 
     const activeMarks = this.markManager.getActiveMarksInRange(
@@ -259,7 +258,7 @@ export class FloatingToolbar {
     const sel = this.ctx.selectionManager.get();
     if (!sel || sel.isCollapsed) return;
 
-    const block = this.ctx.document.children.find(b => b.id === sel.anchorBlockId);
+    const block = getBlockById(this.ctx.document, sel.anchorBlockId);
     if (!block) return;
 
     const cmd = new ToggleMarkCommand(

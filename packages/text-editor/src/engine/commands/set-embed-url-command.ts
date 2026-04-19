@@ -2,6 +2,7 @@ import type { DocumentNode, EmbedData } from '@core/model/interfaces';
 import type { Command } from '@core/commands/command';
 import type { OperationRecord } from '@core/operation-log/interfaces';
 import { generateId } from '@core/id';
+import { findBlockLocation } from '../block-locator';
 
 export class SetEmbedUrlCommand implements Command {
   readonly operationRecords: OperationRecord[] = [];
@@ -18,7 +19,7 @@ export class SetEmbedUrlCommand implements Command {
   ) {}
 
   execute(): void {
-    const block = this.doc.children.find(b => b.id === this.blockId);
+    const block = findBlockLocation(this.doc, this.blockId)?.block;
     if (!block || block.type !== 'embed') return;
 
     const data = block.data as EmbedData;
@@ -46,7 +47,7 @@ export class SetEmbedUrlCommand implements Command {
   }
 
   undo(): void {
-    const block = this.doc.children.find(b => b.id === this.blockId);
+    const block = findBlockLocation(this.doc, this.blockId)?.block;
     if (!block || block.type !== 'embed') return;
 
     const data = block.data as EmbedData;

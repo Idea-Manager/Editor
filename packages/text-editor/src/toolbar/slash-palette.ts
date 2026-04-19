@@ -8,6 +8,8 @@ import { TableSizePicker, type BorderPreset, type TableSizePickerResult } from '
 import { showEmbedUrlModal } from './embed-url-modal';
 import { embedDataFromUrl } from '../blocks/embed-url';
 import { generateId } from '@core/id';
+import { findBlockLocation, getFirstTableCellFirstBlockId } from '../engine/block-locator';
+import { createDefaultCellBlocks } from '../blocks/table-cell-defaults';
 
 export type SlashPaletteMode = 'change' | 'insert';
 
@@ -23,6 +25,7 @@ export class SlashPalette {
   private readonly disposers: (() => void)[] = [];
   private tableSizePicker: TableSizePicker;
   private boundOnClickOutside = (e: MouseEvent) => this.onClickOutside(e);
+  private paletteExcludeTypes: BlockType[] | undefined;
 
   constructor(
     private readonly ctx: EditorContext,
@@ -55,17 +58,23 @@ export class SlashPalette {
     this.disposers.push(() => root.removeEventListener('keydown', onKeydown, true));
   }
 
-  show(blockId: string, mode: SlashPaletteMode = 'change', anchorRect?: DOMRect): void {
+  show(
+    blockId: string,
+    mode: SlashPaletteMode = 'change',
+    anchorRect?: DOMRect,
+    excludeTypes?: BlockType[],
+  ): void {
     if (this.visible) this.hide();
 
     this.blockId = blockId;
     this.mode = mode;
     this.anchorRect = anchorRect ?? null;
+    this.paletteExcludeTypes = excludeTypes;
     this.filterText = '';
     this.activeIndex = 0;
     this.visible = true;
 
-    this.filteredItems = this.ctx.blockRegistry.getPaletteItems();
+    this.filteredItems = this.ctx.blockRegistry.getPaletteItems(excludeTypes);
     this.createOverlay();
     this.positionOverlay();
     this.renderItems();
@@ -83,6 +92,7 @@ export class SlashPalette {
     this.filterText = '';
     this.activeIndex = 0;
     this.anchorRect = null;
+    this.paletteExcludeTypes = undefined;
   }
 
   updateFilter(char: string): void {
@@ -93,7 +103,7 @@ export class SlashPalette {
     }
 
     const query = this.filterText.toLowerCase();
-    this.filteredItems = this.ctx.blockRegistry.getPaletteItems().filter(item =>
+    this.filteredItems = this.ctx.blockRegistry.getPaletteItems(this.paletteExcludeTypes).filter(item =>
       this.ctx.i18n.t(item.labelKey).toLowerCase().includes(query) ||
       item.id.toLowerCase().includes(query),
     );
@@ -140,6 +150,10 @@ export class SlashPalette {
     }
 
     if (selected.type === 'table') {
+      if (this.paletteExcludeTypes?.includes('table')) {
+        this.hide();
+        return;
+      }
       this.showTablePicker();
       return;
     }
@@ -165,7 +179,7 @@ export class SlashPalette {
   }
 
   private changeBlock(type: BlockType, dataOverride?: Record<string, unknown>): void {
-    const block = this.ctx.document.children.find(b => b.id === this.blockId);
+    const block = findBlockLocation(this.ctx.document, this.blockId)?.block;
     if (block) {
       const textLen = block.children.reduce((s, r) => s + r.data.text.length, 0);
       if (textLen > 0) {
@@ -272,7 +286,7 @@ export class SlashPalette {
   }
 
   private changeToTable(blockId: string, result: TableSizePickerResult): void {
-    const block = this.ctx.document.children.find(b => b.id === blockId);
+    const block = findBlockLocation(this.ctx.document, blockId)?.block;
     if (block) {
       const textLen = block.children.reduce((s, r) => s + r.data.text.length, 0);
       if (textLen > 0) {
@@ -292,9 +306,11 @@ export class SlashPalette {
     );
     this.ctx.undoRedoManager.push(cmd);
 
-    const updatedBlock = this.ctx.document.children.find(b => b.id === blockId);
-    if (updatedBlock) {
+    const updatedBlock = findBlockLocation(this.ctx.document, blockId)?.block;
+    if (updatedBlock?.type === 'table') {
       updatedBlock.data = this.buildTableData(result);
+      const focusId = getFirstTableCellFirstBlockId(updatedBlock);
+      if (focusId) this.ctx.selectionManager.setCollapsed(focusId, 0);
     }
 
     this.ctx.eventBus.emit('doc:change', { document: this.ctx.document });
@@ -309,12 +325,13 @@ export class SlashPalette {
     );
     this.ctx.undoRedoManager.push(cmd);
 
-    const newBlock = this.ctx.document.children.find(b => b.id === cmd.getNewBlockId());
-    if (newBlock) {
+    const newBlock = findBlockLocation(this.ctx.document, cmd.getNewBlockId())?.block;
+    if (newBlock?.type === 'table') {
       newBlock.data = this.buildTableData(result);
+      const focusId = getFirstTableCellFirstBlockId(newBlock);
+      if (focusId) this.ctx.selectionManager.setCollapsed(focusId, 0);
     }
 
-    this.ctx.selectionManager.setCollapsed(cmd.getNewBlockId(), 0);
     this.ctx.eventBus.emit('doc:change', { document: this.ctx.document });
   }
 
@@ -328,7 +345,7 @@ export class SlashPalette {
           );
           return {
             id: generateId('cell'),
-            content: [{ id: generateId('txt'), type: 'text' as const, data: { text: '', marks: [] as never[] } }],
+            blocks: createDefaultCellBlocks(),
             colspan: 1,
             rowspan: 1,
             absorbed: false,

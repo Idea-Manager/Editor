@@ -1,7 +1,9 @@
-import type { DocumentNode, TableData, TableCell, TextRun } from '@core/model/interfaces';
+import type { BlockNode, DocumentNode, TableData, TableCell } from '@core/model/interfaces';
 import type { Command } from '@core/commands/command';
 import type { OperationRecord } from '@core/operation-log/interfaces';
 import { generateId } from '@core/id';
+import { cloneBlockNodeDeep } from '../document-snapshot';
+import { createDefaultCellBlocks } from '../../blocks/table-cell-defaults';
 
 export interface CellRange {
   startRow: number;
@@ -36,7 +38,7 @@ export class MergeCellsCommand implements Command {
           col: c,
           cell: {
             ...cell,
-            content: cell.content.map(run => ({ ...run, data: { ...run.data, marks: [...run.data.marks] } })),
+            blocks: cell.blocks.map(cloneBlockNodeDeep),
             style: { ...cell.style },
           },
         });
@@ -44,29 +46,26 @@ export class MergeCellsCommand implements Command {
     }
 
     const primaryCell = data.rows[startRow].cells[startCol];
-    const mergedContent: TextRun[] = [];
+    const mergedBlocks: BlockNode[] = [];
 
     for (let r = startRow; r <= endRow; r++) {
       for (let c = startCol; c <= endCol; c++) {
         const cell = data.rows[r].cells[c];
-        const text = cell.content.map(run => run.data.text).join('');
-        if (text.length > 0) {
-          mergedContent.push(...cell.content);
+        for (const b of cell.blocks) {
+          mergedBlocks.push(cloneBlockNodeDeep(b));
         }
       }
     }
 
     primaryCell.colspan = endCol - startCol + 1;
     primaryCell.rowspan = endRow - startRow + 1;
-    primaryCell.content = mergedContent.length > 0 ? mergedContent : [{
-      id: generateId('txt'), type: 'text', data: { text: '', marks: [] },
-    }];
+    primaryCell.blocks = mergedBlocks.length > 0 ? mergedBlocks : createDefaultCellBlocks();
 
     for (let r = startRow; r <= endRow; r++) {
       for (let c = startCol; c <= endCol; c++) {
         if (r === startRow && c === startCol) continue;
         data.rows[r].cells[c].absorbed = true;
-        data.rows[r].cells[c].content = [];
+        data.rows[r].cells[c].blocks = [];
       }
     }
 
@@ -93,7 +92,7 @@ export class MergeCellsCommand implements Command {
     for (const snap of this.snapshot) {
       data.rows[snap.row].cells[snap.col] = {
         ...snap.cell,
-        content: snap.cell.content.map(run => ({ ...run, data: { ...run.data, marks: [...run.data.marks] } })),
+        blocks: snap.cell.blocks.map(cloneBlockNodeDeep),
         style: { ...snap.cell.style },
       };
     }

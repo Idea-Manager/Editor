@@ -1,13 +1,15 @@
-import type { DocumentNode, TableData, TableCell, TextRun } from '@core/model/interfaces';
+import type { BlockNode, DocumentNode, TableData, TableCell } from '@core/model/interfaces';
 import type { Command } from '@core/commands/command';
 import type { OperationRecord } from '@core/operation-log/interfaces';
 import { generateId } from '@core/id';
+import { cloneBlockNodeDeep } from '../document-snapshot';
+import { createDefaultCellBlocks } from '../../blocks/table-cell-defaults';
 
 export class SplitCellCommand implements Command {
   readonly operationRecords: OperationRecord[] = [];
   private oldColspan = 1;
   private oldRowspan = 1;
-  private oldContent: TextRun[] = [];
+  private oldBlocks: BlockNode[] = [];
   private cellRow = -1;
   private cellCol = -1;
 
@@ -43,7 +45,7 @@ export class SplitCellCommand implements Command {
     const cell = data.rows[foundRow].cells[foundCol];
     this.oldColspan = cell.colspan;
     this.oldRowspan = cell.rowspan;
-    this.oldContent = cell.content.map(r => ({ ...r, data: { ...r.data, marks: [...r.data.marks] } }));
+    this.oldBlocks = cell.blocks.map(cloneBlockNodeDeep);
 
     if (cell.colspan === 1 && cell.rowspan === 1) return;
 
@@ -54,7 +56,7 @@ export class SplitCellCommand implements Command {
         absorbed.absorbed = false;
         absorbed.colspan = 1;
         absorbed.rowspan = 1;
-        absorbed.content = [{ id: generateId('txt'), type: 'text', data: { text: '', marks: [] } }];
+        absorbed.blocks = createDefaultCellBlocks();
       }
     }
 
@@ -86,13 +88,13 @@ export class SplitCellCommand implements Command {
     const cell = data.rows[this.cellRow].cells[this.cellCol];
     cell.colspan = this.oldColspan;
     cell.rowspan = this.oldRowspan;
-    cell.content = this.oldContent.map(r => ({ ...r, data: { ...r.data, marks: [...r.data.marks] } }));
+    cell.blocks = this.oldBlocks.map(cloneBlockNodeDeep);
 
     for (let r = this.cellRow; r < this.cellRow + this.oldRowspan; r++) {
       for (let c = this.cellCol; c < this.cellCol + this.oldColspan; c++) {
         if (r === this.cellRow && c === this.cellCol) continue;
         data.rows[r].cells[c].absorbed = true;
-        data.rows[r].cells[c].content = [];
+        data.rows[r].cells[c].blocks = [];
       }
     }
   }

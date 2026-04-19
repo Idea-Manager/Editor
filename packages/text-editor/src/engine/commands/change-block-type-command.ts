@@ -3,6 +3,7 @@ import type { Command } from '@core/commands/command';
 import type { OperationRecord } from '@core/operation-log/interfaces';
 import { generateId } from '@core/id';
 import type { BlockRegistry } from '../../blocks/block-registry';
+import { findBlockLocation } from '../block-locator';
 
 export class ChangeBlockTypeCommand implements Command {
   readonly operationRecords: OperationRecord[] = [];
@@ -18,7 +19,7 @@ export class ChangeBlockTypeCommand implements Command {
   ) {}
 
   execute(): void {
-    const block = this.doc.children.find(b => b.id === this.blockId);
+    const block = findBlockLocation(this.doc, this.blockId)?.block;
     if (!block) return;
 
     this.oldType = block.type;
@@ -59,7 +60,7 @@ export class ChangeBlockTypeCommand implements Command {
   }
 
   undo(): void {
-    const block = this.doc.children.find(b => b.id === this.blockId);
+    const block = findBlockLocation(this.doc, this.blockId)?.block;
     if (!block) return;
 
     block.type = this.oldType;

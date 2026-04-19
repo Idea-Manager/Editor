@@ -2,6 +2,7 @@ import type { DocumentNode, TableData, TableRow, TableCell } from '@core/model/i
 import type { Command } from '@core/commands/command';
 import type { OperationRecord } from '@core/operation-log/interfaces';
 import { generateId } from '@core/id';
+import { createDefaultCellBlocks } from '../../blocks/table-cell-defaults';
 
 export class InsertRowCommand implements Command {
   readonly operationRecords: OperationRecord[] = [];
@@ -24,7 +25,7 @@ export class InsertRowCommand implements Command {
       id: generateId('row'),
       cells: Array.from({ length: colCount }, (): TableCell => ({
         id: generateId('cell'),
-        content: [{ id: generateId('txt'), type: 'text', data: { text: '', marks: [] } }],
+        blocks: createDefaultCellBlocks(),
         colspan: 1,
         rowspan: 1,
         absorbed: false,

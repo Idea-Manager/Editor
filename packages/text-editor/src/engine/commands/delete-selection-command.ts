@@ -1,8 +1,10 @@
-import type { BlockNode, BlockSelection, DocumentNode, TextRun } from '@core/model/interfaces';
+import type { BlockNode, BlockSelection, DocumentNode } from '@core/model/interfaces';
 import type { Command } from '@core/commands/command';
 import type { OperationRecord } from '@core/operation-log/interfaces';
 import { generateId } from '@core/id';
 import { InlineMarkManager } from '../../inline/inline-mark-manager';
+import { findBlockLocation } from '../block-locator';
+import { snapshotDocumentChildren, restoreDocumentChildren } from '../document-snapshot';
 
 export class DeleteSelectionCommand implements Command {
   readonly operationRecords: OperationRecord[] = [];
@@ -14,68 +16,51 @@ export class DeleteSelectionCommand implements Command {
   ) {}
 
   execute(): void {
-    this.snapshot = this.doc.children.map(b => ({
-      ...b,
-      children: b.children.map(r => ({
-        ...r,
-        data: { ...r.data, marks: [...r.data.marks] },
-      })),
-      data: { ...b.data },
-    }));
+    this.snapshot = snapshotDocumentChildren(this.doc);
 
-    const { startBlockId, startOffset, endBlockId, endOffset } = this.normalizeSelection();
+    const anchorLoc = findBlockLocation(this.doc, this.sel.anchorBlockId);
+    const focusLoc = findBlockLocation(this.doc, this.sel.focusBlockId);
+    if (!anchorLoc || !focusLoc) return;
+    if (anchorLoc.parentList !== focusLoc.parentList) return;
 
-    const startIdx = this.doc.children.findIndex(b => b.id === startBlockId);
-    const endIdx = this.doc.children.findIndex(b => b.id === endBlockId);
+    const forward =
+      anchorLoc.index < focusLoc.index ||
+      (anchorLoc.index === focusLoc.index && this.sel.anchorOffset <= this.sel.focusOffset);
 
-    if (startIdx === -1 || endIdx === -1) return;
+    const startLoc = forward ? anchorLoc : focusLoc;
+    const endLoc = forward ? focusLoc : anchorLoc;
+    const startOffset = forward ? this.sel.anchorOffset : this.sel.focusOffset;
+    const endOffset = forward ? this.sel.focusOffset : this.sel.anchorOffset;
 
-    if (startIdx === endIdx) {
-      this.deleteSameBlock(startIdx, startOffset, endOffset);
+    if (startLoc.index === endLoc.index) {
+      this.deleteSameBlockInList(
+        startLoc.parentList,
+        startLoc.index,
+        Math.min(startOffset, endOffset),
+        Math.max(startOffset, endOffset),
+      );
     } else {
-      this.deleteCrossBlock(startIdx, startOffset, endIdx, endOffset);
+      this.deleteCrossBlocksInList(
+        startLoc.parentList,
+        startLoc.index,
+        startOffset,
+        endLoc.index,
+        endOffset,
+      );
     }
   }
 
   undo(): void {
-    this.doc.children = this.snapshot.map(b => ({
-      ...b,
-      children: b.children.map(r => ({
-        ...r,
-        data: { ...r.data, marks: [...r.data.marks] },
-      })),
-      data: { ...b.data },
-    }));
+    restoreDocumentChildren(this.doc, this.snapshot);
   }
 
-  private normalizeSelection(): {
-    startBlockId: string;
-    startOffset: number;
-    endBlockId: string;
-    endOffset: number;
-  } {
-    const anchorIdx = this.doc.children.findIndex(b => b.id === this.sel.anchorBlockId);
-    const focusIdx = this.doc.children.findIndex(b => b.id === this.sel.focusBlockId);
-
-    if (anchorIdx < focusIdx || (anchorIdx === focusIdx && this.sel.anchorOffset <= this.sel.focusOffset)) {
-      return {
-        startBlockId: this.sel.anchorBlockId,
-        startOffset: this.sel.anchorOffset,
-        endBlockId: this.sel.focusBlockId,
-        endOffset: this.sel.focusOffset,
-      };
-    }
-
-    return {
-      startBlockId: this.sel.focusBlockId,
-      startOffset: this.sel.focusOffset,
-      endBlockId: this.sel.anchorBlockId,
-      endOffset: this.sel.anchorOffset,
-    };
-  }
-
-  private deleteSameBlock(idx: number, startOffset: number, endOffset: number): void {
-    const block = this.doc.children[idx];
+  private deleteSameBlockInList(
+    parentList: BlockNode[],
+    idx: number,
+    startOffset: number,
+    endOffset: number,
+  ): void {
+    const block = parentList[idx];
     const mgr = new InlineMarkManager();
 
     const { before } = mgr.splitRunAtOffset(block.children, startOffset);
@@ -104,20 +89,18 @@ export class DeleteSelectionCommand implements Command {
     });
   }
 
-  private deleteCrossBlock(
+  private deleteCrossBlocksInList(
+    parentList: BlockNode[],
     startIdx: number,
     startOffset: number,
     endIdx: number,
     endOffset: number,
   ): void {
-    const startBlock = this.doc.children[startIdx];
-    const endBlock = this.doc.children[endIdx];
+    const startBlock = parentList[startIdx];
+    const endBlock = parentList[endIdx];
     const mgr = new InlineMarkManager();
 
-    // Keep text before startOffset in startBlock
     const { before: keepBefore } = mgr.splitRunAtOffset(startBlock.children, startOffset);
-
-    // Keep text after endOffset in endBlock
     const { after: keepAfter } = mgr.splitRunAtOffset(endBlock.children, endOffset);
 
     const merged = mgr.mergeAdjacentRuns([...keepBefore, ...keepAfter]);
@@ -127,8 +110,7 @@ export class DeleteSelectionCommand implements Command {
       data: { text: '', marks: [] },
     }];
 
-    // Remove middle blocks and endBlock
-    const removedBlocks = this.doc.children.splice(startIdx + 1, endIdx - startIdx);
+    const removedBlocks = parentList.splice(startIdx + 1, endIdx - startIdx);
 
     for (let i = 0; i < removedBlocks.length; i++) {
       this.operationRecords.push({
@@ -155,7 +137,7 @@ export class DeleteSelectionCommand implements Command {
       payload: {
         nodeId: startBlock.id,
         path: 'children',
-        oldValue: this.snapshot[startIdx].children,
+        oldValue: [],
         newValue: startBlock.children,
       },
     });

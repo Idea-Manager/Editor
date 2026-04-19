@@ -2,6 +2,7 @@ import type { DocumentNode } from '@core/model/interfaces';
 import type { Command } from '@core/commands/command';
 import type { OperationRecord } from '@core/operation-log/interfaces';
 import { generateId } from '@core/id';
+import { findBlockLocation } from '../block-locator';
 
 export type Alignment = 'left' | 'center' | 'right' | 'justify';
 
@@ -16,7 +17,7 @@ export class SetAlignCommand implements Command {
   ) {}
 
   execute(): void {
-    const block = this.doc.children.find(b => b.id === this.blockId);
+    const block = findBlockLocation(this.doc, this.blockId)?.block;
     if (!block) return;
 
     this.oldAlign = (block.data as Record<string, unknown>).align as string ?? 'left';
@@ -38,7 +39,7 @@ export class SetAlignCommand implements Command {
   }
 
   undo(): void {
-    const block = this.doc.children.find(b => b.id === this.blockId);
+    const block = findBlockLocation(this.doc, this.blockId)?.block;
     if (!block) return;
     (block.data as Record<string, unknown>).align = this.oldAlign;
   }

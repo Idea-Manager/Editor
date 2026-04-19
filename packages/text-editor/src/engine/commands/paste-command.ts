@@ -1,8 +1,10 @@
-import type { BlockNode, DocumentNode, TextRun } from '@core/model/interfaces';
+import type { BlockNode, DocumentNode } from '@core/model/interfaces';
 import type { Command } from '@core/commands/command';
 import type { OperationRecord } from '@core/operation-log/interfaces';
 import { generateId } from '@core/id';
 import { InlineMarkManager } from '../../inline/inline-mark-manager';
+import { findBlockLocation } from '../block-locator';
+import { snapshotDocumentChildren, restoreDocumentChildren } from '../document-snapshot';
 
 export class PasteCommand implements Command {
   readonly operationRecords: OperationRecord[] = [];
@@ -17,40 +19,26 @@ export class PasteCommand implements Command {
   ) {}
 
   execute(): void {
-    this.snapshot = this.doc.children.map(b => ({
-      ...b,
-      children: b.children.map(r => ({
-        ...r,
-        data: { ...r.data, marks: [...r.data.marks] },
-      })),
-      data: { ...b.data },
-    }));
+    this.snapshot = snapshotDocumentChildren(this.doc);
 
     if (this.pasteBlocks.length === 0) return;
 
-    const blockIdx = this.doc.children.findIndex(b => b.id === this.blockId);
-    if (blockIdx === -1) return;
+    const loc = findBlockLocation(this.doc, this.blockId);
+    if (!loc) return;
 
     if (this.pasteBlocks.length === 1) {
-      this.insertSingleBlock(blockIdx);
+      this.insertSingleBlock(loc);
     } else {
-      this.insertMultipleBlocks(blockIdx);
+      this.insertMultipleBlocks(loc);
     }
   }
 
   undo(): void {
-    this.doc.children = this.snapshot.map(b => ({
-      ...b,
-      children: b.children.map(r => ({
-        ...r,
-        data: { ...r.data, marks: [...r.data.marks] },
-      })),
-      data: { ...b.data },
-    }));
+    restoreDocumentChildren(this.doc, this.snapshot);
   }
 
-  private insertSingleBlock(blockIdx: number): void {
-    const block = this.doc.children[blockIdx];
+  private insertSingleBlock(loc: NonNullable<ReturnType<typeof findBlockLocation>>): void {
+    const block = loc.block;
     const pasteRuns = this.pasteBlocks[0].children;
 
     const mgr = new InlineMarkManager();
@@ -67,22 +55,20 @@ export class PasteCommand implements Command {
       payload: {
         nodeId: block.id,
         path: 'children',
-        oldValue: this.snapshot[blockIdx].children,
+        oldValue: [],
         newValue: block.children,
       },
     });
   }
 
-  private insertMultipleBlocks(blockIdx: number): void {
-    const block = this.doc.children[blockIdx];
+  private insertMultipleBlocks(loc: NonNullable<ReturnType<typeof findBlockLocation>>): void {
+    const block = loc.block;
     const mgr = new InlineMarkManager();
     const { before, after } = mgr.splitRunAtOffset(block.children, this.offset);
 
-    // First paste block merges with content before the cursor
     const firstPasteRuns = this.pasteBlocks[0].children;
     block.children = mgr.mergeAdjacentRuns([...before, ...firstPasteRuns]);
 
-    // Last paste block merges with content after the cursor
     const lastPaste = this.pasteBlocks[this.pasteBlocks.length - 1];
     const lastBlock: BlockNode = {
       id: generateId('blk'),
@@ -92,7 +78,6 @@ export class PasteCommand implements Command {
       meta: { createdAt: Date.now(), version: 1 },
     };
 
-    // Middle paste blocks inserted as-is
     const middleBlocks = this.pasteBlocks.slice(1, -1).map(b => ({
       ...b,
       id: generateId('blk'),
@@ -100,8 +85,9 @@ export class PasteCommand implements Command {
     }));
 
     const newBlocks = [...middleBlocks, lastBlock];
-    this.doc.children.splice(blockIdx + 1, 0, ...newBlocks);
     this.insertedBlockIds = newBlocks.map(b => b.id);
+
+    loc.parentList.splice(loc.index + 1, 0, ...newBlocks);
 
     this.operationRecords.push({
       id: generateId('op'),
@@ -112,7 +98,7 @@ export class PasteCommand implements Command {
       payload: {
         nodeId: block.id,
         path: 'children',
-        oldValue: this.snapshot[blockIdx].children,
+        oldValue: [],
         newValue: block.children,
       },
     });
@@ -126,7 +112,7 @@ export class PasteCommand implements Command {
         type: 'node:insert',
         payload: {
           parentId: this.doc.id,
-          index: blockIdx + 1 + i,
+          index: loc.index + 1 + i,
           node: newBlocks[i],
         },
       });

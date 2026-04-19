@@ -47,7 +47,6 @@ export class ListItemBlock implements BlockDefinition<ListItemData> {
       el.appendChild(renderInline(node.children));
     } else {
       el.setAttribute('data-empty', '');
-      el.setAttribute('data-placeholder', ctx.i18n.t('editor.placeholder'));
     }
 
     return el;

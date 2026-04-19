@@ -3,12 +3,24 @@ import type { Command } from '@core/commands/command';
 import type { OperationRecord } from '@core/operation-log/interfaces';
 import { generateId } from '@core/id';
 import { InlineMarkManager } from '../../inline/inline-mark-manager';
+import { findBlockLocation } from '../block-locator';
+import { cloneBlockNodeDeep } from '../document-snapshot';
+
+function cloneRuns(runs: TextRun[]): TextRun[] {
+  return runs.map(r => ({
+    ...r,
+    data: { ...r.data, marks: [...r.data.marks] },
+  }));
+}
 
 export class SplitBlockCommand implements Command {
   readonly operationRecords: OperationRecord[] = [];
-  private newBlockId: string = '';
+  private newBlockId = '';
   private originalChildren: TextRun[] = [];
-  private blockIndex: number = -1;
+  private splitBlockId = '';
+  private beforeChildren: TextRun[] = [];
+  private newBlockSnapshot: BlockNode | null = null;
+  private planned = false;
 
   constructor(
     private readonly doc: DocumentNode,
@@ -17,96 +29,109 @@ export class SplitBlockCommand implements Command {
   ) {}
 
   execute(): void {
-    const blockIndex = this.doc.children.findIndex(b => b.id === this.blockId);
-    if (blockIndex === -1) return;
+    const loc = findBlockLocation(this.doc, this.blockId);
+    if (!loc) return;
 
-    this.blockIndex = blockIndex;
-    const block = this.doc.children[blockIndex];
+    if (!this.planned) {
+      this.splitBlockId = loc.block.id;
+      const block = loc.block;
 
-    this.originalChildren = block.children.map(r => ({
-      ...r,
-      data: { ...r.data, marks: [...r.data.marks] },
-    }));
+      this.originalChildren = block.children.map(r => ({
+        ...r,
+        data: { ...r.data, marks: [...r.data.marks] },
+      }));
 
-    const mgr = new InlineMarkManager();
-    const { before, after } = mgr.splitRunAtOffset(block.children, this.offset);
+      const mgr = new InlineMarkManager();
+      const { before, after } = mgr.splitRunAtOffset(block.children, this.offset);
 
-    // New block type: heading at end becomes paragraph, otherwise same type
-    const totalLen = block.children.reduce((s, r) => s + r.data.text.length, 0);
-    const isAtEnd = this.offset >= totalLen;
-    const newType = (block.type === 'heading' && isAtEnd) ? 'paragraph' : block.type;
+      const totalLen = block.children.reduce((s, r) => s + r.data.text.length, 0);
+      const isAtEnd = this.offset >= totalLen;
+      const newType = (block.type === 'heading' && isAtEnd) ? 'paragraph' : block.type;
 
-    const newBlockId = generateId('blk');
-    this.newBlockId = newBlockId;
+      this.newBlockId = generateId('blk');
 
-    let newBlockData: Record<string, unknown>;
-    if (newType === 'paragraph') {
-      newBlockData = { align: 'left' as const };
-    } else {
-      newBlockData = { ...block.data };
+      let newBlockData: Record<string, unknown>;
+      if (newType === 'paragraph') {
+        newBlockData = { align: 'left' as const };
+      } else {
+        newBlockData = { ...block.data };
+      }
+
+      const beforeRuns = before.length > 0 ? before : [{
+        id: generateId('txt'),
+        type: 'text' as const,
+        data: { text: '', marks: [] },
+      }];
+
+      const afterRuns = after.length > 0 ? after : [{
+        id: generateId('txt'),
+        type: 'text' as const,
+        data: { text: '', marks: [] },
+      }];
+
+      this.beforeChildren = cloneRuns(beforeRuns);
+
+      this.newBlockSnapshot = {
+        id: this.newBlockId,
+        type: newType as BlockNode['type'],
+        data: newBlockData,
+        children: cloneRuns(afterRuns),
+        meta: { createdAt: Date.now(), version: 1 },
+      };
+
+      this.planned = true;
+
+      this.operationRecords.push(
+        {
+          id: generateId('op'),
+          actorId: 'local',
+          timestamp: Date.now(),
+          wallClock: Date.now(),
+          type: 'node:update',
+          payload: {
+            nodeId: block.id,
+            path: 'children',
+            oldValue: this.originalChildren,
+            newValue: this.beforeChildren,
+          },
+        },
+        {
+          id: generateId('op'),
+          actorId: 'local',
+          timestamp: Date.now(),
+          wallClock: Date.now(),
+          type: 'node:insert',
+          payload: {
+            parentId: this.doc.id,
+            index: loc.index + 1,
+            node: this.newBlockSnapshot,
+          },
+        },
+      );
     }
 
-    const newBlock: BlockNode = {
-      id: newBlockId,
-      type: newType as BlockNode['type'],
-      data: newBlockData,
-      children: after.length > 0 ? after : [{
-        id: generateId('txt'),
-        type: 'text',
-        data: { text: '', marks: [] },
-      }],
-      meta: { createdAt: Date.now(), version: 1 },
-    };
+    if (findBlockLocation(this.doc, this.newBlockId)) return;
 
-    block.children = before.length > 0 ? before : [{
-      id: generateId('txt'),
-      type: 'text',
-      data: { text: '', marks: [] },
-    }];
+    const splitLoc = findBlockLocation(this.doc, this.splitBlockId);
+    if (!splitLoc || !this.newBlockSnapshot) return;
 
-    this.doc.children.splice(blockIndex + 1, 0, newBlock);
-
-    this.operationRecords.push(
-      {
-        id: generateId('op'),
-        actorId: 'local',
-        timestamp: Date.now(),
-        wallClock: Date.now(),
-        type: 'node:update',
-        payload: {
-          nodeId: block.id,
-          path: 'children',
-          oldValue: this.originalChildren,
-          newValue: block.children,
-        },
-      },
-      {
-        id: generateId('op'),
-        actorId: 'local',
-        timestamp: Date.now(),
-        wallClock: Date.now(),
-        type: 'node:insert',
-        payload: {
-          parentId: this.doc.id,
-          index: blockIndex + 1,
-          node: newBlock,
-        },
-      },
-    );
+    splitLoc.block.children = cloneRuns(this.beforeChildren);
+    splitLoc.parentList.splice(splitLoc.index + 1, 0, cloneBlockNodeDeep(this.newBlockSnapshot));
   }
 
   undo(): void {
-    if (this.blockIndex === -1) return;
+    const splitLoc = findBlockLocation(this.doc, this.splitBlockId);
+    if (!splitLoc) return;
 
-    const block = this.doc.children[this.blockIndex];
+    const block = splitLoc.block;
     block.children = this.originalChildren.map(r => ({
       ...r,
       data: { ...r.data, marks: [...r.data.marks] },
     }));
 
-    const newBlockIdx = this.doc.children.findIndex(b => b.id === this.newBlockId);
-    if (newBlockIdx !== -1) {
-      this.doc.children.splice(newBlockIdx, 1);
+    const newLoc = findBlockLocation(this.doc, this.newBlockId);
+    if (newLoc) {
+      newLoc.parentList.splice(newLoc.index, 1);
     }
   }
 

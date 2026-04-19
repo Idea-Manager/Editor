@@ -5,6 +5,8 @@ import type { RenderContext } from '../engine/render-context';
 import type { EditorContext } from '../engine/editor-context';
 import { SetEmbedUrlCommand } from '../engine/commands/set-embed-url-command';
 import { DeleteBlockCommand } from '../engine/commands/delete-block-command';
+import { findBlockLocation, findTableCell } from '../engine/block-locator';
+import type { BlockLocation } from '../engine/block-locator';
 import { createIcon } from '../../../../src/util/icon';
 import { detectProvider, getFaviconUrl } from './embed-url';
 import { showEmbedUrlModal } from '../toolbar/embed-url-modal';
@@ -85,8 +87,13 @@ export class EmbedBlock implements BlockDefinition<EmbedData> {
   }
 
   private removeBlock(node: BlockNode<EmbedData>, ctx: RenderContext): void {
-    const idx = ctx.document.children.findIndex(b => b.id === node.id);
-    if (idx === -1) return;
+    const loc = findBlockLocation(ctx.document, node.id);
+    if (!loc) return;
+
+    const docIdx =
+      loc.parentKind === 'document'
+        ? ctx.document.children.findIndex(b => b.id === node.id)
+        : -1;
 
     const cmd = new DeleteBlockCommand(ctx.document, node.id);
     if (ctx.undoRedoManager) {
@@ -94,8 +101,31 @@ export class EmbedBlock implements BlockDefinition<EmbedData> {
     } else {
       cmd.execute();
     }
-    this.focusAfterDelete(ctx, idx);
+
+    if (loc.parentKind === 'document' && docIdx !== -1) {
+      this.focusAfterDelete(ctx, docIdx);
+    } else if (loc.parentKind === 'table-cell') {
+      this.focusAfterDeleteInTableCell(ctx, loc);
+    }
     ctx.eventBus.emit('doc:change', { document: ctx.document });
+  }
+
+  private focusAfterDeleteInTableCell(ctx: RenderContext, loc: BlockLocation): void {
+    const sm = ctx.selectionManager;
+    if (!sm || !loc.tableBlockId || !loc.cellId) return;
+    const cell = findTableCell(ctx.document, loc.tableBlockId, loc.cellId);
+    if (!cell || cell.blocks.length === 0) return;
+
+    const n = cell.blocks.length;
+    const i = loc.index;
+    const textLen = (b: BlockNode) => b.children.reduce((s, r) => s + r.data.text.length, 0);
+
+    if (i < n) {
+      sm.setCollapsed(cell.blocks[i].id, 0);
+    } else {
+      const prev = cell.blocks[n - 1];
+      sm.setCollapsed(prev.id, textLen(prev));
+    }
   }
 
   private focusAfterDelete(ctx: RenderContext, removedIndex: number): void {

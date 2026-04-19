@@ -3,11 +3,14 @@ import type { Command } from '@core/commands/command';
 import type { OperationRecord } from '@core/operation-log/interfaces';
 import type { BlockRegistry } from '../../blocks/block-registry';
 import { generateId } from '@core/id';
+import { findBlockLocation } from '../block-locator';
+import { cloneBlockNodeDeep } from '../document-snapshot';
 
 export class InsertBlockCommand implements Command {
   readonly operationRecords: OperationRecord[] = [];
   private newBlockId = '';
-  private insertIndex = -1;
+  /** Stable prototype for redo (IDs must not change on re-execute). */
+  private blockTemplate: BlockNode | null = null;
 
   constructor(
     private readonly doc: DocumentNode,
@@ -18,48 +21,49 @@ export class InsertBlockCommand implements Command {
   ) {}
 
   execute(): void {
-    const afterIndex = this.doc.children.findIndex(b => b.id === this.afterBlockId);
-    if (afterIndex === -1) return;
+    const afterLoc = findBlockLocation(this.doc, this.afterBlockId);
+    if (!afterLoc) return;
 
-    const def = this.registry.get(this.newType);
-    const newBlockId = generateId('blk');
-    this.newBlockId = newBlockId;
-    this.insertIndex = afterIndex + 1;
+    if (!this.blockTemplate) {
+      const def = this.registry.get(this.newType);
+      this.newBlockId = generateId('blk');
+      this.blockTemplate = {
+        id: this.newBlockId,
+        type: this.newType,
+        data: this.dataOverride ? { ...this.dataOverride } : def.defaultData(),
+        children: [{
+          id: generateId('txt'),
+          type: 'text',
+          data: { text: '', marks: [] },
+        }],
+        meta: { createdAt: Date.now(), version: 1 },
+      };
 
-    const newBlock: BlockNode = {
-      id: newBlockId,
-      type: this.newType,
-      data: this.dataOverride ? { ...this.dataOverride } : def.defaultData(),
-      children: [{
-        id: generateId('txt'),
-        type: 'text',
-        data: { text: '', marks: [] },
-      }],
-      meta: { createdAt: Date.now(), version: 1 },
-    };
+      this.operationRecords.push({
+        id: generateId('op'),
+        actorId: 'local',
+        timestamp: Date.now(),
+        wallClock: Date.now(),
+        type: 'node:insert',
+        payload: {
+          parentId: this.doc.id,
+          index: afterLoc.index + 1,
+          node: this.blockTemplate,
+        },
+      });
+    }
 
-    this.doc.children.splice(this.insertIndex, 0, newBlock);
+    if (findBlockLocation(this.doc, this.newBlockId)) return;
 
-    this.operationRecords.push({
-      id: generateId('op'),
-      actorId: 'local',
-      timestamp: Date.now(),
-      wallClock: Date.now(),
-      type: 'node:insert',
-      payload: {
-        parentId: this.doc.id,
-        index: this.insertIndex,
-        node: newBlock,
-      },
-    });
+    afterLoc.parentList.splice(afterLoc.index + 1, 0, cloneBlockNodeDeep(this.blockTemplate));
   }
 
   undo(): void {
-    if (this.insertIndex === -1) return;
+    if (!this.newBlockId) return;
 
-    const idx = this.doc.children.findIndex(b => b.id === this.newBlockId);
-    if (idx !== -1) {
-      this.doc.children.splice(idx, 1);
+    const loc = findBlockLocation(this.doc, this.newBlockId);
+    if (loc) {
+      loc.parentList.splice(loc.index, 1);
     }
   }
 

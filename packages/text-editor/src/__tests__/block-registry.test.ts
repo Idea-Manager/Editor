@@ -70,6 +70,13 @@ describe('ParagraphBlock', () => {
     expect(el.textContent).toBe('');
   });
 
+  it('renders whitespace-only paragraph without data-empty', () => {
+    const node = createParagraph('   ');
+    const el = para.render(node, ctx);
+    expect(el.hasAttribute('data-empty')).toBe(false);
+    expect(el.textContent).toBe('   ');
+  });
+
   it('serialize is pure (no side effects)', () => {
     const node = createParagraph('Test');
     const serialized = para.serialize(node);
@@ -117,6 +124,13 @@ describe('HeadingBlock', () => {
     expect(el.getAttribute('data-level')).toBe('2');
     expect(el.classList.contains('idea-block--heading')).toBe(true);
     expect(el.textContent).toBe('Title');
+  });
+
+  it('renders whitespace-only heading without data-empty', () => {
+    const node = createHeading(2, ' ');
+    const el = heading.render(node, ctx);
+    expect(el.hasAttribute('data-empty')).toBe(false);
+    expect(el.textContent).toBe(' ');
   });
 
   it.each([1, 2, 3, 4, 5] as const)('renders heading level %d', (level) => {

@@ -3,6 +3,7 @@ import type { Command } from '@core/commands/command';
 import type { OperationRecord } from '@core/operation-log/interfaces';
 import { generateId } from '@core/id';
 import { InlineMarkManager } from '../../inline/inline-mark-manager';
+import { findBlockLocation } from '../block-locator';
 
 export class MergeBlocksCommand implements Command {
   readonly operationRecords: OperationRecord[] = [];
@@ -10,6 +11,7 @@ export class MergeBlocksCommand implements Command {
   private removedBlock: BlockNode | null = null;
   private removedBlockIndex: number = -1;
   private mergeOffset: number = 0;
+  private prevBlockId: string = '';
 
   constructor(
     private readonly doc: DocumentNode,
@@ -17,11 +19,13 @@ export class MergeBlocksCommand implements Command {
   ) {}
 
   execute(): void {
-    const blockIndex = this.doc.children.findIndex(b => b.id === this.blockId);
-    if (blockIndex <= 0) return;
+    const loc = findBlockLocation(this.doc, this.blockId);
+    if (!loc || loc.index <= 0) return;
 
-    const currentBlock = this.doc.children[blockIndex];
-    const prevBlock = this.doc.children[blockIndex - 1];
+    const currentBlock = loc.block;
+    const prevBlock = loc.parentList[loc.index - 1];
+
+    this.prevBlockId = prevBlock.id;
 
     this.prevBlockOriginalChildren = prevBlock.children.map(r => ({
       ...r,
@@ -36,7 +40,7 @@ export class MergeBlocksCommand implements Command {
       })),
       data: { ...currentBlock.data },
     };
-    this.removedBlockIndex = blockIndex;
+    this.removedBlockIndex = loc.index;
 
     this.mergeOffset = prevBlock.children.reduce(
       (sum, r) => sum + r.data.text.length,
@@ -50,7 +54,7 @@ export class MergeBlocksCommand implements Command {
     ]);
     prevBlock.children = merged;
 
-    this.doc.children.splice(blockIndex, 1);
+    loc.parentList.splice(loc.index, 1);
 
     this.operationRecords.push(
       {
@@ -74,7 +78,7 @@ export class MergeBlocksCommand implements Command {
         type: 'node:delete',
         payload: {
           parentId: this.doc.id,
-          index: blockIndex,
+          index: loc.index,
           nodeId: currentBlock.id,
           node: this.removedBlock,
         },
@@ -85,15 +89,16 @@ export class MergeBlocksCommand implements Command {
   undo(): void {
     if (!this.removedBlock || this.removedBlockIndex === -1) return;
 
-    const prevBlock = this.doc.children[this.removedBlockIndex - 1];
-    if (prevBlock) {
-      prevBlock.children = this.prevBlockOriginalChildren.map(r => ({
-        ...r,
-        data: { ...r.data, marks: [...r.data.marks] },
-      }));
-    }
+    const prevLoc = findBlockLocation(this.doc, this.prevBlockId);
+    if (!prevLoc) return;
 
-    this.doc.children.splice(this.removedBlockIndex, 0, {
+    const prevBlock = prevLoc.block;
+    prevBlock.children = this.prevBlockOriginalChildren.map(r => ({
+      ...r,
+      data: { ...r.data, marks: [...r.data.marks] },
+    }));
+
+    prevLoc.parentList.splice(this.removedBlockIndex, 0, {
       ...this.removedBlock,
       children: this.removedBlock.children.map(r => ({
         ...r,
@@ -107,7 +112,6 @@ export class MergeBlocksCommand implements Command {
   }
 
   getPreviousBlockId(): string {
-    if (this.removedBlockIndex <= 0) return '';
-    return this.doc.children[this.removedBlockIndex - 1]?.id ?? '';
+    return this.prevBlockId;
   }
 }

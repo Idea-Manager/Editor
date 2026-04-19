@@ -1,8 +1,13 @@
+import { generateId } from '@core/id';
+import type { BlockNode, DocumentNode, TableData } from '@core/model/interfaces';
 import { createDocument, createParagraph, createHeading, createTextRun } from '@core/model/factory';
 import { InsertTextCommand } from '../engine/commands/insert-text-command';
 import { DeleteCharCommand } from '../engine/commands/delete-char-command';
 import { SplitBlockCommand } from '../engine/commands/split-block-command';
 import { MergeBlocksCommand } from '../engine/commands/merge-blocks-command';
+import { InsertBlockCommand } from '../engine/commands/insert-block-command';
+import { BlockRegistry } from '../blocks/block-registry';
+import { ParagraphBlock } from '../blocks/paragraph-block';
 
 describe('InsertTextCommand', () => {
   it('inserts a single character', () => {
@@ -238,6 +243,126 @@ describe('SplitBlockCommand', () => {
     cmd.undo();
     expect(doc.children).toHaveLength(1);
     expect(doc.children[0].children[0].data.text).toBe('Hello World');
+  });
+
+  it('redo keeps stable ids so a second split command can redo after both undos', () => {
+    const doc = createDocument();
+    doc.children = [createParagraph('abc')];
+    const firstId = doc.children[0].id;
+
+    const split1 = new SplitBlockCommand(doc, firstId, 1);
+    split1.execute();
+    const secondId = doc.children[1].id;
+
+    const split2 = new SplitBlockCommand(doc, secondId, 1);
+    split2.execute();
+    expect(doc.children).toHaveLength(3);
+
+    split2.undo();
+    split1.undo();
+
+    split1.execute();
+    expect(doc.children[1].id).toBe(secondId);
+
+    split2.execute();
+    expect(doc.children).toHaveLength(3);
+    expect(doc.children[1].children[0].data.text).toBe('b');
+    expect(doc.children[2].children[0].data.text).toBe('c');
+  });
+});
+
+describe('Table cell nested blocks', () => {
+  function documentWithSingleCellTable(text: string): {
+    doc: DocumentNode;
+    cellParagraphId: string;
+  } {
+    const doc = createDocument();
+    const p = createParagraph(text);
+    const table: BlockNode<TableData> = {
+      id: generateId('blk'),
+      type: 'table',
+      data: {
+        rows: [
+          {
+            id: generateId('row'),
+            cells: [
+              {
+                id: generateId('cell'),
+                blocks: [p],
+                colspan: 1,
+                rowspan: 1,
+                absorbed: false,
+                style: {
+                  borderTop: true,
+                  borderRight: true,
+                  borderBottom: true,
+                  borderLeft: true,
+                },
+              },
+            ],
+          },
+        ],
+        columnWidths: [120],
+      },
+      children: [],
+      meta: { createdAt: Date.now(), version: 1 },
+    };
+    doc.children = [table];
+    return { doc, cellParagraphId: p.id };
+  }
+
+  it('splits a paragraph inside a table cell into two blocks', () => {
+    const { doc, cellParagraphId } = documentWithSingleCellTable('Hi');
+    const cmd = new SplitBlockCommand(doc, cellParagraphId, 1);
+    cmd.execute();
+
+    const table = doc.children[0];
+    expect(table.type).toBe('table');
+    const cell = (table.data as TableData).rows[0].cells[0];
+    expect(cell.blocks).toHaveLength(2);
+    expect(cell.blocks[0].children[0].data.text).toBe('H');
+    expect(cell.blocks[1].children[0].data.text).toBe('i');
+  });
+
+  it('inserts a block after a block inside a table cell', () => {
+    const { doc, cellParagraphId } = documentWithSingleCellTable('Hi');
+    const registry = new BlockRegistry();
+    registry.register(new ParagraphBlock());
+
+    const cmd = new InsertBlockCommand(doc, cellParagraphId, 'paragraph', registry);
+    cmd.execute();
+
+    const table = doc.children[0];
+    const cell = (table.data as TableData).rows[0].cells[0];
+    expect(cell.blocks).toHaveLength(2);
+    expect(cell.blocks[0].children[0].data.text).toBe('Hi');
+    expect(cell.blocks[1].type).toBe('paragraph');
+  });
+});
+
+describe('InsertBlockCommand redo', () => {
+  it('reuses the same new block id so chained inserts redo in order', () => {
+    const doc = createDocument();
+    doc.children = [createParagraph('')];
+    const registry = new BlockRegistry();
+    registry.register(new ParagraphBlock());
+
+    const ins1 = new InsertBlockCommand(doc, doc.children[0].id, 'paragraph', registry);
+    ins1.execute();
+    const midId = ins1.getNewBlockId();
+
+    const ins2 = new InsertBlockCommand(doc, midId, 'paragraph', registry);
+    ins2.execute();
+
+    ins2.undo();
+    ins1.undo();
+    expect(doc.children).toHaveLength(1);
+
+    ins1.execute();
+    expect(doc.children[1].id).toBe(midId);
+
+    ins2.execute();
+    expect(doc.children).toHaveLength(3);
   });
 });
 

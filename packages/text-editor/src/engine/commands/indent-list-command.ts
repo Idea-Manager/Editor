@@ -3,6 +3,7 @@ import type { Command } from '@core/commands/command';
 import type { OperationRecord } from '@core/operation-log/interfaces';
 import { generateId } from '@core/id';
 import { MAX_LIST_DEPTH } from '../../blocks/list-item-block';
+import { findBlockLocation } from '../block-locator';
 
 export class IndentListCommand implements Command {
   readonly operationRecords: OperationRecord[] = [];
@@ -14,7 +15,7 @@ export class IndentListCommand implements Command {
   ) {}
 
   execute(): void {
-    const block = this.doc.children.find(b => b.id === this.blockId);
+    const block = findBlockLocation(this.doc, this.blockId)?.block;
     if (!block || block.type !== 'list_item') return;
 
     const data = block.data as ListItemData;
@@ -39,7 +40,7 @@ export class IndentListCommand implements Command {
   }
 
   undo(): void {
-    const block = this.doc.children.find(b => b.id === this.blockId);
+    const block = findBlockLocation(this.doc, this.blockId)?.block;
     if (!block || block.type !== 'list_item') return;
     (block.data as ListItemData).depth = this.oldDepth;
   }

@@ -2,6 +2,7 @@ import type { BlockNode, TextRun, DocumentNode } from '@core/model/interfaces';
 import type { Command } from '@core/commands/command';
 import type { OperationRecord } from '@core/operation-log/interfaces';
 import { generateId } from '@core/id';
+import { findBlockLocation } from '../block-locator';
 
 export class InsertTextCommand implements Command {
   readonly operationRecords: OperationRecord[] = [];
@@ -134,7 +135,7 @@ export class InsertTextCommand implements Command {
   }
 
   private findBlock(): BlockNode | undefined {
-    return this.doc.children.find(b => b.id === this.blockId);
+    return findBlockLocation(this.doc, this.blockId)?.block;
   }
 
   private findRunAtOffset(

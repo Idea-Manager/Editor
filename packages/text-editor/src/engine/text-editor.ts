@@ -154,6 +154,7 @@ export class TextEditor extends HTMLElement {
       i18n: this.ctx.i18n,
       rootElement: this,
       selectionManager: this.ctx.selectionManager,
+      blockRegistry: this.ctx.blockRegistry,
     };
     this.blockRenderer.reconcile(this.ctx.document, this.container, renderCtx);
 

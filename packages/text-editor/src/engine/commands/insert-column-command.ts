@@ -2,6 +2,7 @@ import type { DocumentNode, TableData, TableCell } from '@core/model/interfaces'
 import type { Command } from '@core/commands/command';
 import type { OperationRecord } from '@core/operation-log/interfaces';
 import { generateId } from '@core/id';
+import { createDefaultCellBlocks } from '../../blocks/table-cell-defaults';
 
 const DEFAULT_COL_WIDTH = 120;
 
@@ -26,7 +27,7 @@ export class InsertColumnCommand implements Command {
     for (const row of data.rows) {
       const newCell: TableCell = {
         id: generateId('cell'),
-        content: [{ id: generateId('txt'), type: 'text', data: { text: '', marks: [] } }],
+        blocks: createDefaultCellBlocks(),
         colspan: 1,
         rowspan: 1,
         absorbed: false,

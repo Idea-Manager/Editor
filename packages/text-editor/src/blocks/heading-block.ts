@@ -26,7 +26,6 @@ export class HeadingBlock implements BlockDefinition<HeadingData> {
       el.appendChild(renderInline(node.children));
     } else {
       el.setAttribute('data-empty', '');
-      el.setAttribute('data-placeholder', ctx.i18n.t('editor.placeholder'));
     }
 
     return el;

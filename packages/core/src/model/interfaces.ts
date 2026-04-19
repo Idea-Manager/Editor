@@ -88,7 +88,8 @@ export interface CellBorderStyle {
 
 export interface TableCell {
   id: string;
-  content: TextRun[];
+  /** Nested blocks inside the cell (e.g. paragraph). Non-empty for normal cells; absorbed cells may use []. */
+  blocks: BlockNode[];
   colspan: number;
   rowspan: number;
   absorbed: boolean;

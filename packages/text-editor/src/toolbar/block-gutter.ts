@@ -1,4 +1,5 @@
 import type { BlockType, TableData, TableCell, TableRow, CellBorderStyle } from '@core/model/interfaces';
+import { createDefaultCellBlocks } from '../blocks/table-cell-defaults';
 import type { EditorContext } from '../engine/editor-context';
 import type { SlashPalette } from './slash-palette';
 import { BlockTypeMenu } from './block-type-menu';
@@ -8,9 +9,11 @@ import { ChangeBlockTypeCommand } from '../engine/commands/change-block-type-com
 import { MoveBlockCommand } from '../engine/commands/move-block-command';
 import { createIcon } from '../../../../src/util/icon';
 import { generateId } from '@core/id';
+import { findBlockLocation, getFirstTableCellFirstBlockId } from '../engine/block-locator';
 
 export class BlockGutter {
   private gutterEl: HTMLDivElement | null = null;
+  private dragBtn: HTMLButtonElement | null = null;
   private hoveredBlockId: string | null = null;
   private blockTypeMenu: BlockTypeMenu;
   private tableSizePicker: TableSizePicker;
@@ -57,6 +60,7 @@ export class BlockGutter {
     });
 
     const dragBtn = document.createElement('button');
+    this.dragBtn = dragBtn;
     dragBtn.classList.add('idea-block-gutter__btn', 'idea-block-gutter__btn--drag');
     dragBtn.title = this.ctx.i18n.t('gutter.dragToReorder');
     dragBtn.setAttribute('draggable', 'true');
@@ -85,7 +89,22 @@ export class BlockGutter {
       if (this.blockTypeMenu.isVisible() || this.tableSizePicker.isVisible() || this.slashPalette?.isVisible()) return;
       if (this.dragBlockId) return;
 
-      const blockEl = this.findBlockElement(e.target as HTMLElement);
+      const target = e.target as HTMLElement;
+
+      // Always anchor the gutter to the nearest table block when the pointer is anywhere inside
+      // that table (cells, nested blocks). Avoids flicker from resolving nested [data-block-id]
+      // vs the table wrapper.
+      const tableWrapper = target.closest<HTMLElement>('.idea-block--table');
+      if (tableWrapper) {
+        const tableBlockId = tableWrapper.getAttribute('data-block-id');
+        if (tableBlockId && tableBlockId !== this.hoveredBlockId) {
+          this.hoveredBlockId = tableBlockId;
+          this.updateGutter();
+        }
+        return;
+      }
+
+      const blockEl = this.findBlockElement(target);
       if (blockEl) {
         const blockId = blockEl.getAttribute('data-block-id')
           ?? blockEl.getAttribute('data-list-wrapper');
@@ -198,12 +217,21 @@ export class BlockGutter {
 
     this.gutterEl.style.top = `${blockRect.top - hostRect.top}px`;
     this.gutterEl.style.left = `${leftRef - hostRect.left - gutterWidth - 4}px`;
+
+    if (this.dragBtn) {
+      this.dragBtn.style.display = '';
+      this.dragBtn.setAttribute('draggable', 'true');
+    }
   }
 
   private hideGutter(): void {
     if (this.gutterEl) {
       this.gutterEl.classList.remove('idea-block-gutter--visible');
       this.gutterEl.style.display = 'none';
+    }
+    if (this.dragBtn) {
+      this.dragBtn.style.display = '';
+      this.dragBtn.setAttribute('draggable', 'true');
     }
   }
 
@@ -212,7 +240,11 @@ export class BlockGutter {
     if (!blockId || !this.slashPalette) return;
 
     const anchorRect = anchorBtn.getBoundingClientRect();
-    this.slashPalette.show(blockId, 'insert', anchorRect);
+    const el = this.ctx.rootElement.querySelector(
+      `[data-block-id="${blockId}"], [data-list-wrapper="${blockId}"]`,
+    );
+    const insideCell = !!el?.closest('[data-cell-id]');
+    this.slashPalette.show(blockId, 'insert', anchorRect, insideCell ? ['table'] : undefined);
   }
 
   private openMenu(mode: 'insert' | 'change', anchorBtn: HTMLElement): void {
@@ -283,9 +315,11 @@ export class BlockGutter {
     );
     this.ctx.undoRedoManager.push(cmd);
 
-    const newBlock = this.ctx.document.children.find(b => b.id === cmd.getNewBlockId());
-    if (newBlock) {
+    const newBlock = findBlockLocation(this.ctx.document, cmd.getNewBlockId())?.block;
+    if (newBlock?.type === 'table') {
       newBlock.data = this.buildTableData(result);
+      const focusId = getFirstTableCellFirstBlockId(newBlock);
+      if (focusId) this.ctx.selectionManager.setCollapsed(focusId, 0);
     }
 
     this.ctx.eventBus.emit('doc:change', { document: this.ctx.document });
@@ -300,9 +334,11 @@ export class BlockGutter {
     );
     this.ctx.undoRedoManager.push(cmd);
 
-    const block = this.ctx.document.children.find(b => b.id === blockId);
-    if (block) {
+    const block = findBlockLocation(this.ctx.document, blockId)?.block;
+    if (block?.type === 'table') {
       block.data = this.buildTableData(result);
+      const focusId = getFirstTableCellFirstBlockId(block);
+      if (focusId) this.ctx.selectionManager.setCollapsed(focusId, 0);
     }
 
     this.ctx.eventBus.emit('doc:change', { document: this.ctx.document });
@@ -322,7 +358,7 @@ export class BlockGutter {
           );
           return {
             id: generateId('cell'),
-            content: [{ id: generateId('txt'), type: 'text' as const, data: { text: '', marks: [] as never[] } }],
+            blocks: createDefaultCellBlocks(),
             colspan: 1,
             rowspan: 1,
             absorbed: false,
@@ -375,13 +411,18 @@ export class BlockGutter {
     const blockId = this.hoveredBlockId;
     if (!blockId || !e.dataTransfer) return;
 
+    const blockEl = this.ctx.rootElement.querySelector<HTMLElement>(
+      `[data-block-id="${blockId}"], [data-list-wrapper="${blockId}"]`,
+    );
+    if (blockEl?.closest('[data-cell-id]')) {
+      e.preventDefault();
+      return;
+    }
+
     this.dragBlockId = blockId;
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', this.dragBlockId);
 
-    const blockEl = this.ctx.rootElement.querySelector<HTMLElement>(
-      `[data-block-id="${this.dragBlockId}"], [data-list-wrapper="${this.dragBlockId}"]`,
-    );
     if (blockEl) {
       blockEl.classList.add('idea-block--dragging');
     }
@@ -402,6 +443,11 @@ export class BlockGutter {
     const targetId = blockEl.getAttribute('data-block-id')
       ?? blockEl.getAttribute('data-list-wrapper');
     if (!targetId || targetId === this.dragBlockId) {
+      this.removeDropIndicator();
+      return;
+    }
+
+    if (blockEl.closest('[data-cell-id]')) {
       this.removeDropIndicator();
       return;
     }
@@ -427,6 +473,17 @@ export class BlockGutter {
     const targetId = blockEl.getAttribute('data-block-id')
       ?? blockEl.getAttribute('data-list-wrapper');
     if (!targetId || targetId === this.dragBlockId) {
+      this.onDragEnd();
+      return;
+    }
+
+    if (blockEl.closest('[data-cell-id]')) {
+      this.onDragEnd();
+      return;
+    }
+
+    const fromLoc = findBlockLocation(this.ctx.document, this.dragBlockId);
+    if (fromLoc?.parentKind === 'table-cell') {
       this.onDragEnd();
       return;
     }

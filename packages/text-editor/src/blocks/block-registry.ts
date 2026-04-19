@@ -1,3 +1,4 @@
+import type { BlockType } from '@core/model/interfaces';
 import type { BlockDefinition } from './block-definition';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -35,10 +36,12 @@ export class BlockRegistry {
     return Array.from(this.definitions.values());
   }
 
-  getPaletteItems(): PaletteItem[] {
+  getPaletteItems(excludeTypes?: BlockType[]): PaletteItem[] {
     const items: PaletteItem[] = [];
 
     for (const def of this.definitions.values()) {
+      if (excludeTypes?.includes(def.type as BlockType)) continue;
+
       if (def.paletteEntries) {
         for (const entry of def.paletteEntries()) {
           items.push({

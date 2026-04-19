@@ -6,6 +6,7 @@ import { generateId } from '@core/id';
 import { PasteCommand } from './commands/paste-command';
 import { DeleteSelectionCommand } from './commands/delete-selection-command';
 import { InlineMarkManager } from '../inline/inline-mark-manager';
+import { findBlockLocation, getBlockById, getSelectionStartAfterDelete } from './block-locator';
 
 const ALLOWED_TAGS = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'BR', 'P', 'DIV', 'SPAN']);
 
@@ -65,8 +66,8 @@ export class ClipboardHandler {
     const delCmd = new DeleteSelectionCommand(this.ctx.document, sel);
     this.ctx.undoRedoManager.push(delCmd);
 
-    const startOffset = Math.min(sel.anchorOffset, sel.focusOffset);
-    this.ctx.selectionManager.setCollapsed(sel.anchorBlockId, startOffset);
+    const { blockId, offset } = getSelectionStartAfterDelete(this.ctx.document, sel);
+    this.ctx.selectionManager.setCollapsed(blockId, offset);
     this.ctx.eventBus.emit('doc:change', { document: this.ctx.document });
   }
 
@@ -79,8 +80,8 @@ export class ClipboardHandler {
     if (!sel.isCollapsed) {
       const delCmd = new DeleteSelectionCommand(this.ctx.document, sel);
       this.ctx.undoRedoManager.push(delCmd);
-      const startOffset = Math.min(sel.anchorOffset, sel.focusOffset);
-      this.ctx.selectionManager.setCollapsed(sel.anchorBlockId, startOffset);
+      const { blockId, offset } = getSelectionStartAfterDelete(this.ctx.document, sel);
+      this.ctx.selectionManager.setCollapsed(blockId, offset);
     }
 
     const currentSel = this.ctx.selectionManager.get();
@@ -139,13 +140,16 @@ export class ClipboardHandler {
   }
 
   private getSelectedBlocks(sel: import('@core/model/interfaces').BlockSelection): BlockNode[] {
-    const anchorIdx = this.ctx.document.children.findIndex(b => b.id === sel.anchorBlockId);
-    const focusIdx = this.ctx.document.children.findIndex(b => b.id === sel.focusBlockId);
+    const a = findBlockLocation(this.ctx.document, sel.anchorBlockId);
+    const f = findBlockLocation(this.ctx.document, sel.focusBlockId);
+    if (a && f && a.parentList === f.parentList) {
+      const i1 = Math.min(a.index, f.index);
+      const i2 = Math.max(a.index, f.index);
+      return a.parentList.slice(i1, i2 + 1);
+    }
 
-    const startIdx = Math.min(anchorIdx, focusIdx);
-    const endIdx = Math.max(anchorIdx, focusIdx);
-
-    return this.ctx.document.children.slice(startIdx, endIdx + 1);
+    const single = getBlockById(this.ctx.document, sel.anchorBlockId);
+    return single ? [single] : [];
   }
 
   parsePlainText(text: string): BlockNode[] {

@@ -15,6 +15,8 @@ import { DeleteSelectionCommand } from './commands/delete-selection-command';
 import { IndentListCommand } from './commands/indent-list-command';
 import { OutdentListCommand } from './commands/outdent-list-command';
 import { ChangeBlockTypeCommand } from './commands/change-block-type-command';
+import { findBlockLocation, getSelectionStartAfterDelete } from './block-locator';
+import { tryTableCellHorizontalNavigation } from '../blocks/table-cell-navigation';
 
 export class InputInterceptor {
   private readonly classifier = new IntentClassifier();
@@ -57,12 +59,6 @@ export class InputInterceptor {
     );
   }
 
-  private isInsideTableCell(e: Event): boolean {
-    const target = e.target as HTMLElement | null;
-    if (!target) return false;
-    return !!target.closest?.('[data-cell-id]');
-  }
-
   private handleKeydown(e: KeyboardEvent): void {
     if (this.slashPalette?.isVisible()) {
       if (e.key === 'Backspace') {
@@ -75,12 +71,7 @@ export class InputInterceptor {
       }
     }
 
-    if (this.isInsideTableCell(e)) {
-      const intent = this.classifier.classifyKeydown(e);
-      if (intent && (intent.type === 'undo' || intent.type === 'redo')) {
-        e.preventDefault();
-        this.dispatch(intent);
-      }
+    if (tryTableCellHorizontalNavigation(this.ctx.rootElement, e)) {
       return;
     }
 
@@ -102,8 +93,6 @@ export class InputInterceptor {
       }
       return;
     }
-
-    if (this.isInsideTableCell(e)) return;
 
     const intent = this.classifier.classifyBeforeInput(e);
     if (!intent) return;
@@ -179,11 +168,17 @@ export class InputInterceptor {
 
     // Detect "/" at the start of an empty paragraph to open slash palette
     if (text === '/' && this.slashPalette && sel.isCollapsed && sel.anchorOffset === 0) {
-      const block = this.ctx.document.children.find(b => b.id === sel.anchorBlockId);
+      const block = findBlockLocation(this.ctx.document, sel.anchorBlockId)?.block;
       if (block && block.type === 'paragraph') {
         const textLen = block.children.reduce((s, r) => s + r.data.text.length, 0);
         if (textLen === 0) {
-          this.slashPalette.show(block.id);
+          const insideCell = this.blockInsideTableCell(sel.anchorBlockId);
+          this.slashPalette.show(
+            block.id,
+            'change',
+            undefined,
+            insideCell ? ['table'] : undefined,
+          );
           return;
         }
       }
@@ -222,7 +217,7 @@ export class InputInterceptor {
     }
 
     if (direction === 'backward' && sel.anchorOffset === 0) {
-      const block = this.ctx.document.children.find(b => b.id === sel.anchorBlockId);
+      const block = findBlockLocation(this.ctx.document, sel.anchorBlockId)?.block;
       if (block && block.type === 'list_item') {
         const textLen = block.children.reduce((s, r) => s + r.data.text.length, 0);
         if (textLen === 0) {
@@ -284,7 +279,7 @@ export class InputInterceptor {
     const currentSel = this.ctx.selectionManager.get();
     if (!currentSel) return;
 
-    const block = this.ctx.document.children.find(b => b.id === currentSel.anchorBlockId);
+    const block = findBlockLocation(this.ctx.document, currentSel.anchorBlockId)?.block;
     if (block && block.type === 'list_item') {
       const textLen = block.children.reduce((s, r) => s + r.data.text.length, 0);
       if (textLen === 0) {
@@ -315,7 +310,7 @@ export class InputInterceptor {
     const sel = this.ctx.selectionManager.get();
     if (!sel || sel.isCollapsed) return;
 
-    const block = this.ctx.document.children.find(b => b.id === sel.anchorBlockId);
+    const block = findBlockLocation(this.ctx.document, sel.anchorBlockId)?.block;
     if (!block) return;
 
     const cmd = new ToggleMarkCommand(
@@ -354,7 +349,7 @@ export class InputInterceptor {
     const sel = this.ctx.selectionManager.get();
     if (!sel) return;
 
-    const block = this.ctx.document.children.find(b => b.id === sel.anchorBlockId);
+    const block = findBlockLocation(this.ctx.document, sel.anchorBlockId)?.block;
     if (!block || block.type !== 'list_item') return;
 
     const cmd = new IndentListCommand(this.ctx.document, block.id);
@@ -366,7 +361,7 @@ export class InputInterceptor {
     const sel = this.ctx.selectionManager.get();
     if (!sel) return;
 
-    const block = this.ctx.document.children.find(b => b.id === sel.anchorBlockId);
+    const block = findBlockLocation(this.ctx.document, sel.anchorBlockId)?.block;
     if (!block || block.type !== 'list_item') return;
 
     const cmd = new OutdentListCommand(this.ctx.document, block.id);
@@ -381,21 +376,13 @@ export class InputInterceptor {
     const cmd = new DeleteSelectionCommand(this.ctx.document, sel);
     this.ctx.undoRedoManager.push(cmd);
 
-    const startOffset = Math.min(sel.anchorOffset, sel.focusOffset);
-    const startBlockId = this.getStartBlockId(sel);
-    this.ctx.selectionManager.setCollapsed(startBlockId, startOffset);
+    const { blockId, offset } = getSelectionStartAfterDelete(this.ctx.document, sel);
+    this.ctx.selectionManager.setCollapsed(blockId, offset);
   }
 
-  private getStartBlockId(sel: import('@core/model/interfaces').BlockSelection): string {
-    const anchorIdx = this.ctx.document.children.findIndex(b => b.id === sel.anchorBlockId);
-    const focusIdx = this.ctx.document.children.findIndex(b => b.id === sel.focusBlockId);
-
-    if (anchorIdx <= focusIdx) {
-      return anchorIdx === focusIdx && sel.anchorOffset > sel.focusOffset
-        ? sel.focusBlockId
-        : sel.anchorBlockId;
-    }
-    return sel.focusBlockId;
+  private blockInsideTableCell(blockId: string): boolean {
+    const el = this.ctx.rootElement.querySelector(`[data-block-id="${blockId}"]`);
+    return !!el?.closest('[data-cell-id]');
   }
 
   private emitChange(): void {
