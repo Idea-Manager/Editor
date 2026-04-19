@@ -59,6 +59,7 @@ export const uk: TranslationDictionary = {
   'embed.placeholder': 'Вставте URL (YouTube, Figma, Miro, Google Maps...)',
   'embed.button': 'Вбудувати',
   'embed.open': 'Відкрити ',
+  'embed.remove': 'Видалити вбудовування',
 
   // Top bar
   'topbar.untitled': 'Без назви',

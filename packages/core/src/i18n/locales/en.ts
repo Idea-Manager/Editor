@@ -59,6 +59,7 @@ export const en: TranslationDictionary = {
   'embed.placeholder': 'Paste a URL (YouTube, Figma, Miro, Google Maps...)',
   'embed.button': 'Embed',
   'embed.open': 'Open ',
+  'embed.remove': 'Remove embed',
 
   // Top bar
   'topbar.untitled': 'Untitled',

@@ -5,6 +5,7 @@ const sharedConfig = {
     '^@text-editor/(.*)$': '<rootDir>/packages/text-editor/src/$1',
     '^@graphic-editor/(.*)$': '<rootDir>/packages/graphic-editor/src/$1',
     '^@ui/(.*)$': '<rootDir>/packages/ui/src/$1',
+    '^@shared/(.*)$': '<rootDir>/shared/$1',
     '\\.scss$': '<rootDir>/jest/__mocks__/styleMock.js',
   },
   transformIgnorePatterns: [

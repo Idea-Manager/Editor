@@ -1,0 +1,65 @@
+@use '../../../src/styles/variables' as *;
+
+.idea-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 110;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+
+  &__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba($black, 0.4);
+    pointer-events: auto;
+  }
+
+  &__panel {
+    position: relative;
+    z-index: 1;
+    min-width: min(400px, calc(100vw - #{$spacing-lg} * 2));
+    max-width: calc(100vw - #{$spacing-lg} * 2);
+    max-height: calc(100vh - #{$spacing-lg} * 2);
+    display: flex;
+    flex-direction: column;
+    background: $color-bg;
+    border: 1px solid $color-border;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba($black, 0.12);
+    font-family: $font-family-base;
+    font-size: $font-size-sm;
+    pointer-events: auto;
+  }
+
+  &__header {
+    flex-shrink: 0;
+    padding: $spacing-md $spacing-md $spacing-sm;
+    border-bottom: 1px solid $color-border;
+  }
+
+  &__title {
+    font-size: $font-size-lg;
+    font-weight: 600;
+    color: $color-text;
+    margin: 0;
+  }
+
+  &__body {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: $spacing-md;
+    color: $color-text;
+  }
+
+  &__footer {
+    flex-shrink: 0;
+    display: flex;
+    justify-content: flex-end;
+    gap: $spacing-sm;
+    padding: $spacing-sm $spacing-md $spacing-md;
+    border-top: 1px solid $color-border;
+  }
+}

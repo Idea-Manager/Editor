@@ -34,6 +34,10 @@
     &--paragraph {
       font-size: $font-size-base;
       line-height: 1.6;
+
+      &[data-empty] {
+        min-height: 1lh;
+      }
     }
 
     &--heading {
@@ -153,31 +157,15 @@
     margin: 12px 0;
   }
 
-  .idea-embed-input {
+  .idea-embed-placeholder {
     display: flex;
+    align-items: center;
+    justify-content: space-between;
     gap: $spacing-sm;
     padding: 12px;
     border: 1px dashed $gray-300;
     border-radius: 6px;
     background: $color-bg-subtle;
-
-    &__field {
-      flex: 1;
-      padding: 6px 10px;
-      border: 1px solid $gray-300;
-      border-radius: 4px;
-      font-size: 13px;
-      font-family: inherit;
-      outline: none;
-
-      &:focus {
-        border-color: $color-focus-ring;
-      }
-
-      &--error {
-        border-color: $color-error;
-      }
-    }
 
     &__btn {
       padding: 6px $font-size-base;
@@ -188,10 +176,57 @@
       font-size: 13px;
       font-family: inherit;
       cursor: pointer;
+      flex-shrink: 0;
 
       &:hover {
         background: $color-primary-hover;
       }
+    }
+  }
+
+  .idea-embed-placeholder-fallback-text {
+    flex: 1;
+    min-width: 0;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+  }
+
+  .idea-embed-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: $color-text-secondary;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    &:hover {
+      background: rgba($black, 0.06);
+      color: $color-text;
+    }
+
+    .material-symbols-outlined {
+      font-size: 18px;
+    }
+  }
+
+  .idea-embed-fallback-wrap {
+    position: relative;
+
+    .idea-embed-fallback {
+      padding-right: 40px;
+    }
+
+    .idea-embed-remove {
+      position: absolute;
+      top: $spacing-xs;
+      right: $spacing-xs;
+      z-index: 1;
     }
   }
 
@@ -204,10 +239,24 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: $spacing-sm;
       padding: 6px 10px;
       background: $gray-100;
       border-bottom: 1px solid $color-border;
       font-size: $font-size-sm;
+    }
+
+    &__titlebar-left {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    &__titlebar-right {
+      display: flex;
+      align-items: center;
+      gap: $spacing-xs;
+      flex-shrink: 0;
     }
 
     &__provider {
@@ -281,5 +330,61 @@
     content: attr(data-placeholder);
     color: $color-placeholder;
     pointer-events: none;
+  }
+}
+
+.idea-embed-url-modal__input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 10px;
+  border: 1px solid $gray-300;
+  border-radius: 4px;
+  font-size: $font-size-sm;
+  font-family: inherit;
+  outline: none;
+
+  &:focus {
+    border-color: $color-focus-ring;
+  }
+
+  &--error {
+    border-color: $color-error;
+  }
+}
+
+.idea-embed-url-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $spacing-sm;
+  width: 100%;
+}
+
+.idea-embed-url-modal__cancel-btn {
+  padding: $spacing-xs $spacing-sm;
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: 4px;
+  font-size: $font-size-sm;
+  font-family: $font-family-base;
+  color: $color-text-secondary;
+  cursor: pointer;
+
+  &:hover {
+    background: $color-bg-subtle;
+  }
+}
+
+.idea-embed-url-modal__create-btn {
+  padding: $spacing-xs $spacing-md;
+  background: $gray-900;
+  border: none;
+  border-radius: 4px;
+  font-size: $font-size-sm;
+  font-family: $font-family-base;
+  color: $white;
+  cursor: pointer;
+
+  &:hover {
+    background: $gray-800;
   }
 }

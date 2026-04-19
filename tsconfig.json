@@ -15,8 +15,9 @@
       "@core/*":           ["packages/core/src/*"],
       "@text-editor/*":    ["packages/text-editor/src/*"],
       "@graphic-editor/*": ["packages/graphic-editor/src/*"],
-      "@ui/*":             ["packages/ui/src/*"]
+      "@ui/*":             ["packages/ui/src/*"],
+      "@shared/*":         ["shared/*"]
     }
   },
-  "include": ["src", "packages", "apps"]
+  "include": ["src", "packages", "apps", "shared"]
 }

@@ -30,6 +30,7 @@ import tableContextMenuStyles from '../toolbar/table-context-menu.scss?inline';
 import blockGutterStyles from '../toolbar/block-gutter.scss?inline';
 import blockTypeMenuStyles from '../toolbar/block-type-menu.scss?inline';
 import tableSizePickerStyles from '../toolbar/table-size-picker.scss?inline';
+import modalStyles from '@shared/components/modal/modal.scss?inline';
 
 const STYLE_ID = 'idea-editor-styles';
 
@@ -45,6 +46,7 @@ function injectStyles(): void {
     blockGutterStyles,
     blockTypeMenuStyles,
     tableSizePickerStyles,
+    modalStyles,
   ].join('\n');
   document.head.appendChild(style);
 }
@@ -150,6 +152,8 @@ export class TextEditor extends HTMLElement {
       selection: this.ctx.selectionManager.get(),
       undoRedoManager: this.ctx.undoRedoManager,
       i18n: this.ctx.i18n,
+      rootElement: this,
+      selectionManager: this.ctx.selectionManager,
     };
     this.blockRenderer.reconcile(this.ctx.document, this.container, renderCtx);
 

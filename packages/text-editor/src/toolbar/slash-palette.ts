@@ -5,6 +5,8 @@ import { ChangeBlockTypeCommand } from '../engine/commands/change-block-type-com
 import { InsertBlockCommand } from '../engine/commands/insert-block-command';
 import { createIcon } from '../../../../src/util/icon';
 import { TableSizePicker, type BorderPreset, type TableSizePickerResult } from './table-size-picker';
+import { showEmbedUrlModal } from './embed-url-modal';
+import { embedDataFromUrl } from '../blocks/embed-url';
 import { generateId } from '@core/id';
 
 export type SlashPaletteMode = 'change' | 'insert';
@@ -142,6 +144,11 @@ export class SlashPalette {
       return;
     }
 
+    if (selected.type === 'embed') {
+      this.showEmbedPicker();
+      return;
+    }
+
     this.applyPaletteItem(selected);
   }
 
@@ -224,6 +231,40 @@ export class SlashPalette {
           this.insertTableBlock(blockId, result);
         } else {
           this.changeToTable(blockId, result);
+        }
+      },
+      () => {},
+    );
+  }
+
+  private showEmbedPicker(): void {
+    let pickerAnchor: DOMRect;
+    if (this.anchorRect) {
+      pickerAnchor = this.anchorRect;
+    } else {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) {
+        pickerAnchor = sel.getRangeAt(0).getBoundingClientRect();
+      } else if (this.overlay) {
+        pickerAnchor = this.overlay.getBoundingClientRect();
+      } else {
+        pickerAnchor = new DOMRect(0, 0, 0, 0);
+      }
+    }
+
+    const mode = this.mode;
+    this.hide();
+
+    showEmbedUrlModal(
+      this.host,
+      this.ctx.i18n,
+      pickerAnchor,
+      (url) => {
+        const dataOverride = embedDataFromUrl(url);
+        if (mode === 'insert') {
+          this.insertBlock('embed', dataOverride);
+        } else {
+          this.changeBlock('embed', dataOverride);
         }
       },
       () => {},

@@ -43,6 +43,7 @@ export { SplitCellCommand } from './engine/commands/split-cell-command';
 export { ToggleCellBorderCommand } from './engine/commands/toggle-cell-border-command';
 export { SetEmbedUrlCommand } from './engine/commands/set-embed-url-command';
 export { InsertBlockCommand } from './engine/commands/insert-block-command';
+export { DeleteBlockCommand } from './engine/commands/delete-block-command';
 export { MoveBlockCommand } from './engine/commands/move-block-command';
 export { SetCellBackgroundCommand } from './engine/commands/set-cell-background-command';
 

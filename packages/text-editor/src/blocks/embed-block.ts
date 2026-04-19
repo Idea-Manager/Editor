@@ -1,82 +1,13 @@
-import type { BlockNode, EmbedData, TextRun } from '@core/model/interfaces';
+import type { BlockNode, EmbedData } from '@core/model/interfaces';
 import type { Command } from '@core/commands/command';
 import type { BlockDefinition } from './block-definition';
 import type { RenderContext } from '../engine/render-context';
 import type { EditorContext } from '../engine/editor-context';
 import { SetEmbedUrlCommand } from '../engine/commands/set-embed-url-command';
+import { DeleteBlockCommand } from '../engine/commands/delete-block-command';
 import { createIcon } from '../../../../src/util/icon';
-
-interface ProviderInfo {
-  name: string;
-  embeddable: boolean;
-  transformUrl?: (url: string) => string;
-}
-
-const PROVIDERS: { pattern: RegExp; info: ProviderInfo }[] = [
-  {
-    pattern: /(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/,
-    info: {
-      name: 'YouTube',
-      embeddable: true,
-      transformUrl: (url: string) => {
-        const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/);
-        return match ? `https://www.youtube.com/embed/${match[1]}` : url;
-      },
-    },
-  },
-  {
-    pattern: /figma\.com\/(file|proto|design)\//,
-    info: {
-      name: 'Figma',
-      embeddable: true,
-      transformUrl: (url: string) => `https://www.figma.com/embed?embed_host=idea-editor&url=${encodeURIComponent(url)}`,
-    },
-  },
-  {
-    pattern: /miro\.com\/app\/board\//,
-    info: {
-      name: 'Miro',
-      embeddable: true,
-      transformUrl: (url: string) => url.replace('/app/board/', '/app/live-embed/'),
-    },
-  },
-  {
-    pattern: /google\.com\/maps/,
-    info: {
-      name: 'Google Maps',
-      embeddable: true,
-      transformUrl: (url: string) => {
-        if (url.includes('/embed')) return url;
-        return url.replace('/maps/', '/maps/embed/');
-      },
-    },
-  },
-];
-
-function detectProvider(url: string): ProviderInfo | null {
-  for (const { pattern, info } of PROVIDERS) {
-    if (pattern.test(url)) return info;
-  }
-  return null;
-}
-
-function isValidUrl(str: string): boolean {
-  try {
-    const u = new URL(str);
-    return u.protocol === 'http:' || u.protocol === 'https:';
-  } catch {
-    return false;
-  }
-}
-
-function getFaviconUrl(url: string): string {
-  try {
-    const u = new URL(url);
-    return `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=32`;
-  } catch {
-    return '';
-  }
-}
+import { detectProvider, getFaviconUrl } from './embed-url';
+import { showEmbedUrlModal } from '../toolbar/embed-url-modal';
 
 export class EmbedBlock implements BlockDefinition<EmbedData> {
   readonly type = 'embed';
@@ -103,65 +34,110 @@ export class EmbedBlock implements BlockDefinition<EmbedData> {
   }
 
   private renderInputState(wrapper: HTMLElement, node: BlockNode<EmbedData>, ctx: RenderContext): void {
-    const container = document.createElement('div');
-    container.classList.add('idea-embed-input');
+    if (ctx.rootElement) {
+      const container = document.createElement('div');
+      container.classList.add('idea-embed-placeholder');
 
-    const input = document.createElement('input');
-    input.type = 'url';
-    input.placeholder = ctx.i18n.t('embed.placeholder');
-    input.classList.add('idea-embed-input__field');
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.classList.add('idea-embed-placeholder__btn');
+      btn.textContent = ctx.i18n.t('block.embed');
 
-    const btn = document.createElement('button');
-    btn.textContent = ctx.i18n.t('embed.button');
-    btn.classList.add('idea-embed-input__btn');
-
-    const doEmbed = () => {
-      const url = input.value.trim();
-      if (!url || !isValidUrl(url)) {
-        input.classList.add('idea-embed-input__field--error');
-        return;
-      }
-      input.classList.remove('idea-embed-input__field--error');
-
-      const provider = detectProvider(url);
-
-      if (ctx.undoRedoManager) {
-        const cmd = new SetEmbedUrlCommand(
-          ctx.document,
-          node.id,
-          url,
-          provider?.name ?? '',
-          provider?.name,
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        showEmbedUrlModal(
+          ctx.rootElement!,
+          ctx.i18n,
+          null,
+          (url) => this.applyEmbedUrl(wrapper, node, ctx, url),
+          () => {},
         );
-        ctx.undoRedoManager.push(cmd);
-        ctx.eventBus.emit('doc:change', { document: ctx.document });
-      } else {
-        node.data.url = url;
-        node.data.title = provider?.name ?? '';
-        node.data.provider = provider?.name;
-        wrapper.innerHTML = '';
-        this.renderPreviewState(wrapper, node, ctx);
-      }
-    };
+      });
 
+      container.appendChild(btn);
+      container.appendChild(this.createRemoveButton(node, ctx));
+      wrapper.appendChild(container);
+    } else {
+      const row = document.createElement('div');
+      row.classList.add('idea-embed-placeholder', 'idea-embed-placeholder--fallback-row');
+      const hint = document.createElement('span');
+      hint.classList.add('idea-embed-placeholder-fallback-text');
+      hint.textContent = ctx.i18n.t('embed.placeholder');
+      row.appendChild(hint);
+      row.appendChild(this.createRemoveButton(node, ctx));
+      wrapper.appendChild(row);
+    }
+  }
+
+  private createRemoveButton(node: BlockNode<EmbedData>, ctx: RenderContext): HTMLButtonElement {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.classList.add('idea-embed-remove');
+    btn.setAttribute('aria-label', ctx.i18n.t('embed.remove'));
+    btn.title = ctx.i18n.t('embed.remove');
+    btn.appendChild(createIcon('close'));
     btn.addEventListener('click', (e) => {
       e.preventDefault();
-      doEmbed();
-    });
-
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        doEmbed();
-      }
       e.stopPropagation();
+      this.removeBlock(node, ctx);
     });
+    return btn;
+  }
 
-    input.addEventListener('beforeinput', (e) => e.stopPropagation());
+  private removeBlock(node: BlockNode<EmbedData>, ctx: RenderContext): void {
+    const idx = ctx.document.children.findIndex(b => b.id === node.id);
+    if (idx === -1) return;
 
-    container.appendChild(input);
-    container.appendChild(btn);
-    wrapper.appendChild(container);
+    const cmd = new DeleteBlockCommand(ctx.document, node.id);
+    if (ctx.undoRedoManager) {
+      ctx.undoRedoManager.push(cmd);
+    } else {
+      cmd.execute();
+    }
+    this.focusAfterDelete(ctx, idx);
+    ctx.eventBus.emit('doc:change', { document: ctx.document });
+  }
+
+  private focusAfterDelete(ctx: RenderContext, removedIndex: number): void {
+    const sm = ctx.selectionManager;
+    if (!sm) return;
+    const doc = ctx.document;
+    if (doc.children.length === 0) return;
+
+    if (removedIndex > 0) {
+      const prev = doc.children[removedIndex - 1];
+      const len = prev.children.reduce((s, r) => s + r.data.text.length, 0);
+      sm.setCollapsed(prev.id, len);
+    } else {
+      sm.setCollapsed(doc.children[0].id, 0);
+    }
+  }
+
+  private applyEmbedUrl(
+    wrapper: HTMLElement,
+    node: BlockNode<EmbedData>,
+    ctx: RenderContext,
+    url: string,
+  ): void {
+    const provider = detectProvider(url);
+
+    if (ctx.undoRedoManager) {
+      const cmd = new SetEmbedUrlCommand(
+        ctx.document,
+        node.id,
+        url,
+        provider?.name ?? '',
+        provider?.name,
+      );
+      ctx.undoRedoManager.push(cmd);
+      ctx.eventBus.emit('doc:change', { document: ctx.document });
+    } else {
+      node.data.url = url;
+      node.data.title = provider?.name ?? '';
+      node.data.provider = provider?.name;
+      wrapper.innerHTML = '';
+      this.renderPreviewState(wrapper, node, ctx);
+    }
   }
 
   private renderPreviewState(wrapper: HTMLElement, node: BlockNode<EmbedData>, ctx: RenderContext): void {
@@ -186,8 +162,17 @@ export class EmbedBlock implements BlockDefinition<EmbedData> {
       openBtn.textContent = ctx.i18n.t('embed.open');
       openBtn.appendChild(createIcon('open_in_new'));
 
-      titleBar.appendChild(providerLabel);
-      titleBar.appendChild(openBtn);
+      const titleLeft = document.createElement('div');
+      titleLeft.classList.add('idea-embed-preview__titlebar-left');
+      titleLeft.appendChild(providerLabel);
+
+      const titleRight = document.createElement('div');
+      titleRight.classList.add('idea-embed-preview__titlebar-right');
+      titleRight.appendChild(openBtn);
+      titleRight.appendChild(this.createRemoveButton(node, ctx));
+
+      titleBar.appendChild(titleLeft);
+      titleBar.appendChild(titleRight);
 
       const iframe = document.createElement('iframe');
       iframe.src = provider.transformUrl ? provider.transformUrl(node.data.url) : node.data.url;
@@ -200,11 +185,14 @@ export class EmbedBlock implements BlockDefinition<EmbedData> {
       embedContainer.appendChild(iframe);
       wrapper.appendChild(embedContainer);
     } else {
-      this.renderFallbackCard(wrapper, node);
+      this.renderFallbackCard(wrapper, node, ctx);
     }
   }
 
-  private renderFallbackCard(wrapper: HTMLElement, node: BlockNode<EmbedData>): void {
+  private renderFallbackCard(wrapper: HTMLElement, node: BlockNode<EmbedData>, ctx: RenderContext): void {
+    const outer = document.createElement('div');
+    outer.classList.add('idea-embed-fallback-wrap');
+
     const card = document.createElement('a');
     card.href = node.data.url;
     card.target = '_blank';
@@ -238,7 +226,9 @@ export class EmbedBlock implements BlockDefinition<EmbedData> {
 
     card.appendChild(favicon);
     card.appendChild(info);
-    wrapper.appendChild(card);
+    outer.appendChild(card);
+    outer.appendChild(this.createRemoveButton(node, ctx));
+    wrapper.appendChild(outer);
   }
 
   serialize(node: BlockNode<EmbedData>): BlockNode<EmbedData> {

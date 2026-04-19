@@ -19,6 +19,7 @@ const config = {
       '@text-editor':    path.resolve(__dirname, '../packages/text-editor/src'),
       '@graphic-editor': path.resolve(__dirname, '../packages/graphic-editor/src'),
       '@ui':             path.resolve(__dirname, '../packages/ui/src'),
+      '@shared':         path.resolve(__dirname, '../shared'),
     },
   },
   module: {
