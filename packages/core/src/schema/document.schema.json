@@ -1,0 +1,158 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://ideaeditor.dev/schema/document.json",
+  "title": "IdeaEditor Document",
+  "type": "object",
+  "required": ["id", "type", "schemaVersion", "children", "graphicPages", "assets"],
+  "properties": {
+    "id": { "type": "string", "minLength": 1 },
+    "type": { "type": "string", "const": "document" },
+    "schemaVersion": { "type": "integer", "minimum": 1 },
+    "data": { "type": "object" },
+    "meta": { "$ref": "#/$defs/nodeMeta" },
+    "children": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/blockNode" }
+    },
+    "graphicPages": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/graphicPage" }
+    },
+    "assets": {
+      "type": "object",
+      "additionalProperties": { "$ref": "#/$defs/asset" }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "nodeMeta": {
+      "type": "object",
+      "properties": {
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" },
+        "createdBy": { "type": "string" },
+        "locked": { "type": "boolean" },
+        "version": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "textRun": {
+      "type": "object",
+      "required": ["id", "type", "data"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "const": "text" },
+        "data": {
+          "type": "object",
+          "required": ["text", "marks"],
+          "properties": {
+            "text": { "type": "string" },
+            "marks": {
+              "type": "array",
+              "items": { "type": "string", "enum": ["bold", "italic", "underline", "code"] }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "blockNode": {
+      "type": "object",
+      "required": ["id", "type", "data", "children"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": {
+          "type": "string",
+          "enum": ["paragraph", "heading", "list_item", "table", "embed", "graphic"]
+        },
+        "data": { "type": "object" },
+        "children": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/textRun" }
+        },
+        "meta": { "$ref": "#/$defs/nodeMeta" }
+      },
+      "additionalProperties": false
+    },
+    "graphicElement": {
+      "type": "object",
+      "required": ["id", "type", "data"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": { "type": "string" },
+        "frameId": { "type": "string" },
+        "data": { "type": "object" },
+        "meta": { "$ref": "#/$defs/nodeMeta" }
+      },
+      "additionalProperties": false
+    },
+    "frameElement": {
+      "type": "object",
+      "required": ["id", "name", "data", "childElementIds"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string" },
+        "data": {
+          "type": "object",
+          "required": ["x", "y", "width", "height", "background", "clipContent", "showLabel", "labelFontSize"],
+          "properties": {
+            "x": { "type": "number" },
+            "y": { "type": "number" },
+            "width": { "type": "number" },
+            "height": { "type": "number" },
+            "background": { "type": "string" },
+            "clipContent": { "type": "boolean" },
+            "showLabel": { "type": "boolean" },
+            "labelFontSize": { "type": "number" }
+          },
+          "additionalProperties": false
+        },
+        "childElementIds": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "meta": { "$ref": "#/$defs/nodeMeta" }
+      },
+      "additionalProperties": false
+    },
+    "graphicPage": {
+      "type": "object",
+      "required": ["id", "name", "elements", "frames", "viewport"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "name": { "type": "string" },
+        "elements": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/graphicElement" }
+        },
+        "frames": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/frameElement" }
+        },
+        "viewport": {
+          "type": "object",
+          "required": ["x", "y", "zoom"],
+          "properties": {
+            "x": { "type": "number" },
+            "y": { "type": "number" },
+            "zoom": { "type": "number", "exclusiveMinimum": 0 }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "asset": {
+      "type": "object",
+      "required": ["id", "name", "mimeType", "url"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "mimeType": { "type": "string" },
+        "url": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

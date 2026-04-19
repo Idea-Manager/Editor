@@ -1,0 +1,85 @@
+@use '../../../../src/styles/variables' as *;
+
+.idea-floating-toolbar {
+  position: fixed;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: $spacing-xs;
+  background: $gray-800;
+  border: 1px solid $gray-700;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba($black, 0.2);
+  font-family: $font-family-base;
+  font-size: $font-size-sm;
+  pointer-events: auto;
+  user-select: none;
+
+  &__btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: $white;
+    cursor: pointer;
+    overflow: hidden;
+    transition: background-color 0.1s;
+
+    .material-symbols-outlined {
+      font-size: 18px;
+      line-height: 1;
+      display: block;
+    }
+
+    &:hover {
+      background: rgba($white, 0.1);
+    }
+
+    &--active {
+      background: $white;
+      color: $gray-900;
+
+      &:hover {
+        background: $gray-100;
+      }
+    }
+  }
+
+  &__separator {
+    width: 1px;
+    height: 20px;
+    background: $gray-700;
+    margin: 0 $spacing-xs;
+  }
+
+  &__select {
+    appearance: none;
+    background: transparent;
+    border: 1px solid $gray-700;
+    border-radius: 4px;
+    color: $white;
+    font-size: $font-size-sm;
+    padding: $spacing-xs $spacing-sm;
+    cursor: pointer;
+    outline: none;
+
+    option {
+      background: $gray-800;
+      color: $white;
+    }
+
+    &:hover {
+      border-color: $gray-500;
+    }
+
+    &:focus {
+      border-color: $gray-400;
+    }
+  }
+}

@@ -1,0 +1,91 @@
+@use '../styles/variables' as *;
+
+.command-palette-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba($black, 0.3);
+  z-index: 6000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 15vh;
+}
+
+.command-palette {
+  width: 480px;
+  max-width: 90vw;
+  background: $color-bg;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba($black, 0.15);
+  font-family: $font-family-base;
+  overflow: hidden;
+  animation: cp-in 0.12s ease-out;
+
+  &__input {
+    width: 100%;
+    padding: 14px $spacing-md;
+    border: none;
+    outline: none;
+    font-size: 15px;
+    font-family: inherit;
+    color: $color-text;
+    border-bottom: 1px solid $color-border;
+    background: transparent;
+
+    &::placeholder {
+      color: $color-placeholder;
+    }
+  }
+
+  &__list {
+    max-height: 320px;
+    overflow-y: auto;
+    padding: $spacing-xs;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: $spacing-sm 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    color: $color-text;
+    transition: background-color 0.1s;
+
+    &:hover,
+    &--active {
+      background: rgba($black, 0.06);
+    }
+  }
+
+  &__label {
+    flex: 1;
+  }
+
+  &__keys {
+    font-size: $font-size-xs;
+    color: $color-placeholder;
+    font-family: $font-family-mono;
+    letter-spacing: 0.5px;
+  }
+
+  &__empty {
+    padding: $spacing-md;
+    text-align: center;
+    color: $color-placeholder;
+    font-size: 13px;
+  }
+}
+
+@keyframes cp-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98) translateY(-$spacing-sm);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}

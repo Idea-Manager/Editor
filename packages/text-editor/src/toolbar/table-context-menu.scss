@@ -1,0 +1,123 @@
+@use '../../../../src/styles/variables' as *;
+
+.idea-table-ctx-menu {
+  position: fixed;
+  z-index: 110;
+  min-width: 200px;
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba($black, 0.08);
+  padding: $spacing-xs;
+  font-family: $font-family-base;
+  font-size: $font-size-sm;
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: $spacing-sm;
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: $color-text;
+    transition: background-color 0.1s;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+    font: inherit;
+
+    &:hover {
+      background-color: $color-selection;
+    }
+
+    &--disabled {
+      color: $gray-400;
+      cursor: default;
+
+      &:hover {
+        background-color: transparent;
+      }
+    }
+  }
+
+  &__separator {
+    height: 1px;
+    background: $color-border;
+    margin: $spacing-xs 0;
+  }
+
+  &__section-label {
+    padding: $spacing-xs 10px 2px;
+    font-size: 11px;
+    font-weight: 500;
+    color: $color-text-secondary;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  &__border-row {
+    display: flex;
+    gap: $spacing-xs;
+    padding: $spacing-xs 10px;
+  }
+
+  &__border-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 1px solid $color-border;
+    border-radius: 4px;
+    background: $color-bg;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition: background-color 0.1s, border-color 0.1s;
+
+    .material-symbols-outlined {
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    &:hover {
+      background: $color-bg-subtle;
+      border-color: $gray-400;
+    }
+
+    &--active {
+      background: $gray-900;
+      color: $white;
+      border-color: $gray-900;
+
+      &:hover {
+        background: $gray-800;
+      }
+    }
+  }
+
+  &__color-row {
+    display: flex;
+    gap: $spacing-xs;
+    padding: $spacing-xs 10px;
+  }
+
+  &__color-swatch {
+    width: 24px;
+    height: 24px;
+    border: 1px solid $gray-300;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: border-color 0.1s, box-shadow 0.1s;
+    padding: 0;
+
+    &:hover {
+      border-color: $gray-500;
+    }
+
+    &--active {
+      border-color: $gray-900;
+      box-shadow: 0 0 0 1px $gray-900;
+    }
+  }
+}

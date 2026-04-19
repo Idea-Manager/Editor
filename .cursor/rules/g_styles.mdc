@@ -1,5 +1,32 @@
 ---
 alwaysApply: true
 ---
-Create global style file with set of global variables for Fonts, Colors, etc.
-If you need to set font or color use global one, if no appropriate - feel free to add new one.
+
+## Global Styles — `src/styles/_variables.scss`
+
+All UI styling MUST use variables from `src/styles/_variables.scss`. Never hardcode hex colors, font names, or `rgba()` values in component styles.
+
+Every `.scss` file (except `_variables.scss` and `_base.scss`) MUST begin with:
+
+```scss
+@use '<relative-path>/styles/variables' as *;
+```
+
+### Monochrome Design System
+
+The UI follows a strict **black & white** palette — shades of gray only.
+
+- **Palette scale:** `$gray-{50..900}`, `$black`, `$white`
+- **Semantic tokens:** `$color-primary`, `$color-primary-hover`, `$color-bg`, `$color-bg-subtle`, `$color-text`, `$color-text-secondary`, `$color-placeholder`, `$color-border`, `$color-selection`, `$color-focus-ring`
+- **Status colors (only exception to monochrome):** `$color-error`, `$color-error-dark`, `$color-success-dark` — use only for validation states, toasts, and status indicators.
+- **Fonts:** `$font-family-base` (Inter system stack), `$font-family-mono` (JetBrains Mono stack)
+- **Font sizes:** `$font-size-{xs|sm|base|lg|xl}`
+- **Spacing:** `$spacing-{xs|sm|md|lg|xl}`
+
+### Rules
+
+1. Use existing SCSS variables for every color, font-family, and spacing value.
+2. If no suitable variable exists — add one to `_variables.scss` following the naming convention.
+3. Use gray shades for visual hierarchy: darker = more prominent, lighter = secondary/muted.
+4. Effects (shadows, hover, focus rings) use `rgba($black, …)` or gray-scale variables — never `rgba(0, 0, 0, …)`.
+5. Component-specific pixel values (border-radius, heights, widths) are allowed inline when not part of the global scale.

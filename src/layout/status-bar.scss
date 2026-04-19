@@ -1,0 +1,15 @@
+@use '../styles/variables' as *;
+
+.status-bar {
+  display: flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 $spacing-md;
+  background: $color-bg-subtle;
+  border-top: 1px solid $color-border;
+  font-family: $font-family-base;
+  font-size: $font-size-xs;
+  color: $color-placeholder;
+  flex-shrink: 0;
+  gap: $spacing-md;
+}

@@ -1,0 +1,137 @@
+@use '../../../../src/styles/variables' as *;
+
+.idea-table-picker {
+  position: fixed;
+  z-index: 105;
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba($black, 0.08);
+  padding: $spacing-sm $spacing-md;
+  font-family: $font-family-base;
+  font-size: $font-size-sm;
+  user-select: none;
+
+  &__title {
+    font-weight: 600;
+    color: $color-text;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__size-label {
+    display: block;
+    text-align: center;
+    color: $color-text-secondary;
+    font-size: $font-size-sm;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(10, 24px);
+    grid-template-rows: repeat(10, 24px);
+    gap: 2px;
+    margin-bottom: $spacing-sm;
+  }
+
+  &__cell {
+    width: 24px;
+    height: 24px;
+    border: 1px solid $gray-300;
+    border-radius: 2px;
+    background: $color-bg;
+    cursor: pointer;
+    transition: background-color 0.05s;
+
+    &--active {
+      background: $gray-800;
+      border-color: $gray-700;
+    }
+  }
+
+  &__borders {
+    margin-bottom: $spacing-sm;
+  }
+
+  &__borders-label {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    margin-bottom: $spacing-xs;
+  }
+
+  &__border-btns {
+    display: flex;
+    gap: $spacing-xs;
+  }
+
+  &__border-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid $color-border;
+    border-radius: 4px;
+    background: $color-bg;
+    color: $color-text-secondary;
+    cursor: pointer;
+    transition: background-color 0.1s, border-color 0.1s;
+
+    .material-symbols-outlined {
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    &:hover {
+      background: $color-bg-subtle;
+      border-color: $gray-400;
+    }
+
+    &--active {
+      background: $gray-900;
+      color: $white;
+      border-color: $gray-900;
+
+      &:hover {
+        background: $gray-800;
+      }
+    }
+  }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: $spacing-sm;
+  }
+
+  &__cancel-btn {
+    padding: $spacing-xs $spacing-sm;
+    background: $color-bg;
+    border: 1px solid $color-border;
+    border-radius: 4px;
+    font-size: $font-size-sm;
+    font-family: $font-family-base;
+    color: $color-text-secondary;
+    cursor: pointer;
+
+    &:hover {
+      background: $color-bg-subtle;
+    }
+  }
+
+  &__create-btn {
+    padding: $spacing-xs $spacing-md;
+    background: $gray-900;
+    border: none;
+    border-radius: 4px;
+    font-size: $font-size-sm;
+    font-family: $font-family-base;
+    color: $white;
+    cursor: pointer;
+
+    &:hover {
+      background: $gray-800;
+    }
+  }
+}

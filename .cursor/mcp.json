@@ -1,0 +1,8 @@
+{
+    "mcpServers": {
+      "lumora": {
+        "command": "lumora",
+        "args": ["mcp"]
+      }
+    }
+  }

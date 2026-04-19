@@ -1,0 +1,41 @@
+{
+  "id": "doc_example_text",
+  "type": "document",
+  "schemaVersion": 1,
+  "data": {},
+  "children": [
+    {
+      "id": "blk_001",
+      "type": "heading",
+      "data": { "level": 1, "align": "left" },
+      "children": [
+        { "id": "txt_001", "type": "text", "data": { "text": "Welcome to IdeaEditor", "marks": [] } }
+      ],
+      "meta": { "createdAt": 1700000000, "version": 1 }
+    },
+    {
+      "id": "blk_002",
+      "type": "paragraph",
+      "data": { "align": "left" },
+      "children": [
+        { "id": "txt_002", "type": "text", "data": { "text": "This is a ", "marks": [] } },
+        { "id": "txt_003", "type": "text", "data": { "text": "rich text", "marks": ["bold"] } },
+        { "id": "txt_004", "type": "text", "data": { "text": " example with ", "marks": [] } },
+        { "id": "txt_005", "type": "text", "data": { "text": "inline marks", "marks": ["italic"] } },
+        { "id": "txt_006", "type": "text", "data": { "text": ".", "marks": [] } }
+      ],
+      "meta": { "createdAt": 1700000001, "version": 1 }
+    },
+    {
+      "id": "blk_003",
+      "type": "paragraph",
+      "data": { "align": "left" },
+      "children": [
+        { "id": "txt_007", "type": "text", "data": { "text": "A second paragraph for testing.", "marks": [] } }
+      ],
+      "meta": { "createdAt": 1700000002, "version": 1 }
+    }
+  ],
+  "graphicPages": [],
+  "assets": {}
+}

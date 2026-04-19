@@ -1,0 +1,4 @@
+---
+alwaysApply: true
+---
+All text which displayed should use i8n service. If needed text does not exist in translation files - create it with appropriate key.
