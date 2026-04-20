@@ -1,5 +1,7 @@
 import type { TableData } from '@core/model/interfaces';
 import type { EditorContext } from '../engine/editor-context';
+import { findTableBlock } from '../engine/block-locator';
+import { tableHasMergedCells } from '../blocks/table-merge-guards';
 import { InsertRowCommand } from '../engine/commands/insert-row-command';
 import { DeleteRowCommand } from '../engine/commands/delete-row-command';
 import { InsertColumnCommand } from '../engine/commands/insert-column-command';
@@ -64,8 +66,8 @@ export class TableContextMenu {
   }
 
   private resolveCellPosition(blockId: string, cellId: string): CellPosition | null {
-    const block = this.ctx.document.children.find(b => b.id === blockId);
-    if (!block || block.type !== 'table') return null;
+    const block = findTableBlock(this.ctx.document, blockId);
+    if (!block) return null;
 
     const data = block.data as TableData;
     for (let r = 0; r < data.rows.length; r++) {
@@ -83,8 +85,8 @@ export class TableContextMenu {
     if (selected.length < 2) return null;
 
     const blockId = tableEl.getAttribute('data-block-id')!;
-    const block = this.ctx.document.children.find(b => b.id === blockId);
-    if (!block || block.type !== 'table') return null;
+    const block = findTableBlock(this.ctx.document, blockId);
+    if (!block) return null;
 
     const data = block.data as TableData;
     let minR = Infinity, maxR = -1, minC = Infinity, maxC = -1;
@@ -113,21 +115,22 @@ export class TableContextMenu {
     this.overlay = document.createElement('div');
     this.overlay.classList.add('idea-table-ctx-menu');
 
-    const block = this.ctx.document.children.find(b => b.id === pos.blockId);
+    const block = findTableBlock(this.ctx.document, pos.blockId);
     const data = block?.data as TableData | undefined;
     const cell = data?.rows[pos.rowIndex]?.cells[pos.colIndex];
     const isMerged = cell && (cell.colspan > 1 || cell.rowspan > 1);
     const cellRange = this.getSelectedCellRange(tableEl);
+    const mergeLocksStructure = data ? tableHasMergedCells(data) : false;
 
     const t = this.ctx.i18n.t.bind(this.ctx.i18n);
     const items: { label: string; action: () => void; disabled?: boolean }[] = [
-      { label: t('table.insertRowAbove'), action: () => this.exec(new InsertRowCommand(this.ctx.document, pos.blockId, pos.rowIndex - 1)) },
-      { label: t('table.insertRowBelow'), action: () => this.exec(new InsertRowCommand(this.ctx.document, pos.blockId, pos.rowIndex)) },
-      { label: t('table.deleteRow'), action: () => this.exec(new DeleteRowCommand(this.ctx.document, pos.blockId, pos.rowIndex)), disabled: (data?.rows.length ?? 0) <= 1 },
+      { label: t('table.insertRowAbove'), action: () => this.exec(new InsertRowCommand(this.ctx.document, pos.blockId, pos.rowIndex - 1)), disabled: mergeLocksStructure },
+      { label: t('table.insertRowBelow'), action: () => this.exec(new InsertRowCommand(this.ctx.document, pos.blockId, pos.rowIndex)), disabled: mergeLocksStructure },
+      { label: t('table.deleteRow'), action: () => this.exec(new DeleteRowCommand(this.ctx.document, pos.blockId, pos.rowIndex)), disabled: (data?.rows.length ?? 0) <= 1 || mergeLocksStructure },
       { label: '---', action: () => {} },
-      { label: t('table.insertColumnLeft'), action: () => this.exec(new InsertColumnCommand(this.ctx.document, pos.blockId, pos.colIndex - 1)) },
-      { label: t('table.insertColumnRight'), action: () => this.exec(new InsertColumnCommand(this.ctx.document, pos.blockId, pos.colIndex)) },
-      { label: t('table.deleteColumn'), action: () => this.exec(new DeleteColumnCommand(this.ctx.document, pos.blockId, pos.colIndex)), disabled: (data?.columnWidths.length ?? 0) <= 1 },
+      { label: t('table.insertColumnLeft'), action: () => this.exec(new InsertColumnCommand(this.ctx.document, pos.blockId, pos.colIndex - 1)), disabled: mergeLocksStructure },
+      { label: t('table.insertColumnRight'), action: () => this.exec(new InsertColumnCommand(this.ctx.document, pos.blockId, pos.colIndex)), disabled: mergeLocksStructure },
+      { label: t('table.deleteColumn'), action: () => this.exec(new DeleteColumnCommand(this.ctx.document, pos.blockId, pos.colIndex)), disabled: (data?.columnWidths.length ?? 0) <= 1 || mergeLocksStructure },
       { label: '---', action: () => {} },
       { label: t('table.mergeCells'), action: () => { if (cellRange) this.exec(new MergeCellsCommand(this.ctx.document, pos.blockId, cellRange)); }, disabled: !cellRange },
       { label: t('table.splitCell'), action: () => this.exec(new SplitCellCommand(this.ctx.document, pos.blockId, pos.cellId)), disabled: !isMerged },

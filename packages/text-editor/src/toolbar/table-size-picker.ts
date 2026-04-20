@@ -1,22 +1,20 @@
 import type { I18nService } from '@core/i18n/i18n';
+import { Modal } from '@shared/components/modal';
 import { createIcon } from '../../../../src/util/icon';
+import type { BorderPreset, TableSizePickerResult } from '../blocks/table-data-factory';
 
-export type BorderPreset = 'all' | 'none' | 'outside' | 'inside';
-
-export interface TableSizePickerResult {
-  rows: number;
-  cols: number;
-  borderPreset: BorderPreset;
-}
+export type { BorderPreset, TableSizePickerResult } from '../blocks/table-data-factory';
 
 export class TableSizePicker {
-  private overlay: HTMLDivElement | null = null;
+  private readonly modal = new Modal(this.host);
   private hoverRow = 0;
   private hoverCol = 0;
+  private locked = false;
+  private lockedRow = 0;
+  private lockedCol = 0;
   private borderPreset: BorderPreset = 'all';
   private sizeLabel: HTMLSpanElement | null = null;
   private gridContainer: HTMLDivElement | null = null;
-  private readonly disposers: (() => void)[] = [];
 
   constructor(
     private readonly host: HTMLElement,
@@ -24,11 +22,10 @@ export class TableSizePicker {
   ) {}
 
   isVisible(): boolean {
-    return this.overlay !== null;
+    return this.modal.isVisible();
   }
 
   show(
-    anchorRect: DOMRect,
     onConfirm: (result: TableSizePickerResult) => void,
     onCancel: () => void,
   ): void {
@@ -36,25 +33,23 @@ export class TableSizePicker {
 
     this.hoverRow = 2;
     this.hoverCol = 2;
+    this.locked = false;
+    this.lockedRow = 2;
+    this.lockedCol = 2;
     this.borderPreset = 'all';
 
-    this.overlay = document.createElement('div');
-    this.overlay.classList.add('idea-table-picker');
-
-    const title = document.createElement('div');
-    title.classList.add('idea-table-picker__title');
-    title.textContent = this.i18n.t('table.insertTable');
-    this.overlay.appendChild(title);
+    const body = document.createElement('div');
+    body.classList.add('idea-table-picker');
 
     this.sizeLabel = document.createElement('span');
     this.sizeLabel.classList.add('idea-table-picker__size-label');
     this.updateSizeLabel();
-    this.overlay.appendChild(this.sizeLabel);
+    body.appendChild(this.sizeLabel);
 
     this.gridContainer = document.createElement('div');
     this.gridContainer.classList.add('idea-table-picker__grid');
     this.buildGrid();
-    this.overlay.appendChild(this.gridContainer);
+    body.appendChild(this.gridContainer);
 
     const borderSection = document.createElement('div');
     borderSection.classList.add('idea-table-picker__borders');
@@ -75,13 +70,14 @@ export class TableSizePicker {
       { preset: 'inside', icon: 'border_inner', title: t('table.insideOnly') },
     ];
 
-    for (const { preset, icon, title: t } of presets) {
+    for (const { preset, icon, title: presetTitle } of presets) {
       const btn = document.createElement('button');
+      btn.type = 'button';
       btn.classList.add('idea-table-picker__border-btn');
       if (preset === this.borderPreset) {
         btn.classList.add('idea-table-picker__border-btn--active');
       }
-      btn.title = t;
+      btn.title = presetTitle;
       btn.appendChild(createIcon(icon));
 
       btn.addEventListener('mousedown', (e) => {
@@ -98,12 +94,13 @@ export class TableSizePicker {
     }
 
     borderSection.appendChild(borderButtons);
-    this.overlay.appendChild(borderSection);
+    body.appendChild(borderSection);
 
     const actions = document.createElement('div');
     actions.classList.add('idea-table-picker__actions');
 
     const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
     cancelBtn.classList.add('idea-table-picker__cancel-btn');
     cancelBtn.textContent = this.i18n.t('table.cancel');
     cancelBtn.addEventListener('mousedown', (e) => {
@@ -114,14 +111,17 @@ export class TableSizePicker {
     });
 
     const createBtn = document.createElement('button');
+    createBtn.type = 'button';
     createBtn.classList.add('idea-table-picker__create-btn');
     createBtn.textContent = this.i18n.t('table.create');
     createBtn.addEventListener('mousedown', (e) => {
       e.preventDefault();
       e.stopPropagation();
+      const effRow = this.effectiveRow();
+      const effCol = this.effectiveCol();
       onConfirm({
-        rows: this.hoverRow + 1,
-        cols: this.hoverCol + 1,
+        rows: effRow + 1,
+        cols: effCol + 1,
         borderPreset: this.borderPreset,
       });
       this.hide();
@@ -129,72 +129,86 @@ export class TableSizePicker {
 
     actions.appendChild(cancelBtn);
     actions.appendChild(createBtn);
-    this.overlay.appendChild(actions);
 
-    this.host.appendChild(this.overlay);
-    this.positionOverlay(anchorRect);
-
-    const onMousedown = (e: MouseEvent) => {
-      if (this.overlay && !this.overlay.contains(e.target as Node)) {
-        onCancel();
-        this.hide();
-      }
-    };
-
-    const onKeydown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        e.stopPropagation();
-        onCancel();
-        this.hide();
-      }
-    };
-
-    document.addEventListener('mousedown', onMousedown);
-    document.addEventListener('keydown', onKeydown, true);
-    this.disposers.push(
-      () => document.removeEventListener('mousedown', onMousedown),
-      () => document.removeEventListener('keydown', onKeydown, true),
-    );
+    this.modal.show({
+      title: this.i18n.t('table.createTableTitle'),
+      body,
+      footer: actions,
+      onDismiss: () => onCancel(),
+    });
   }
 
   hide(): void {
-    if (this.overlay) {
-      this.overlay.remove();
-      this.overlay = null;
-    }
+    this.modal.hide();
     this.gridContainer = null;
     this.sizeLabel = null;
-    this.disposers.forEach(fn => fn());
-    this.disposers.length = 0;
+  }
+
+  private effectiveRow(): number {
+    return this.locked ? this.lockedRow : this.hoverRow;
+  }
+
+  private effectiveCol(): number {
+    return this.locked ? this.lockedCol : this.hoverCol;
+  }
+
+  private updateGridLockedClass(): void {
+    if (!this.gridContainer) return;
+    this.gridContainer.classList.toggle('idea-table-picker__grid--locked', this.locked);
   }
 
   private buildGrid(): void {
     if (!this.gridContainer) return;
     this.gridContainer.innerHTML = '';
 
+    const effRow = this.effectiveRow();
+    const effCol = this.effectiveCol();
+
     for (let r = 0; r < 10; r++) {
       for (let c = 0; c < 10; c++) {
         const cell = document.createElement('div');
         cell.classList.add('idea-table-picker__cell');
-        if (r <= this.hoverRow && c <= this.hoverCol) {
+        if (r <= effRow && c <= effCol) {
           cell.classList.add('idea-table-picker__cell--active');
         }
 
         cell.addEventListener('mouseenter', () => {
+          if (this.locked) return;
           this.hoverRow = r;
           this.hoverCol = c;
           this.updateGridHighlight();
           this.updateSizeLabel();
         });
 
-        this.gridContainer!.appendChild(cell);
+        cell.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (this.locked) {
+            this.hoverRow = this.lockedRow;
+            this.hoverCol = this.lockedCol;
+            this.locked = false;
+          } else {
+            this.locked = true;
+            this.lockedRow = r;
+            this.lockedCol = c;
+            this.hoverRow = r;
+            this.hoverCol = c;
+          }
+          this.updateGridLockedClass();
+          this.updateGridHighlight();
+          this.updateSizeLabel();
+        });
+
+        this.gridContainer.appendChild(cell);
       }
     }
+    this.updateGridLockedClass();
   }
 
   private updateGridHighlight(): void {
     if (!this.gridContainer) return;
+    const effRow = this.effectiveRow();
+    const effCol = this.effectiveCol();
     const cells = this.gridContainer.children;
     for (let r = 0; r < 10; r++) {
       for (let c = 0; c < 10; c++) {
@@ -202,7 +216,7 @@ export class TableSizePicker {
         if (!cell) continue;
         cell.classList.toggle(
           'idea-table-picker__cell--active',
-          r <= this.hoverRow && c <= this.hoverCol,
+          r <= effRow && c <= effCol,
         );
       }
     }
@@ -210,31 +224,9 @@ export class TableSizePicker {
 
   private updateSizeLabel(): void {
     if (this.sizeLabel) {
-      this.sizeLabel.textContent = `${this.hoverCol + 1} \u00d7 ${this.hoverRow + 1}`;
+      const effCol = this.effectiveCol();
+      const effRow = this.effectiveRow();
+      this.sizeLabel.textContent = `${effCol + 1} \u00d7 ${effRow + 1}`;
     }
-  }
-
-  private positionOverlay(anchorRect: DOMRect): void {
-    if (!this.overlay) return;
-
-    const overlay = this.overlay;
-    overlay.style.top = `${anchorRect.bottom + 4}px`;
-    overlay.style.left = `${anchorRect.left}px`;
-
-    requestAnimationFrame(() => {
-      if (!overlay.isConnected) return;
-      const rect = overlay.getBoundingClientRect();
-
-      let top = anchorRect.bottom + 4;
-      if (top + rect.height > window.innerHeight) {
-        top = anchorRect.top - rect.height - 4;
-      }
-
-      let left = anchorRect.left;
-      left = Math.max(8, Math.min(left, window.innerWidth - rect.width - 8));
-
-      overlay.style.top = `${top}px`;
-      overlay.style.left = `${left}px`;
-    });
   }
 }

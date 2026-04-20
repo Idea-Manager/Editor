@@ -8,29 +8,9 @@ import { createDefaultCellBlocks } from './table-cell-defaults';
 import { cloneBlockNodeDeep } from '../engine/document-snapshot';
 import { deserializeCellBlocks } from './cell-block-deserialize';
 import { appendRenderedBlockList } from '../renderer/block-renderer';
+import { DEFAULT_TABLE_COL_WIDTH, defaultTableData } from './table-data-factory';
 
-const DEFAULT_COLS = 3;
-const DEFAULT_ROWS = 3;
-const DEFAULT_COL_WIDTH = 120;
 const MIN_COL_WEIGHT = 8;
-
-function createCell(): TableCell {
-  return {
-    id: generateId('cell'),
-    blocks: createDefaultCellBlocks(),
-    colspan: 1,
-    rowspan: 1,
-    absorbed: false,
-    style: { borderTop: true, borderRight: true, borderBottom: true, borderLeft: true },
-  };
-}
-
-function createRow(colCount: number): TableRow {
-  return {
-    id: generateId('row'),
-    cells: Array.from({ length: colCount }, () => createCell()),
-  };
-}
 
 function columnTemplatePercent(weights: number[]): string {
   const sum = weights.reduce((a, b) => a + b, 0) || 1;
@@ -43,10 +23,7 @@ export class TableBlock implements BlockDefinition<TableData> {
   readonly icon = 'table_chart';
 
   defaultData(): TableData {
-    return {
-      rows: Array.from({ length: DEFAULT_ROWS }, () => createRow(DEFAULT_COLS)),
-      columnWidths: Array.from({ length: DEFAULT_COLS }, () => DEFAULT_COL_WIDTH),
-    };
+    return defaultTableData();
   }
 
   render(node: BlockNode<TableData>, ctx: RenderContext): HTMLElement {
@@ -293,7 +270,13 @@ export class TableBlock implements BlockDefinition<TableData> {
       id: obj.id,
       type: 'table',
       data: {
-        columnWidths: [...(obj.data?.columnWidths ?? [DEFAULT_COL_WIDTH, DEFAULT_COL_WIDTH, DEFAULT_COL_WIDTH])],
+        columnWidths: [
+          ...(obj.data?.columnWidths ?? [
+            DEFAULT_TABLE_COL_WIDTH,
+            DEFAULT_TABLE_COL_WIDTH,
+            DEFAULT_TABLE_COL_WIDTH,
+          ]),
+        ],
         rows: (obj.data?.rows ?? []).map((r: TableRow) => ({
           id: r.id,
           cells: r.cells.map((c: LegacyCell) => ({

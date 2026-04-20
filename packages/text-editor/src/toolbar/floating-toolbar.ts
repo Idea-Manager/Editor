@@ -1,4 +1,4 @@
-import type { InlineMark, BlockType } from '@core/model/interfaces';
+import type { BlockNode, BlockSelection, InlineMark, BlockType } from '@core/model/interfaces';
 import type { EditorContext } from '../engine/editor-context';
 import type { PaletteItem } from '../blocks/block-registry';
 import { ToggleMarkCommand } from '../inline/toggle-mark-command';
@@ -6,7 +6,8 @@ import { InlineMarkManager } from '../inline/inline-mark-manager';
 import { ChangeBlockTypeCommand } from '../engine/commands/change-block-type-command';
 import { SetAlignCommand, type Alignment } from '../engine/commands/set-align-command';
 import { createIcon } from '../../../../src/util/icon';
-import { getBlockById } from '../engine/block-locator';
+import { getBlockById, getSelectionSpansInDocumentOrder } from '../engine/block-locator';
+import { SelectionSync, escapeSelectorAttr } from '../engine/selection-sync';
 
 const MARK_BUTTONS: { mark: InlineMark; icon: string }[] = [
   { mark: 'bold', icon: 'format_bold' },
@@ -28,11 +29,14 @@ export class FloatingToolbar {
   private showTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly markManager = new InlineMarkManager();
   private readonly disposers: (() => void)[] = [];
+  private readonly selectionSync: SelectionSync;
 
   constructor(
     private readonly ctx: EditorContext,
     private readonly host: HTMLElement,
+    selectionSync?: SelectionSync,
   ) {
+    this.selectionSync = selectionSync ?? new SelectionSync();
     this.attach();
   }
 
@@ -121,6 +125,24 @@ export class FloatingToolbar {
     });
   }
 
+  /** Unique blocks touched by the selection (paragraphs, headings, etc.), in span order. */
+  private getToolbarTargetBlocks(sel: BlockSelection): BlockNode[] {
+    const spans = getSelectionSpansInDocumentOrder(this.ctx.document, sel);
+    if (!spans || spans.length === 0) {
+      const b = getBlockById(this.ctx.document, sel.anchorBlockId);
+      return b ? [b] : [];
+    }
+    const seen = new Set<string>();
+    const out: BlockNode[] = [];
+    for (const s of spans) {
+      if (!seen.has(s.block.id)) {
+        seen.add(s.block.id);
+        out.push(s.block);
+      }
+    }
+    return out;
+  }
+
   private createOverlay(): void {
     this.overlay = document.createElement('div');
     this.overlay.classList.add('idea-floating-toolbar');
@@ -158,12 +180,10 @@ export class FloatingToolbar {
       this.overlay.appendChild(btn);
     }
 
-    const sel = this.ctx.selectionManager.get();
-    const block = sel ? getBlockById(this.ctx.document, sel.anchorBlockId) : null;
-
-    if (block && CONVERTIBLE_BLOCK_TYPES.includes(block.type)) {
+    if (this.getConvertiblePaletteItems().length > 0) {
       const sep2 = document.createElement('div');
       sep2.classList.add('idea-floating-toolbar__separator');
+      sep2.setAttribute('data-role', 'block-type-sep');
       this.overlay.appendChild(sep2);
 
       const select = document.createElement('select');
@@ -199,14 +219,27 @@ export class FloatingToolbar {
     const sel = this.ctx.selectionManager.get();
     if (!sel) return;
 
-    const block = getBlockById(this.ctx.document, sel.anchorBlockId);
-    if (!block) return;
+    const toolbarBlocks = this.getToolbarTargetBlocks(sel);
+    if (toolbarBlocks.length === 0) return;
 
-    const activeMarks = this.markManager.getActiveMarksInRange(
-      block,
-      Math.min(sel.anchorOffset, sel.focusOffset),
-      Math.max(sel.anchorOffset, sel.focusOffset),
-    );
+    const block = toolbarBlocks[0];
+
+    const spans = getSelectionSpansInDocumentOrder(this.ctx.document, sel);
+    let activeMarks: InlineMark[] = [];
+    if (spans && spans.length > 0) {
+      let acc: InlineMark[] | null = null;
+      for (const span of spans) {
+        const marks = this.markManager.getActiveMarksInRange(span.block, span.start, span.end);
+        acc = acc === null ? marks : acc.filter(m => marks.includes(m));
+      }
+      activeMarks = acc ?? [];
+    } else {
+      activeMarks = this.markManager.getActiveMarksInRange(
+        block,
+        Math.min(sel.anchorOffset, sel.focusOffset),
+        Math.max(sel.anchorOffset, sel.focusOffset),
+      );
+    }
 
     const buttons = this.overlay.querySelectorAll('.idea-floating-toolbar__btn[data-mark]');
     buttons.forEach(btn => {
@@ -214,62 +247,119 @@ export class FloatingToolbar {
       btn.classList.toggle('idea-floating-toolbar__btn--active', activeMarks.includes(mark));
     });
 
-    const currentAlign = (block.data as Record<string, unknown>).align as string ?? 'left';
     const alignBtns = this.overlay.querySelectorAll('.idea-floating-toolbar__btn--align[data-align]');
     alignBtns.forEach(btn => {
-      const a = btn.getAttribute('data-align');
-      btn.classList.toggle('idea-floating-toolbar__btn--active', a === currentAlign);
+      const a = btn.getAttribute('data-align') as Alignment;
+      const allMatch =
+        toolbarBlocks.length > 0 &&
+        toolbarBlocks.every(
+          b => ((b.data as Record<string, unknown>).align as string ?? 'left') === a,
+        );
+      btn.classList.toggle('idea-floating-toolbar__btn--active', allMatch);
     });
 
+    const convertibleBlocks = toolbarBlocks.filter(b => CONVERTIBLE_BLOCK_TYPES.includes(b.type));
     const select = this.overlay.querySelector('[data-role="block-type"]') as HTMLSelectElement;
+    const blockTypeSep = this.overlay.querySelector('[data-role="block-type-sep"]') as HTMLElement | null;
+    const showBlockType = convertibleBlocks.length > 0;
     if (select) {
-      const matched = this.findPaletteItemForBlock(block as { type: string; data: Record<string, unknown> });
-      if (matched) {
-        select.value = matched.id;
+      select.style.display = showBlockType ? '' : 'none';
+      if (showBlockType) {
+        const items = convertibleBlocks.map(b =>
+          this.findPaletteItemForBlock(b as { type: string; data: Record<string, unknown> }),
+        );
+        const first = items[0];
+        const allSame = first && items.every(i => i && i.id === first.id);
+        if (first && allSame) {
+          select.value = first.id;
+        } else if (convertibleBlocks[0]) {
+          const fb = this.findPaletteItemForBlock(
+            convertibleBlocks[0] as { type: string; data: Record<string, unknown> },
+          );
+          if (fb) select.value = fb.id;
+        }
       }
+    }
+    if (blockTypeSep) {
+      blockTypeSep.style.display = showBlockType ? '' : 'none';
     }
   }
 
   private positionOverlay(): void {
     if (!this.overlay) return;
 
-    const domSel = window.getSelection();
-    if (!domSel || domSel.rangeCount === 0) return;
+    const sel = this.ctx.selectionManager.get();
+    if (!sel || sel.isCollapsed) return;
 
-    const range = domSel.getRangeAt(0);
-    const rect = range.getBoundingClientRect();
+    let rect = this.selectionSync.getSelectionClientRect(this.ctx.rootElement, sel);
 
-    const toolbarWidth = 240;
-    const toolbarHeight = 42;
-
-    let top = rect.top - toolbarHeight - 8;
-    if (top < 0) {
-      top = rect.bottom + 8;
+    if (!rect || (rect.width === 0 && rect.height === 0)) {
+      const domSel = this.ctx.rootElement.ownerDocument.defaultView?.getSelection();
+      if (domSel && domSel.rangeCount > 0) {
+        rect = domSel.getRangeAt(0).getBoundingClientRect();
+      }
     }
 
-    let left = rect.left + (rect.width - toolbarWidth) / 2;
-    left = Math.max(8, Math.min(left, window.innerWidth - toolbarWidth - 8));
+    if (!rect || (rect.width === 0 && rect.height === 0)) {
+      const blockEl = this.ctx.rootElement.querySelector(
+        `[data-block-id="${escapeSelectorAttr(sel.anchorBlockId)}"]`,
+      );
+      if (blockEl) {
+        rect = blockEl.getBoundingClientRect();
+      }
+    }
 
-    this.overlay.style.top = `${top}px`;
-    this.overlay.style.left = `${left}px`;
+    if (!rect) return;
+
+    const margin = 8;
+    const vw = this.ctx.rootElement.ownerDocument.defaultView?.innerWidth ?? window.innerWidth;
+    const vh = this.ctx.rootElement.ownerDocument.defaultView?.innerHeight ?? window.innerHeight;
+
+    const place = () => {
+      const toolbarW = this.overlay!.offsetWidth || 240;
+      const toolbarH = this.overlay!.offsetHeight || 42;
+
+      let top = rect.top - toolbarH - margin;
+      const below = rect.bottom + margin;
+      if (top < margin) {
+        top = below;
+      }
+      if (top + toolbarH > vh - margin && rect.top - toolbarH - margin >= margin) {
+        top = rect.top - toolbarH - margin;
+      }
+      if (top + toolbarH > vh - margin) {
+        top = Math.max(margin, vh - toolbarH - margin);
+      }
+
+      let left = rect.left + rect.width / 2 - toolbarW / 2;
+      left = Math.max(margin, Math.min(left, vw - toolbarW - margin));
+
+      this.overlay!.style.top = `${top}px`;
+      this.overlay!.style.left = `${left}px`;
+    };
+
+    place();
+    requestAnimationFrame(place);
   }
 
   private toggleMark(mark: InlineMark): void {
     const sel = this.ctx.selectionManager.get();
     if (!sel || sel.isCollapsed) return;
 
-    const block = getBlockById(this.ctx.document, sel.anchorBlockId);
-    if (!block) return;
+    const spans = getSelectionSpansInDocumentOrder(this.ctx.document, sel);
+    if (!spans || spans.length === 0) return;
 
-    const cmd = new ToggleMarkCommand(
-      block,
-      mark,
-      Math.min(sel.anchorOffset, sel.focusOffset),
-      Math.max(sel.anchorOffset, sel.focusOffset),
-      this.markManager,
-    );
+    for (const span of spans) {
+      const cmd = new ToggleMarkCommand(
+        span.block,
+        mark,
+        span.start,
+        span.end,
+        this.markManager,
+      );
+      this.ctx.undoRedoManager.push(cmd);
+    }
 
-    this.ctx.undoRedoManager.push(cmd);
     this.ctx.eventBus.emit('doc:change', { document: this.ctx.document });
     this.updateActiveStates();
   }
@@ -278,13 +368,10 @@ export class FloatingToolbar {
     const sel = this.ctx.selectionManager.get();
     if (!sel) return;
 
-    const cmd = new SetAlignCommand(
-      this.ctx.document,
-      sel.anchorBlockId,
-      align,
-    );
+    for (const b of this.getToolbarTargetBlocks(sel)) {
+      this.ctx.undoRedoManager.push(new SetAlignCommand(this.ctx.document, b.id, align));
+    }
 
-    this.ctx.undoRedoManager.push(cmd);
     this.ctx.eventBus.emit('doc:change', { document: this.ctx.document });
     this.updateActiveStates();
   }
@@ -293,15 +380,20 @@ export class FloatingToolbar {
     const sel = this.ctx.selectionManager.get();
     if (!sel) return;
 
-    const cmd = new ChangeBlockTypeCommand(
-      this.ctx.document,
-      sel.anchorBlockId,
-      newType,
-      this.ctx.blockRegistry,
-      dataOverride,
-    );
+    for (const b of this.getToolbarTargetBlocks(sel)) {
+      if (!CONVERTIBLE_BLOCK_TYPES.includes(b.type)) continue;
+      this.ctx.undoRedoManager.push(
+        new ChangeBlockTypeCommand(
+          this.ctx.document,
+          b.id,
+          newType,
+          this.ctx.blockRegistry,
+          dataOverride,
+        ),
+      );
+    }
 
-    this.ctx.undoRedoManager.push(cmd);
     this.ctx.eventBus.emit('doc:change', { document: this.ctx.document });
+    this.updateActiveStates();
   }
 }

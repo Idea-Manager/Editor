@@ -1,4 +1,4 @@
-import type { BlockNode, DocumentNode, BlockType } from '@core/model/interfaces';
+import type { DocumentNode, BlockType, TextRun } from '@core/model/interfaces';
 import type { Command } from '@core/commands/command';
 import type { OperationRecord } from '@core/operation-log/interfaces';
 import { generateId } from '@core/id';
@@ -9,6 +9,7 @@ export class ChangeBlockTypeCommand implements Command {
   readonly operationRecords: OperationRecord[] = [];
   private oldType: BlockType = 'paragraph';
   private oldData: Record<string, unknown> = {};
+  private oldChildren: TextRun[] = [];
 
   constructor(
     private readonly doc: DocumentNode,
@@ -24,10 +25,17 @@ export class ChangeBlockTypeCommand implements Command {
 
     this.oldType = block.type;
     this.oldData = { ...block.data };
+    this.oldChildren = block.children.map(run => ({
+      ...run,
+      data: { text: run.data.text, marks: [...run.data.marks] },
+    }));
 
     const def = this.registry.get(this.newType);
     block.type = this.newType;
     block.data = this.dataOverride ? { ...this.dataOverride } : def.defaultData();
+    if (this.newType === 'table') {
+      block.children = [];
+    }
 
     this.operationRecords.push(
       {
@@ -65,5 +73,9 @@ export class ChangeBlockTypeCommand implements Command {
 
     block.type = this.oldType;
     block.data = { ...this.oldData };
+    block.children = this.oldChildren.map(run => ({
+      ...run,
+      data: { text: run.data.text, marks: [...run.data.marks] },
+    }));
   }
 }

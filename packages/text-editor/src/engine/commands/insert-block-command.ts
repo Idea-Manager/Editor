@@ -31,11 +31,14 @@ export class InsertBlockCommand implements Command {
         id: this.newBlockId,
         type: this.newType,
         data: this.dataOverride ? { ...this.dataOverride } : def.defaultData(),
-        children: [{
-          id: generateId('txt'),
-          type: 'text',
-          data: { text: '', marks: [] },
-        }],
+        children:
+          this.newType === 'table'
+            ? []
+            : [{
+                id: generateId('txt'),
+                type: 'text',
+                data: { text: '', marks: [] },
+              }],
         meta: { createdAt: Date.now(), version: 1 },
       };
 

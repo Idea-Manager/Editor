@@ -1,5 +1,42 @@
 import type { BlockSelection } from '@core/model/interfaces';
 
+/** Safe for `[data-block-id="..."]` in querySelector; works in Jest where `CSS` may be missing. */
+export function escapeSelectorAttr(value: string): string {
+  if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+    return CSS.escape(value);
+  }
+  return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
+function compareDomPoints(doc: Document, a: Node, ao: number, b: Node, bo: number): number {
+  const r = doc.createRange();
+  r.setStart(a, ao);
+  r.setEnd(b, bo);
+  if (!r.collapsed) return -1;
+  r.setStart(b, bo);
+  r.setEnd(a, ao);
+  if (!r.collapsed) return 1;
+  return 0;
+}
+
+function unionClientRects(range: Range): DOMRect {
+  const rects = Array.from(range.getClientRects()).filter(r => r.width > 0 || r.height > 0);
+  if (rects.length === 0) {
+    return range.getBoundingClientRect();
+  }
+  let minL = Infinity;
+  let minT = Infinity;
+  let maxR = -Infinity;
+  let maxB = -Infinity;
+  for (const r of rects) {
+    minL = Math.min(minL, r.left);
+    minT = Math.min(minT, r.top);
+    maxR = Math.max(maxR, r.right);
+    maxB = Math.max(maxB, r.bottom);
+  }
+  return new DOMRect(minL, minT, maxR - minL, maxB - minT);
+}
+
 export class SelectionSync {
   syncToDOM(sel: BlockSelection, rootEl: HTMLElement): void {
     const win = rootEl.ownerDocument.defaultView;
@@ -52,12 +89,61 @@ export class SelectionSync {
     };
   }
 
+  /**
+   * Client rect for the selection from the same DOM mapping as syncToDOM.
+   * Prefer over window.getSelection() when the native range has no geometry (e.g. table cells).
+   */
+  getSelectionClientRect(rootEl: HTMLElement, sel: BlockSelection): DOMRect | null {
+    if (sel.isCollapsed) return null;
+
+    const doc = rootEl.ownerDocument;
+    const anchorResult = this.findTextNodeAtOffset(rootEl, sel.anchorBlockId, sel.anchorOffset);
+    const focusResult = this.findTextNodeAtOffset(rootEl, sel.focusBlockId, sel.focusOffset);
+    if (!anchorResult || !focusResult) return null;
+
+    const cmp = compareDomPoints(
+      doc,
+      anchorResult.node,
+      anchorResult.offset,
+      focusResult.node,
+      focusResult.offset,
+    );
+
+    const range = doc.createRange();
+    try {
+      if (cmp <= 0) {
+        range.setStart(anchorResult.node, anchorResult.offset);
+        range.setEnd(focusResult.node, focusResult.offset);
+      } else {
+        range.setStart(focusResult.node, focusResult.offset);
+        range.setEnd(anchorResult.node, anchorResult.offset);
+      }
+    } catch {
+      return null;
+    }
+
+    let rect = unionClientRects(range);
+    if (rect.width === 0 && rect.height === 0) {
+      rect = range.getBoundingClientRect();
+    }
+
+    if (rect.width === 0 && rect.height === 0) {
+      const blockEl = rootEl.querySelector(`[data-block-id="${escapeSelectorAttr(sel.anchorBlockId)}"]`);
+      if (blockEl) {
+        rect = blockEl.getBoundingClientRect();
+      }
+    }
+
+    if (rect.width === 0 && rect.height === 0) return null;
+    return rect;
+  }
+
   private findTextNodeAtOffset(
     rootEl: HTMLElement,
     blockId: string,
     offset: number,
   ): { node: Node; offset: number } | null {
-    const blockEl = rootEl.querySelector(`[data-block-id="${blockId}"]`);
+    const blockEl = this.findBlockElement(rootEl, blockId);
     if (!blockEl) return null;
 
     const walker = document.createTreeWalker(blockEl, NodeFilter.SHOW_TEXT);
@@ -79,6 +165,22 @@ export class SelectionSync {
     }
 
     return { node: blockEl, offset: 0 };
+  }
+
+  /** Resolves `[data-block-id]`; if multiple, prefer the one containing the live selection anchor. */
+  private findBlockElement(rootEl: HTMLElement, blockId: string): Element | null {
+    const matches = rootEl.querySelectorAll(`[data-block-id="${escapeSelectorAttr(blockId)}"]`);
+    if (matches.length === 0) return null;
+    if (matches.length === 1) return matches[0];
+
+    const win = rootEl.ownerDocument.defaultView;
+    const anchor = win?.getSelection()?.anchorNode;
+    if (anchor) {
+      for (const el of matches) {
+        if (el.contains(anchor)) return el;
+      }
+    }
+    return matches[0];
   }
 
   private resolveBlockOffset(

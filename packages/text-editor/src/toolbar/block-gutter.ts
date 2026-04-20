@@ -1,15 +1,14 @@
-import type { BlockType, TableData, TableCell, TableRow, CellBorderStyle } from '@core/model/interfaces';
-import { createDefaultCellBlocks } from '../blocks/table-cell-defaults';
+import type { BlockType } from '@core/model/interfaces';
 import type { EditorContext } from '../engine/editor-context';
 import type { SlashPalette } from './slash-palette';
 import { BlockTypeMenu } from './block-type-menu';
-import { TableSizePicker, type BorderPreset, type TableSizePickerResult } from './table-size-picker';
+import { TableSizePicker, type TableSizePickerResult } from './table-size-picker';
 import { InsertBlockCommand } from '../engine/commands/insert-block-command';
 import { ChangeBlockTypeCommand } from '../engine/commands/change-block-type-command';
 import { MoveBlockCommand } from '../engine/commands/move-block-command';
 import { createIcon } from '../../../../src/util/icon';
-import { generateId } from '@core/id';
 import { findBlockLocation, getFirstTableCellFirstBlockId } from '../engine/block-locator';
+import { buildTableDataFromSizePicker } from '../blocks/table-data-factory';
 
 export class BlockGutter {
   private gutterEl: HTMLDivElement | null = null;
@@ -263,14 +262,13 @@ export class BlockGutter {
         }
       },
       onTableSelect: () => {
-        this.openTablePicker(anchorRect, blockId, mode);
+        this.openTablePicker(blockId, mode);
       },
     });
   }
 
-  private openTablePicker(anchorRect: DOMRect, blockId: string, mode: 'insert' | 'change'): void {
+  private openTablePicker(blockId: string, mode: 'insert' | 'change'): void {
     this.tableSizePicker.show(
-      anchorRect,
       (result: TableSizePickerResult) => {
         if (mode === 'insert') {
           this.insertTableBlock(blockId, result);
@@ -317,7 +315,7 @@ export class BlockGutter {
 
     const newBlock = findBlockLocation(this.ctx.document, cmd.getNewBlockId())?.block;
     if (newBlock?.type === 'table') {
-      newBlock.data = this.buildTableData(result);
+      newBlock.data = buildTableDataFromSizePicker(result);
       const focusId = getFirstTableCellFirstBlockId(newBlock);
       if (focusId) this.ctx.selectionManager.setCollapsed(focusId, 0);
     }
@@ -336,73 +334,12 @@ export class BlockGutter {
 
     const block = findBlockLocation(this.ctx.document, blockId)?.block;
     if (block?.type === 'table') {
-      block.data = this.buildTableData(result);
+      block.data = buildTableDataFromSizePicker(result);
       const focusId = getFirstTableCellFirstBlockId(block);
       if (focusId) this.ctx.selectionManager.setCollapsed(focusId, 0);
     }
 
     this.ctx.eventBus.emit('doc:change', { document: this.ctx.document });
-  }
-
-  private buildTableData(result: TableSizePickerResult): TableData {
-    const rows: TableRow[] = Array.from({ length: result.rows }, (_, rowIdx) =>
-      ({
-        id: generateId('row'),
-        cells: Array.from({ length: result.cols }, (__, colIdx) => {
-          const style = this.cellBorderForPreset(
-            result.borderPreset,
-            rowIdx,
-            colIdx,
-            result.rows,
-            result.cols,
-          );
-          return {
-            id: generateId('cell'),
-            blocks: createDefaultCellBlocks(),
-            colspan: 1,
-            rowspan: 1,
-            absorbed: false,
-            style,
-          } satisfies TableCell;
-        }),
-      } satisfies TableRow),
-    );
-
-    return {
-      rows,
-      columnWidths: Array.from({ length: result.cols }, () => 120),
-    };
-  }
-
-  private cellBorderForPreset(
-    preset: BorderPreset,
-    row: number,
-    col: number,
-    totalRows: number,
-    totalCols: number,
-  ): CellBorderStyle {
-    switch (preset) {
-      case 'all':
-        return { borderTop: true, borderRight: true, borderBottom: true, borderLeft: true };
-      case 'none':
-        return { borderTop: false, borderRight: false, borderBottom: false, borderLeft: false };
-      case 'outside':
-        return {
-          borderTop: row === 0,
-          borderRight: col === totalCols - 1,
-          borderBottom: row === totalRows - 1,
-          borderLeft: col === 0,
-        };
-      case 'inside':
-        return {
-          borderTop: row > 0,
-          borderRight: col < totalCols - 1,
-          borderBottom: row < totalRows - 1,
-          borderLeft: col > 0,
-        };
-      default:
-        return { borderTop: true, borderRight: true, borderBottom: true, borderLeft: true };
-    }
   }
 
   // ── Drag & Drop ──────────────────────────────────────

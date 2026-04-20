@@ -3,6 +3,8 @@ import type { Command } from '@core/commands/command';
 import type { OperationRecord } from '@core/operation-log/interfaces';
 import { generateId } from '@core/id';
 import { createDefaultCellBlocks } from '../../blocks/table-cell-defaults';
+import { tableHasMergedCells } from '../../blocks/table-merge-guards';
+import { findTableBlock } from '../block-locator';
 
 export class InsertRowCommand implements Command {
   readonly operationRecords: OperationRecord[] = [];
@@ -15,10 +17,11 @@ export class InsertRowCommand implements Command {
   ) {}
 
   execute(): void {
-    const block = this.doc.children.find(b => b.id === this.blockId);
-    if (!block || block.type !== 'table') return;
+    const block = findTableBlock(this.doc, this.blockId);
+    if (!block) return;
 
     const data = block.data as TableData;
+    if (tableHasMergedCells(data)) return;
     const colCount = data.columnWidths.length;
 
     const newRow: TableRow = {
@@ -51,8 +54,8 @@ export class InsertRowCommand implements Command {
   }
 
   undo(): void {
-    const block = this.doc.children.find(b => b.id === this.blockId);
-    if (!block || block.type !== 'table') return;
+    const block = findTableBlock(this.doc, this.blockId);
+    if (!block) return;
 
     const data = block.data as TableData;
     const idx = data.rows.findIndex(r => r.id === this.insertedRowId);

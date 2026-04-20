@@ -47,6 +47,7 @@ export const en: TranslationDictionary = {
 
   // Table size picker
   'table.insertTable': 'Insert Table',
+  'table.createTableTitle': 'Create table',
   'table.borders': 'Borders',
   'table.allBorders': 'All Borders',
   'table.noBorders': 'No Borders',
@@ -59,6 +60,7 @@ export const en: TranslationDictionary = {
   'embed.placeholder': 'Paste a URL (YouTube, Figma, Miro, Google Maps...)',
   'embed.button': 'Embed',
   'embed.open': 'Open ',
+  'embed.watchYoutube': 'Watch on YouTube',
   'embed.remove': 'Remove embed',
 
   // Top bar

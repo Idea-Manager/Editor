@@ -107,7 +107,7 @@ export class TextEditor extends HTMLElement {
     this.inputInterceptor.setSlashPalette(this.slashPalette);
 
     this.clipboardHandler = new ClipboardHandler(this.ctx, this.blockRenderer, this.selectionSync);
-    this.floatingToolbar = new FloatingToolbar(this.ctx, this);
+    this.floatingToolbar = new FloatingToolbar(this.ctx, this, this.selectionSync);
     this.tableContextMenu = new TableContextMenu(this.ctx, this);
     this.blockGutter = new BlockGutter(this.ctx, this);
     this.blockGutter.setSlashPalette(this.slashPalette);

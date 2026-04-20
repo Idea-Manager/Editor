@@ -1,6 +1,16 @@
 import type { DocumentNode, BlockNode, ListItemData, ListType } from '@core/model/interfaces';
 import type { RenderContext } from '../engine/render-context';
 import type { BlockRegistry } from '../blocks/block-registry';
+import { pruneEmbedStableRoots } from '../blocks/embed-block';
+
+function collectDataBlockIds(root: HTMLElement): Set<string> {
+  const ids = new Set<string>();
+  for (const el of root.querySelectorAll('[data-block-id]')) {
+    const id = el.getAttribute('data-block-id');
+    if (id) ids.add(id);
+  }
+  return ids;
+}
 
 function listTagForType(listType: ListType): 'ol' | 'ul' {
   return listType === 'ordered' ? 'ol' : 'ul';
@@ -103,6 +113,7 @@ export class BlockRenderer {
     this.renderedVersions.clear();
     rootEl.innerHTML = '';
     appendRenderedBlockList(this.registry, doc.children, rootEl, ctx, this.renderedVersions);
+    pruneEmbedStableRoots(collectDataBlockIds(rootEl));
   }
 
   renderBlock(block: BlockNode, ctx: RenderContext): HTMLElement {

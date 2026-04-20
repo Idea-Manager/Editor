@@ -2,6 +2,8 @@ import type { DocumentNode, TableData, TableCell } from '@core/model/interfaces'
 import type { Command } from '@core/commands/command';
 import type { OperationRecord } from '@core/operation-log/interfaces';
 import { generateId } from '@core/id';
+import { tableHasMergedCells } from '../../blocks/table-merge-guards';
+import { findTableBlock } from '../block-locator';
 
 export class DeleteColumnCommand implements Command {
   readonly operationRecords: OperationRecord[] = [];
@@ -15,11 +17,12 @@ export class DeleteColumnCommand implements Command {
   ) {}
 
   execute(): void {
-    const block = this.doc.children.find(b => b.id === this.blockId);
-    if (!block || block.type !== 'table') return;
+    const block = findTableBlock(this.doc, this.blockId);
+    if (!block) return;
 
     const data = block.data as TableData;
     if (data.columnWidths.length <= 1) return;
+    if (tableHasMergedCells(data)) return;
 
     this.deletedWidth = data.columnWidths[this.colIndex];
     data.columnWidths.splice(this.colIndex, 1);
@@ -46,8 +49,8 @@ export class DeleteColumnCommand implements Command {
   }
 
   undo(): void {
-    const block = this.doc.children.find(b => b.id === this.blockId);
-    if (!block || block.type !== 'table') return;
+    const block = findTableBlock(this.doc, this.blockId);
+    if (!block) return;
 
     const data = block.data as TableData;
     data.columnWidths.splice(this.colIndex, 0, this.deletedWidth);

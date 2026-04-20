@@ -1,15 +1,14 @@
-import type { BlockType, TableData, TableRow, TableCell, CellBorderStyle } from '@core/model/interfaces';
+import type { BlockType } from '@core/model/interfaces';
 import type { EditorContext } from '../engine/editor-context';
 import type { PaletteItem } from '../blocks/block-registry';
 import { ChangeBlockTypeCommand } from '../engine/commands/change-block-type-command';
 import { InsertBlockCommand } from '../engine/commands/insert-block-command';
 import { createIcon } from '../../../../src/util/icon';
-import { TableSizePicker, type BorderPreset, type TableSizePickerResult } from './table-size-picker';
+import { TableSizePicker, type TableSizePickerResult } from './table-size-picker';
 import { showEmbedUrlModal } from './embed-url-modal';
 import { embedDataFromUrl } from '../blocks/embed-url';
-import { generateId } from '@core/id';
 import { findBlockLocation, getFirstTableCellFirstBlockId } from '../engine/block-locator';
-import { createDefaultCellBlocks } from '../blocks/table-cell-defaults';
+import { buildTableDataFromSizePicker } from '../blocks/table-data-factory';
 
 export type SlashPaletteMode = 'change' | 'insert';
 
@@ -220,26 +219,11 @@ export class SlashPalette {
   }
 
   private showTablePicker(): void {
-    let pickerAnchor: DOMRect;
-    if (this.anchorRect) {
-      pickerAnchor = this.anchorRect;
-    } else {
-      const sel = window.getSelection();
-      if (sel && sel.rangeCount > 0) {
-        pickerAnchor = sel.getRangeAt(0).getBoundingClientRect();
-      } else if (this.overlay) {
-        pickerAnchor = this.overlay.getBoundingClientRect();
-      } else {
-        pickerAnchor = new DOMRect(0, 0, 0, 0);
-      }
-    }
-
     const blockId = this.blockId;
     const mode = this.mode;
     this.hide();
 
     this.tableSizePicker.show(
-      pickerAnchor,
       (result: TableSizePickerResult) => {
         if (mode === 'insert') {
           this.insertTableBlock(blockId, result);
@@ -308,7 +292,7 @@ export class SlashPalette {
 
     const updatedBlock = findBlockLocation(this.ctx.document, blockId)?.block;
     if (updatedBlock?.type === 'table') {
-      updatedBlock.data = this.buildTableData(result);
+      updatedBlock.data = buildTableDataFromSizePicker(result);
       const focusId = getFirstTableCellFirstBlockId(updatedBlock);
       if (focusId) this.ctx.selectionManager.setCollapsed(focusId, 0);
     }
@@ -327,61 +311,12 @@ export class SlashPalette {
 
     const newBlock = findBlockLocation(this.ctx.document, cmd.getNewBlockId())?.block;
     if (newBlock?.type === 'table') {
-      newBlock.data = this.buildTableData(result);
+      newBlock.data = buildTableDataFromSizePicker(result);
       const focusId = getFirstTableCellFirstBlockId(newBlock);
       if (focusId) this.ctx.selectionManager.setCollapsed(focusId, 0);
     }
 
     this.ctx.eventBus.emit('doc:change', { document: this.ctx.document });
-  }
-
-  private buildTableData(result: TableSizePickerResult): TableData {
-    const rows: TableRow[] = Array.from({ length: result.rows }, (_, rowIdx) =>
-      ({
-        id: generateId('row'),
-        cells: Array.from({ length: result.cols }, (__, colIdx) => {
-          const style = this.cellBorderForPreset(
-            result.borderPreset, rowIdx, colIdx, result.rows, result.cols,
-          );
-          return {
-            id: generateId('cell'),
-            blocks: createDefaultCellBlocks(),
-            colspan: 1,
-            rowspan: 1,
-            absorbed: false,
-            style,
-          } satisfies TableCell;
-        }),
-      } satisfies TableRow),
-    );
-    return {
-      rows,
-      columnWidths: Array.from({ length: result.cols }, () => 120),
-    };
-  }
-
-  private cellBorderForPreset(
-    preset: BorderPreset, row: number, col: number,
-    totalRows: number, totalCols: number,
-  ): CellBorderStyle {
-    switch (preset) {
-      case 'all':
-        return { borderTop: true, borderRight: true, borderBottom: true, borderLeft: true };
-      case 'none':
-        return { borderTop: false, borderRight: false, borderBottom: false, borderLeft: false };
-      case 'outside':
-        return {
-          borderTop: row === 0, borderRight: col === totalCols - 1,
-          borderBottom: row === totalRows - 1, borderLeft: col === 0,
-        };
-      case 'inside':
-        return {
-          borderTop: row > 0, borderRight: col < totalCols - 1,
-          borderBottom: row < totalRows - 1, borderLeft: col > 0,
-        };
-      default:
-        return { borderTop: true, borderRight: true, borderBottom: true, borderLeft: true };
-    }
   }
 
   private createOverlay(): void {

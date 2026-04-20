@@ -52,6 +52,15 @@ export function detectProvider(url: string): ProviderInfo | null {
   return null;
 }
 
+/** Resolves a YouTube video id from watch, short, or /embed/ URLs (editor uses a poster, not the embed player). */
+export function extractYouTubeVideoId(url: string): string | null {
+  const embed = url.match(/youtube\.com\/embed\/([\w-]+)/);
+  if (embed) return embed[1];
+  const watch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/);
+  if (watch) return watch[1];
+  return null;
+}
+
 export function isValidUrl(str: string): boolean {
   try {
     const u = new URL(str);

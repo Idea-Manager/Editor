@@ -4,6 +4,7 @@ import type { OperationRecord } from '@core/operation-log/interfaces';
 import { generateId } from '@core/id';
 import { cloneBlockNodeDeep } from '../document-snapshot';
 import { createDefaultCellBlocks } from '../../blocks/table-cell-defaults';
+import { findTableBlock } from '../block-locator';
 
 export interface CellRange {
   startRow: number;
@@ -23,8 +24,8 @@ export class MergeCellsCommand implements Command {
   ) {}
 
   execute(): void {
-    const block = this.doc.children.find(b => b.id === this.blockId);
-    if (!block || block.type !== 'table') return;
+    const block = findTableBlock(this.doc, this.blockId);
+    if (!block) return;
 
     const data = block.data as TableData;
     const { startRow, startCol, endRow, endCol } = this.range;
@@ -85,8 +86,8 @@ export class MergeCellsCommand implements Command {
   }
 
   undo(): void {
-    const block = this.doc.children.find(b => b.id === this.blockId);
-    if (!block || block.type !== 'table') return;
+    const block = findTableBlock(this.doc, this.blockId);
+    if (!block) return;
 
     const data = block.data as TableData;
     for (const snap of this.snapshot) {

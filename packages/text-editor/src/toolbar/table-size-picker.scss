@@ -1,22 +1,9 @@
 @use '../../../../src/styles/variables' as *;
 
 .idea-table-picker {
-  position: fixed;
-  z-index: 105;
-  background: $color-bg;
-  border: 1px solid $color-border;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba($black, 0.08);
-  padding: $spacing-sm $spacing-md;
   font-family: $font-family-base;
   font-size: $font-size-sm;
   user-select: none;
-
-  &__title {
-    font-weight: 600;
-    color: $color-text;
-    margin-bottom: $spacing-xs;
-  }
 
   &__size-label {
     display: block;
@@ -32,6 +19,10 @@
     grid-template-rows: repeat(10, 24px);
     gap: 2px;
     margin-bottom: $spacing-sm;
+
+    &--locked .idea-table-picker__cell {
+      cursor: default;
+    }
   }
 
   &__cell {
@@ -50,7 +41,7 @@
   }
 
   &__borders {
-    margin-bottom: $spacing-sm;
+    margin-bottom: 0;
   }
 
   &__borders-label {

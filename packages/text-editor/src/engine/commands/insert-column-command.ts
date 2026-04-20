@@ -3,8 +3,9 @@ import type { Command } from '@core/commands/command';
 import type { OperationRecord } from '@core/operation-log/interfaces';
 import { generateId } from '@core/id';
 import { createDefaultCellBlocks } from '../../blocks/table-cell-defaults';
-
-const DEFAULT_COL_WIDTH = 120;
+import { DEFAULT_TABLE_COL_WIDTH } from '../../blocks/table-data-factory';
+import { tableHasMergedCells } from '../../blocks/table-merge-guards';
+import { findTableBlock } from '../block-locator';
 
 export class InsertColumnCommand implements Command {
   readonly operationRecords: OperationRecord[] = [];
@@ -16,13 +17,14 @@ export class InsertColumnCommand implements Command {
   ) {}
 
   execute(): void {
-    const block = this.doc.children.find(b => b.id === this.blockId);
-    if (!block || block.type !== 'table') return;
+    const block = findTableBlock(this.doc, this.blockId);
+    if (!block) return;
 
     const data = block.data as TableData;
+    if (tableHasMergedCells(data)) return;
     const insertAt = this.afterColIndex + 1;
 
-    data.columnWidths.splice(insertAt, 0, DEFAULT_COL_WIDTH);
+    data.columnWidths.splice(insertAt, 0, DEFAULT_TABLE_COL_WIDTH);
 
     for (const row of data.rows) {
       const newCell: TableCell = {
@@ -52,8 +54,8 @@ export class InsertColumnCommand implements Command {
   }
 
   undo(): void {
-    const block = this.doc.children.find(b => b.id === this.blockId);
-    if (!block || block.type !== 'table') return;
+    const block = findTableBlock(this.doc, this.blockId);
+    if (!block) return;
 
     const data = block.data as TableData;
     const removeAt = this.afterColIndex + 1;

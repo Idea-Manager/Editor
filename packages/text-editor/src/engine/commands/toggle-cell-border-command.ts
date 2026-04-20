@@ -1,13 +1,21 @@
-import type { DocumentNode, TableData, CellBorderStyle } from '@core/model/interfaces';
+import type { DocumentNode, TableData, TableCell } from '@core/model/interfaces';
 import type { Command } from '@core/commands/command';
 import type { OperationRecord } from '@core/operation-log/interfaces';
 import { generateId } from '@core/id';
+import { findTableBlock } from '../block-locator';
+import {
+  applyBorderWithAdjacentSync,
+  findCellGridPosition,
+  type BorderSide,
+} from '../../blocks/table-border-sync';
 
-export type BorderSide = 'borderTop' | 'borderRight' | 'borderBottom' | 'borderLeft';
+export type { BorderSide };
+
+type BorderPatch = { cellId: string; side: BorderSide; oldValue: boolean };
 
 export class ToggleCellBorderCommand implements Command {
   readonly operationRecords: OperationRecord[] = [];
-  private oldValue = true;
+  private patches: BorderPatch[] = [];
 
   constructor(
     private readonly doc: DocumentNode,
@@ -17,44 +25,60 @@ export class ToggleCellBorderCommand implements Command {
   ) {}
 
   execute(): void {
-    const block = this.doc.children.find(b => b.id === this.blockId);
-    if (!block || block.type !== 'table') return;
+    const block = findTableBlock(this.doc, this.blockId);
+    if (!block) return;
 
     const data = block.data as TableData;
-    for (const row of data.rows) {
-      const cell = row.cells.find(c => c.id === this.cellId);
-      if (cell) {
-        this.oldValue = cell.style[this.side];
-        cell.style[this.side] = !this.oldValue;
+    const pos = findCellGridPosition(data, this.cellId);
+    if (!pos) return;
 
-        this.operationRecords.push({
-          id: generateId('op'),
-          actorId: 'local',
-          timestamp: Date.now(),
-          wallClock: Date.now(),
-          type: 'node:update',
-          payload: {
-            nodeId: this.cellId,
-            path: `style.${this.side}`,
-            oldValue: this.oldValue,
-            newValue: cell.style[this.side],
-          },
-        });
-        return;
-      }
-    }
+    const cell = data.rows[pos.row].cells[pos.col];
+    const oldPrimary = cell.style[this.side];
+    const newValue = !oldPrimary;
+
+    this.patches = [];
+
+    const recordPatch = (cellId: string, side: BorderSide, oldValue: boolean) => {
+      this.patches.push({ cellId, side, oldValue });
+    };
+
+    const apply = (target: TableCell, s: BorderSide, v: boolean) => {
+      target.style[s] = v;
+    };
+
+    recordPatch(cell.id, this.side, oldPrimary);
+    cell.style[this.side] = newValue;
+
+    applyBorderWithAdjacentSync(data, pos.row, pos.col, this.side, newValue, recordPatch, apply);
+
+    this.operationRecords.push({
+      id: generateId('op'),
+      actorId: 'local',
+      timestamp: Date.now(),
+      wallClock: Date.now(),
+      type: 'node:update',
+      payload: {
+        nodeId: this.cellId,
+        path: `style.${this.side}`,
+        oldValue: oldPrimary,
+        newValue,
+      },
+    });
   }
 
   undo(): void {
-    const block = this.doc.children.find(b => b.id === this.blockId);
-    if (!block || block.type !== 'table') return;
+    const block = findTableBlock(this.doc, this.blockId);
+    if (!block) return;
 
     const data = block.data as TableData;
-    for (const row of data.rows) {
-      const cell = row.cells.find(c => c.id === this.cellId);
-      if (cell) {
-        cell.style[this.side] = this.oldValue;
-        return;
+    for (let i = this.patches.length - 1; i >= 0; i--) {
+      const { cellId, side, oldValue } = this.patches[i];
+      for (const row of data.rows) {
+        const c = row.cells.find(x => x.id === cellId);
+        if (c) {
+          c.style[side] = oldValue;
+          break;
+        }
       }
     }
   }

@@ -2,6 +2,7 @@ import type { DocumentNode, TableData } from '@core/model/interfaces';
 import type { Command } from '@core/commands/command';
 import type { OperationRecord } from '@core/operation-log/interfaces';
 import { generateId } from '@core/id';
+import { findTableBlock } from '../block-locator';
 
 export class SetCellBackgroundCommand implements Command {
   readonly operationRecords: OperationRecord[] = [];
@@ -15,8 +16,8 @@ export class SetCellBackgroundCommand implements Command {
   ) {}
 
   execute(): void {
-    const block = this.doc.children.find(b => b.id === this.blockId);
-    if (!block || block.type !== 'table') return;
+    const block = findTableBlock(this.doc, this.blockId);
+    if (!block) return;
 
     const data = block.data as TableData;
     for (const row of data.rows) {
@@ -44,8 +45,8 @@ export class SetCellBackgroundCommand implements Command {
   }
 
   undo(): void {
-    const block = this.doc.children.find(b => b.id === this.blockId);
-    if (!block || block.type !== 'table') return;
+    const block = findTableBlock(this.doc, this.blockId);
+    if (!block) return;
 
     const data = block.data as TableData;
     for (const row of data.rows) {
