@@ -4,16 +4,24 @@ export interface ProviderInfo {
   transformUrl?: (url: string) => string;
 }
 
+/** Normalize common YouTube URL shapes to the canonical embed player URL. */
+function youtubeToEmbedUrl(url: string): string {
+  const embed = url.match(/youtube\.com\/embed\/([\w-]+)/);
+  if (embed) return `https://www.youtube.com/embed/${embed[1]}`;
+  const shorts = url.match(/youtube\.com\/shorts\/([\w-]+)/);
+  if (shorts) return `https://www.youtube.com/embed/${shorts[1]}`;
+  const watch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/);
+  if (watch) return `https://www.youtube.com/embed/${watch[1]}`;
+  return url;
+}
+
 const PROVIDERS: { pattern: RegExp; info: ProviderInfo }[] = [
   {
-    pattern: /(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/,
+    pattern: /youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\//,
     info: {
       name: 'YouTube',
       embeddable: true,
-      transformUrl: (url: string) => {
-        const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/);
-        return match ? `https://www.youtube.com/embed/${match[1]}` : url;
-      },
+      transformUrl: youtubeToEmbedUrl,
     },
   },
   {
@@ -49,15 +57,6 @@ export function detectProvider(url: string): ProviderInfo | null {
   for (const { pattern, info } of PROVIDERS) {
     if (pattern.test(url)) return info;
   }
-  return null;
-}
-
-/** Resolves a YouTube video id from watch, short, or /embed/ URLs (editor uses a poster, not the embed player). */
-export function extractYouTubeVideoId(url: string): string | null {
-  const embed = url.match(/youtube\.com\/embed\/([\w-]+)/);
-  if (embed) return embed[1];
-  const watch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]+)/);
-  if (watch) return watch[1];
   return null;
 }
 

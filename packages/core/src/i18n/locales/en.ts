@@ -60,7 +60,6 @@ export const en: TranslationDictionary = {
   'embed.placeholder': 'Paste a URL (YouTube, Figma, Miro, Google Maps...)',
   'embed.button': 'Embed',
   'embed.open': 'Open ',
-  'embed.watchYoutube': 'Watch on YouTube',
   'embed.remove': 'Remove embed',
 
   // Top bar

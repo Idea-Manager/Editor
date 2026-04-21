@@ -71,7 +71,7 @@ export class BlockGutter {
     this.gutterEl.appendChild(dragBtn);
 
     this.host.appendChild(this.gutterEl);
-    this.gutterEl.style.display = 'none';
+    this.gutterEl.classList.add('idea-block-gutter--hidden');
   }
 
   private removeGutter(): void {
@@ -201,7 +201,7 @@ export class BlockGutter {
   private positionGutter(blockEl: HTMLElement): void {
     if (!this.gutterEl) return;
 
-    this.gutterEl.style.display = 'flex';
+    this.gutterEl.classList.remove('idea-block-gutter--hidden');
     this.gutterEl.classList.add('idea-block-gutter--visible');
 
     const blockRect = blockEl.getBoundingClientRect();
@@ -226,7 +226,7 @@ export class BlockGutter {
   private hideGutter(): void {
     if (this.gutterEl) {
       this.gutterEl.classList.remove('idea-block-gutter--visible');
-      this.gutterEl.style.display = 'none';
+      this.gutterEl.classList.add('idea-block-gutter--hidden');
     }
     if (this.dragBtn) {
       this.dragBtn.style.display = '';

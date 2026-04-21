@@ -1,11 +1,51 @@
 import { EventBus } from '@core/events/event-bus';
 import { I18nService } from '@core/i18n/i18n';
 import { createParagraph, createHeading, createTextRun, createDocument } from '@core/model/factory';
+import type { BlockNode, ParagraphData } from '@core/model/interfaces';
 import { BlockRegistry } from '../blocks/block-registry';
+import type { BlockDefinition } from '../blocks/block-definition';
 import { ParagraphBlock } from '../blocks/paragraph-block';
 import { HeadingBlock } from '../blocks/heading-block';
 import { BlockRenderer } from '../renderer/block-renderer';
 import type { RenderContext } from '../engine/render-context';
+
+/** Test double: returns the same root element per block id when data is unchanged (like embed stable roots). */
+class StableRootParagraphBlock implements BlockDefinition<ParagraphData> {
+  readonly type = 'paragraph';
+  readonly labelKey = 'block.paragraph';
+  readonly icon = 'notes';
+  private readonly roots = new Map<string, HTMLElement>();
+
+  defaultData(): ParagraphData {
+    return { align: 'left' };
+  }
+
+  render(node: BlockNode<ParagraphData>, _ctx: RenderContext): HTMLElement {
+    let el = this.roots.get(node.id);
+    if (!el) {
+      el = document.createElement('div');
+      el.setAttribute('data-block-id', node.id);
+      el.classList.add('idea-block', 'idea-block--paragraph');
+      this.roots.set(node.id, el);
+    }
+    return el;
+  }
+
+  serialize(node: BlockNode<ParagraphData>): BlockNode<ParagraphData> {
+    return {
+      ...node,
+      data: { ...node.data },
+      children: node.children.map(run => ({
+        ...run,
+        data: { ...run.data, marks: [...run.data.marks] },
+      })),
+    };
+  }
+
+  deserialize(raw: unknown): BlockNode<ParagraphData> {
+    return raw as BlockNode<ParagraphData>;
+  }
+}
 
 describe('BlockRegistry', () => {
   let registry: BlockRegistry;
@@ -61,7 +101,7 @@ describe('ParagraphBlock', () => {
   it('renders with text-align from data', () => {
     const node = createParagraph('Centered', 'center');
     const el = para.render(node, ctx);
-    expect(el.style.textAlign).toBe('center');
+    expect(el.getAttribute('data-align')).toBe('center');
   });
 
   it('renders empty paragraph', () => {
@@ -216,5 +256,20 @@ describe('BlockRenderer', () => {
 
     expect(root.children[0].classList.contains('idea-block--heading')).toBe(true);
     expect(root.children[1].classList.contains('idea-block--paragraph')).toBe(true);
+  });
+
+  it('preserves HTMLElement identity when render returns the same reference', () => {
+    const stableRegistry = new BlockRegistry();
+    stableRegistry.register(new StableRootParagraphBlock());
+    stableRegistry.register(new HeadingBlock());
+    const stableRenderer = new BlockRenderer(stableRegistry);
+
+    const doc = createDocument();
+    const p = createParagraph('Hello');
+    doc.children = [p];
+    stableRenderer.reconcile(doc, root, makeCtx(doc));
+    const first = root.children[0];
+    stableRenderer.reconcile(doc, root, makeCtx(doc));
+    expect(root.children[0]).toBe(first);
   });
 });

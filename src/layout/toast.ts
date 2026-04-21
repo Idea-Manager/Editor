@@ -42,9 +42,7 @@ export function showToast(options: ToastOptions): void {
   root.appendChild(el);
 
   const remove = () => {
-    el.style.opacity = '0';
-    el.style.transform = 'translateY(8px)';
-    el.style.transition = 'opacity 0.15s, transform 0.15s';
+    el.classList.add('toast--leaving');
     setTimeout(() => el.remove(), 150);
   };
 

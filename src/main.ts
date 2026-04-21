@@ -1,4 +1,5 @@
 import './styles/_base.scss';
+import './layout/import-export.scss';
 import { createDocument, EventBus, UndoRedoManager, ShortcutManager, I18nService } from '@core/index';
 import { TextEditor } from '@text-editor/index';
 import { AppShell } from './layout/app-shell';

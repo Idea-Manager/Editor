@@ -40,6 +40,12 @@
     color: $color-bg;
   }
 
+  &--leaving {
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.15s, transform 0.15s;
+  }
+
   &__message {
     flex: 1;
   }

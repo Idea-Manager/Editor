@@ -17,8 +17,8 @@ export class ParagraphBlock implements BlockDefinition<ParagraphData> {
   render(node: BlockNode<ParagraphData>, ctx: RenderContext): HTMLElement {
     const el = document.createElement('div');
     el.setAttribute('data-block-id', node.id);
+    el.setAttribute('data-align', node.data.align);
     el.classList.add('idea-block', 'idea-block--paragraph');
-    el.style.textAlign = node.data.align;
 
     const hasText = node.children.some(r => r.data.text.length > 0);
     if (hasText) {

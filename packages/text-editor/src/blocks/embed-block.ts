@@ -8,7 +8,7 @@ import { DeleteBlockCommand } from '../engine/commands/delete-block-command';
 import { findBlockLocation, findTableCell } from '../engine/block-locator';
 import type { BlockLocation } from '../engine/block-locator';
 import { createIcon } from '../../../../src/util/icon';
-import { detectProvider, extractYouTubeVideoId, getFaviconUrl } from './embed-url';
+import { detectProvider, getFaviconUrl } from './embed-url';
 import { showEmbedUrlModal } from '../toolbar/embed-url-modal';
 
 // Reuse embed DOM across full reconciles so iframe previews are not torn down (e.g. edits in another table cell).
@@ -201,14 +201,6 @@ export class EmbedBlock implements BlockDefinition<EmbedData> {
     const provider = detectProvider(node.data.url);
 
     if (provider?.embeddable) {
-      if (provider.name === 'YouTube') {
-        const videoId = extractYouTubeVideoId(node.data.url);
-        if (videoId) {
-          this.renderYouTubePosterPreview(wrapper, node, ctx, videoId);
-          return;
-        }
-      }
-
       const embedContainer = document.createElement('div');
       embedContainer.classList.add('idea-embed-preview');
 
@@ -243,6 +235,10 @@ export class EmbedBlock implements BlockDefinition<EmbedData> {
       iframe.src = provider.transformUrl ? provider.transformUrl(node.data.url) : node.data.url;
       iframe.classList.add('idea-embed-preview__iframe');
       iframe.setAttribute('sandbox', 'allow-scripts allow-same-origin');
+      iframe.setAttribute(
+        'allow',
+        'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share',
+      );
       iframe.setAttribute('loading', 'lazy');
       iframe.setAttribute('allowfullscreen', '');
 
@@ -252,73 +248,6 @@ export class EmbedBlock implements BlockDefinition<EmbedData> {
     } else {
       this.renderFallbackCard(wrapper, node, ctx);
     }
-  }
-
-  private renderYouTubePosterPreview(
-    wrapper: HTMLElement,
-    node: BlockNode<EmbedData>,
-    ctx: RenderContext,
-    videoId: string,
-  ): void {
-    const embedContainer = document.createElement('div');
-    embedContainer.classList.add('idea-embed-preview', 'idea-embed-preview--youtube-poster');
-
-    const titleBar = document.createElement('div');
-    titleBar.classList.add('idea-embed-preview__titlebar');
-
-    const providerLabel = document.createElement('span');
-    providerLabel.classList.add('idea-embed-preview__provider');
-    providerLabel.textContent = 'YouTube';
-
-    const openBtn = document.createElement('a');
-    openBtn.href = node.data.url;
-    openBtn.target = '_blank';
-    openBtn.rel = 'noopener noreferrer';
-    openBtn.classList.add('idea-embed-preview__open');
-    openBtn.textContent = ctx.i18n.t('embed.open');
-    openBtn.appendChild(createIcon('open_in_new'));
-
-    const titleLeft = document.createElement('div');
-    titleLeft.classList.add('idea-embed-preview__titlebar-left');
-    titleLeft.appendChild(providerLabel);
-
-    const titleRight = document.createElement('div');
-    titleRight.classList.add('idea-embed-preview__titlebar-right');
-    titleRight.appendChild(openBtn);
-    titleRight.appendChild(this.createRemoveButton(node, ctx));
-
-    titleBar.appendChild(titleLeft);
-    titleBar.appendChild(titleRight);
-
-    const watchLink = document.createElement('a');
-    watchLink.href = node.data.url;
-    watchLink.target = '_blank';
-    watchLink.rel = 'noopener noreferrer';
-    watchLink.classList.add('idea-embed-preview__youtube-watch');
-    watchLink.setAttribute('aria-label', ctx.i18n.t('embed.watchYoutube'));
-
-    const frame = document.createElement('span');
-    frame.classList.add('idea-embed-preview__youtube-frame');
-
-    const thumb = document.createElement('img');
-    thumb.classList.add('idea-embed-preview__youtube-thumb');
-    thumb.src = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
-    thumb.alt = '';
-    thumb.decoding = 'async';
-    thumb.setAttribute('loading', 'lazy');
-
-    const play = document.createElement('span');
-    play.classList.add('idea-embed-preview__youtube-play');
-    play.setAttribute('aria-hidden', 'true');
-    play.appendChild(createIcon('play_circle'));
-
-    frame.appendChild(thumb);
-    frame.appendChild(play);
-    watchLink.appendChild(frame);
-
-    embedContainer.appendChild(titleBar);
-    embedContainer.appendChild(watchLink);
-    wrapper.appendChild(embedContainer);
   }
 
   private renderFallbackCard(wrapper: HTMLElement, node: BlockNode<EmbedData>, ctx: RenderContext): void {
