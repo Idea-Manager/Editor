@@ -88,32 +88,34 @@ export function showJSONPreview(doc: DocumentNode, i18n: I18nService): void {
   const json = serializer.export(doc);
 
   const backdrop = document.createElement('div');
-  backdrop.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:5000;display:flex;align-items:center;justify-content:center;';
+  backdrop.className = 'idea-json-preview-backdrop';
 
   const modal = document.createElement('div');
-  modal.style.cssText = 'background:#fff;border-radius:8px;width:640px;max-width:90vw;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,0.15);';
+  modal.className = 'idea-json-preview-modal';
 
   const header = document.createElement('div');
-  header.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #e5e5e5;font-family:Inter,sans-serif;font-size:14px;font-weight:600;';
+  header.className = 'idea-json-preview-header';
   header.textContent = i18n.t('io.previewTitle');
 
   const closeBtn = document.createElement('button');
+  closeBtn.type = 'button';
+  closeBtn.className = 'idea-json-preview-close';
   closeBtn.appendChild(createIcon('close'));
-  closeBtn.style.cssText = 'background:none;border:none;font-size:20px;cursor:pointer;color:#737373;padding:0;line-height:1;display:flex;align-items:center;';
   closeBtn.addEventListener('click', () => backdrop.remove());
   header.appendChild(closeBtn);
 
   const textarea = document.createElement('textarea');
   textarea.readOnly = true;
   textarea.value = json;
-  textarea.style.cssText = 'flex:1;padding:16px;border:none;outline:none;resize:none;font-family:"JetBrains Mono","Fira Code",monospace;font-size:12px;line-height:1.5;color:#171717;overflow:auto;';
+  textarea.className = 'idea-json-preview-textarea';
 
   const footer = document.createElement('div');
-  footer.style.cssText = 'display:flex;justify-content:flex-end;gap:8px;padding:10px 16px;border-top:1px solid #e5e5e5;';
+  footer.className = 'idea-json-preview-footer';
 
   const copyBtn = document.createElement('button');
+  copyBtn.type = 'button';
+  copyBtn.className = 'idea-json-preview-copy';
   copyBtn.textContent = i18n.t('io.copyButton');
-  copyBtn.style.cssText = 'padding:6px 14px;background:#171717;color:#fff;border:none;border-radius:4px;font-size:13px;cursor:pointer;font-family:inherit;';
   copyBtn.addEventListener('click', () => {
     navigator.clipboard.writeText(json).then(
       () => showToast({ message: i18n.t('io.jsonCopied'), type: 'success' }),

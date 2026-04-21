@@ -263,7 +263,7 @@ export class FloatingToolbar {
     const blockTypeSep = this.overlay.querySelector('[data-role="block-type-sep"]') as HTMLElement | null;
     const showBlockType = convertibleBlocks.length > 0;
     if (select) {
-      select.style.display = showBlockType ? '' : 'none';
+      select.classList.toggle('idea-floating-toolbar__block-type-hidden', !showBlockType);
       if (showBlockType) {
         const items = convertibleBlocks.map(b =>
           this.findPaletteItemForBlock(b as { type: string; data: Record<string, unknown> }),
@@ -281,7 +281,7 @@ export class FloatingToolbar {
       }
     }
     if (blockTypeSep) {
-      blockTypeSep.style.display = showBlockType ? '' : 'none';
+      blockTypeSep.classList.toggle('idea-floating-toolbar__block-type-hidden', !showBlockType);
     }
   }
 

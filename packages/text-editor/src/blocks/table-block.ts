@@ -1,20 +1,61 @@
 import type { BlockNode, TableData, TableRow, TableCell, TextRun } from '@core/model/interfaces';
 import type { Command } from '@core/commands/command';
 import type { BlockDefinition } from './block-definition';
+import type { BlockRegistry } from './block-registry';
 import type { RenderContext } from '../engine/render-context';
 import type { EditorContext } from '../engine/editor-context';
 import { generateId } from '@core/id';
 import { createDefaultCellBlocks } from './table-cell-defaults';
 import { cloneBlockNodeDeep } from '../engine/document-snapshot';
 import { deserializeCellBlocks } from './cell-block-deserialize';
-import { appendRenderedBlockList } from '../renderer/block-renderer';
+import { collectRenderedBlockListElements } from '../renderer/block-renderer';
+import { reconcileChildren } from '../engine/reconciler';
 import { DEFAULT_TABLE_COL_WIDTH, defaultTableData } from './table-data-factory';
 
 const MIN_COL_WEIGHT = 8;
 
+/** Keeps the same table wrapper/grid in the document when layout is unchanged so cell inners (and iframes) are not reparented through a fresh subtree. */
+const tableStableRoots = new Map<string, { signature: string; el: HTMLElement }>();
+
+/** Layout-only: column widths excluded so column resize does not force a full rebuild. */
+function tableStructureSignature(node: BlockNode<TableData>): string {
+  return JSON.stringify({
+    rows: node.data.rows.map(r => ({
+      id: r.id,
+      cells: r.cells.map(c => ({
+        id: c.id,
+        absorbed: c.absorbed,
+        colspan: c.colspan,
+        rowspan: c.rowspan,
+        style: c.style,
+      })),
+    })),
+  });
+}
+
+export function pruneTableStableRoots(presentBlockIds: Set<string>): void {
+  for (const id of tableStableRoots.keys()) {
+    if (!presentBlockIds.has(id)) {
+      tableStableRoots.delete(id);
+    }
+  }
+}
+
 function columnTemplatePercent(weights: number[]): string {
   const sum = weights.reduce((a, b) => a + b, 0) || 1;
   return weights.map(w => `${(w / sum) * 100}%`).join(' ');
+}
+
+const TABLE_CELL_BORDER_TOP = 'idea-table-cell--border-top';
+const TABLE_CELL_BORDER_RIGHT = 'idea-table-cell--border-right';
+const TABLE_CELL_BORDER_BOTTOM = 'idea-table-cell--border-bottom';
+const TABLE_CELL_BORDER_LEFT = 'idea-table-cell--border-left';
+
+function applyTableCellBorderClasses(cellEl: HTMLElement, cell: TableCell): void {
+  cellEl.classList.toggle(TABLE_CELL_BORDER_TOP, !!cell.style.borderTop);
+  cellEl.classList.toggle(TABLE_CELL_BORDER_RIGHT, !!cell.style.borderRight);
+  cellEl.classList.toggle(TABLE_CELL_BORDER_BOTTOM, !!cell.style.borderBottom);
+  cellEl.classList.toggle(TABLE_CELL_BORDER_LEFT, !!cell.style.borderLeft);
 }
 
 export class TableBlock implements BlockDefinition<TableData> {
@@ -32,6 +73,98 @@ export class TableBlock implements BlockDefinition<TableData> {
       throw new Error('TableBlock.render requires blockRegistry on RenderContext');
     }
 
+    const sig = tableStructureSignature(node);
+    const cached = tableStableRoots.get(node.id);
+    if (cached && cached.signature === sig && cached.el.isConnected) {
+      if (this.syncTableDom(cached.el, node, ctx, registry)) {
+        return cached.el;
+      }
+      tableStableRoots.delete(node.id);
+    } else if (cached) {
+      tableStableRoots.delete(node.id);
+    }
+
+    const wrapper = this.buildFreshTableDom(node, ctx, registry);
+    tableStableRoots.set(node.id, { signature: sig, el: wrapper });
+    return wrapper;
+  }
+
+  /**
+   * Updates grid/cell chrome and reconciles cell inners in place. Returns false if DOM is missing
+   * expected cells (caller should rebuild).
+   */
+  private syncTableDom(
+    wrapper: HTMLElement,
+    node: BlockNode<TableData>,
+    ctx: RenderContext,
+    registry: BlockRegistry,
+  ): boolean {
+    const grid = wrapper.querySelector<HTMLElement>(':scope > .idea-table-block');
+    if (!grid) return false;
+
+    const numRows = node.data.rows.length;
+    const numCols = node.data.columnWidths.length;
+    const weights = node.data.columnWidths;
+
+    grid.style.gridTemplateColumns = columnTemplatePercent(weights);
+    grid.style.gridTemplateRows = `repeat(${numRows}, auto)`;
+
+    grid.querySelectorAll('.idea-table-col-resizer').forEach(el => el.remove());
+
+    const resizerTargets: { el: HTMLElement; boundaryCol: number }[] = [];
+
+    for (let r = 0; r < numRows; r++) {
+      let col = 0;
+      for (const cell of node.data.rows[r].cells) {
+        if (cell.absorbed) {
+          col++;
+          continue;
+        }
+
+        const cellEl = grid.querySelector<HTMLElement>(`:scope > [data-cell-id="${CSS.escape(cell.id)}"]`);
+        if (!cellEl) return false;
+
+        cellEl.style.gridColumn = `${col + 1} / span ${cell.colspan}`;
+        cellEl.style.gridRow = `${r + 1} / span ${cell.rowspan}`;
+
+        applyTableCellBorderClasses(cellEl, cell);
+
+        if (cell.style.background) {
+          cellEl.style.backgroundColor = cell.style.background;
+        } else {
+          cellEl.style.backgroundColor = '';
+        }
+
+        let inner = cellEl.querySelector<HTMLElement>(':scope > .idea-table-cell__inner');
+        if (!inner) {
+          inner = document.createElement('div');
+          inner.classList.add('idea-table-cell__inner');
+          cellEl.appendChild(inner);
+        }
+
+        const cellElements = collectRenderedBlockListElements(registry, cell.blocks, ctx);
+        reconcileChildren(inner, cellElements);
+
+        if (r === 0) {
+          const cEnd = col + cell.colspan - 1;
+          if (cEnd < numCols - 1) {
+            resizerTargets.push({ el: cellEl, boundaryCol: cEnd });
+          }
+        }
+
+        col += cell.colspan;
+      }
+    }
+
+    this.attachColumnResize(grid, node, resizerTargets);
+    return true;
+  }
+
+  private buildFreshTableDom(
+    node: BlockNode<TableData>,
+    ctx: RenderContext,
+    registry: BlockRegistry,
+  ): HTMLElement {
     const wrapper = document.createElement('div');
     wrapper.setAttribute('data-block-id', node.id);
     wrapper.classList.add('idea-block', 'idea-block--table');
@@ -43,8 +176,6 @@ export class TableBlock implements BlockDefinition<TableData> {
     const numCols = node.data.columnWidths.length;
     const weights = node.data.columnWidths;
 
-    grid.style.display = 'grid';
-    grid.style.width = '100%';
     grid.style.gridTemplateColumns = columnTemplatePercent(weights);
     grid.style.gridTemplateRows = `repeat(${numRows}, auto)`;
 
@@ -64,10 +195,7 @@ export class TableBlock implements BlockDefinition<TableData> {
         cellEl.style.gridColumn = `${col + 1} / span ${cell.colspan}`;
         cellEl.style.gridRow = `${r + 1} / span ${cell.rowspan}`;
 
-        cellEl.style.borderTop = cell.style.borderTop ? '1px solid #d4d4d4' : 'none';
-        cellEl.style.borderRight = cell.style.borderRight ? '1px solid #d4d4d4' : 'none';
-        cellEl.style.borderBottom = cell.style.borderBottom ? '1px solid #d4d4d4' : 'none';
-        cellEl.style.borderLeft = cell.style.borderLeft ? '1px solid #d4d4d4' : 'none';
+        applyTableCellBorderClasses(cellEl, cell);
 
         if (cell.style.background) {
           cellEl.style.backgroundColor = cell.style.background;
@@ -75,7 +203,8 @@ export class TableBlock implements BlockDefinition<TableData> {
 
         const inner = document.createElement('div');
         inner.classList.add('idea-table-cell__inner');
-        appendRenderedBlockList(registry, cell.blocks, inner, ctx);
+        const cellElements = collectRenderedBlockListElements(registry, cell.blocks, ctx);
+        reconcileChildren(inner, cellElements);
         cellEl.appendChild(inner);
 
         if (r === 0) {
@@ -165,7 +294,6 @@ export class TableBlock implements BlockDefinition<TableData> {
         document.addEventListener('mouseup', onMouseUp);
       });
 
-      cellEl.style.position = 'relative';
       cellEl.appendChild(resizer);
     }
   }

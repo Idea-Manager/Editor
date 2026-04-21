@@ -1,7 +1,9 @@
 import type { DocumentNode, BlockNode, ListItemData, ListType } from '@core/model/interfaces';
 import type { RenderContext } from '../engine/render-context';
 import type { BlockRegistry } from '../blocks/block-registry';
+import { reconcileChildren } from '../engine/reconciler';
 import { pruneEmbedStableRoots } from '../blocks/embed-block';
+import { pruneTableStableRoots } from '../blocks/table-block';
 
 function collectDataBlockIds(root: HTMLElement): Set<string> {
   const ids = new Set<string>();
@@ -16,14 +18,17 @@ function listTagForType(listType: ListType): 'ol' | 'ul' {
   return listType === 'ordered' ? 'ol' : 'ul';
 }
 
-function appendListGroup(
+/**
+ * Builds one grouped list root (`ul`/`ol`) for consecutive `list_item` blocks starting at `startIdx`.
+ * Does not attach the root to any parent.
+ */
+function buildListGroup(
   registry: BlockRegistry,
   blocks: ReadonlyArray<BlockNode>,
   startIdx: number,
-  parent: HTMLElement,
   ctx: RenderContext,
   versionMap?: Map<string, number>,
-): number {
+): { rootList: HTMLElement; nextIndex: number } {
   const firstData = blocks[startIdx].data as ListItemData;
   const groupListType = firstData.listType;
   const listTag = listTagForType(groupListType);
@@ -75,8 +80,35 @@ function appendListGroup(
     i++;
   }
 
-  parent.appendChild(rootList);
-  return i;
+  return { rootList, nextIndex: i };
+}
+
+/**
+ * Produces top-level `HTMLElement` nodes for `blocks`, grouping consecutive `list_item` blocks
+ * into a single `ul`/`ol` root per group (same structure as the main document).
+ */
+export function collectRenderedBlockListElements(
+  registry: BlockRegistry,
+  blocks: ReadonlyArray<BlockNode>,
+  ctx: RenderContext,
+  versionMap?: Map<string, number>,
+): HTMLElement[] {
+  const elements: HTMLElement[] = [];
+  let i = 0;
+  while (i < blocks.length) {
+    const block = blocks[i];
+    if (block.type === 'list_item') {
+      const { rootList, nextIndex } = buildListGroup(registry, blocks, i, ctx, versionMap);
+      elements.push(rootList);
+      i = nextIndex;
+    } else {
+      const el = registry.get(block.type).render(block, ctx);
+      versionMap?.set(block.id, block.meta?.version ?? 0);
+      elements.push(el);
+      i++;
+    }
+  }
+  return elements;
 }
 
 /**
@@ -90,18 +122,7 @@ export function appendRenderedBlockList(
   ctx: RenderContext,
   versionMap?: Map<string, number>,
 ): void {
-  let i = 0;
-  while (i < blocks.length) {
-    const block = blocks[i];
-    if (block.type === 'list_item') {
-      i = appendListGroup(registry, blocks, i, parent, ctx, versionMap);
-    } else {
-      const el = registry.get(block.type).render(block, ctx);
-      versionMap?.set(block.id, block.meta?.version ?? 0);
-      parent.appendChild(el);
-      i++;
-    }
-  }
+  reconcileChildren(parent, collectRenderedBlockListElements(registry, blocks, ctx, versionMap));
 }
 
 export class BlockRenderer {
@@ -111,9 +132,16 @@ export class BlockRenderer {
 
   reconcile(doc: DocumentNode, rootEl: HTMLElement, ctx: RenderContext): void {
     this.renderedVersions.clear();
-    rootEl.innerHTML = '';
-    appendRenderedBlockList(this.registry, doc.children, rootEl, ctx, this.renderedVersions);
-    pruneEmbedStableRoots(collectDataBlockIds(rootEl));
+    const elements = collectRenderedBlockListElements(
+      this.registry,
+      doc.children,
+      ctx,
+      this.renderedVersions,
+    );
+    reconcileChildren(rootEl, elements);
+    const presentIds = collectDataBlockIds(rootEl);
+    pruneEmbedStableRoots(presentIds);
+    pruneTableStableRoots(presentIds);
   }
 
   renderBlock(block: BlockNode, ctx: RenderContext): HTMLElement {
