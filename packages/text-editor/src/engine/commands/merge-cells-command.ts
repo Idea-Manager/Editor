@@ -4,6 +4,10 @@ import type { OperationRecord } from '@core/operation-log/interfaces';
 import { generateId } from '@core/id';
 import { cloneBlockNodeDeep } from '../document-snapshot';
 import { createDefaultCellBlocks } from '../../blocks/table-cell-defaults';
+import {
+  applyMergeOutlineToPrimary,
+  collectMergeRangeOutline,
+} from '../../blocks/table-border-sync';
 import { findTableBlock } from '../block-locator';
 
 /** Paragraph with no non-empty text runs (matches empty placeholder cells). */
@@ -91,6 +95,13 @@ export class MergeCellsCommand implements Command {
     }
 
     const primaryCell = data.rows[startRow].cells[startCol];
+    const mergeOutline = collectMergeRangeOutline(data, {
+      startRow,
+      startCol,
+      endRow,
+      endCol,
+    });
+
     const cellsBlocks: BlockNode[][] = [];
     for (let r = startRow; r <= endRow; r++) {
       for (let c = startCol; c <= endCol; c++) {
@@ -109,6 +120,8 @@ export class MergeCellsCommand implements Command {
         data.rows[r].cells[c].blocks = [];
       }
     }
+
+    applyMergeOutlineToPrimary(data, { startRow, startCol, endRow, endCol }, mergeOutline);
 
     this.operationRecords.push({
       id: generateId('op'),

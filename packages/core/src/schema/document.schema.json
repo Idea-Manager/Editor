@@ -50,7 +50,9 @@
             "marks": {
               "type": "array",
               "items": { "type": "string", "enum": ["bold", "italic", "underline", "code"] }
-            }
+            },
+            "color": { "type": "string" },
+            "href": { "type": "string" }
           },
           "additionalProperties": false
         }

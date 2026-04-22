@@ -20,6 +20,7 @@ app.appendChild(shell.element);
 const editor = new TextEditor();
 shell.getEditorContainer().appendChild(editor);
 editor.init(doc, bus, history, { locale: i18n.locale });
+shell.setDocumentReplaceHook((newDoc) => editor.replaceDocument(newDoc));
 
 const shortcuts = new ShortcutManager();
 shortcuts.setScope('text');
@@ -30,7 +31,7 @@ shortcuts.registerAll([
   { keys: 'mod+k', scope: 'global', label: i18n.t('shortcut.commandPalette'), command: () => palette.toggle() },
   {
     keys: 'mod+s', scope: 'global', label: i18n.t('shortcut.exportJson'),
-    command: () => { exportJSON(doc, i18n); },
+    command: () => { exportJSON(shell.getDocument(), i18n); },
   },
 ]);
 

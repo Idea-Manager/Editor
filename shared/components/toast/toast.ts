@@ -1,4 +1,4 @@
-import { createIcon } from '../util/icon';
+import { createIcon } from '../../../src/util/icon';
 import './toast.scss';
 
 export type ToastType = 'info' | 'success' | 'error';

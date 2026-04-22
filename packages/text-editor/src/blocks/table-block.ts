@@ -587,6 +587,7 @@ export class TableBlock implements BlockDefinition<TableData> {
         ? { borderWidth: obj.data.borderWidth as number }
         : {}),
     };
+    // Structural row/column/merge edits also run reconcilers in table-border-sync.
     normalizeTableBorders(data);
     return {
       id: obj.id,

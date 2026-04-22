@@ -95,8 +95,8 @@ export const uk: TranslationDictionary = {
   'topbar.previewJson': 'Перегляд JSON',
 
   // Status bar
-  'status.wordSingular': '{count} слово',
-  'status.wordPlural': '{count} слів',
+  'status.characterSingular': '{count} символ',
+  'status.characterPlural': '{count} символів',
   'status.blockSingular': '{count} блок',
   'status.blockPlural': '{count} блоків',
 
@@ -111,6 +111,9 @@ export const uk: TranslationDictionary = {
   'io.copyFailed': 'Не вдалося скопіювати до буфера обміну',
   'io.invalidDocument': 'Некоректний документ: {error}',
   'io.unknownError': 'невідома помилка',
+  'io.importConfirmTitle': 'Імпортувати JSON?',
+  'io.importConfirmCancel': 'Скасувати',
+  'io.importConfirmPrimary': 'Замінити',
   'io.confirmReplace': 'Це замінить поточний документ. Продовжити?',
   'io.imported': 'Документ імпортовано',
   'io.importFailed': 'Помилка імпорту: {error}',

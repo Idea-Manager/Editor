@@ -3,6 +3,7 @@ import type { Command } from '@core/commands/command';
 import type { OperationRecord } from '@core/operation-log/interfaces';
 import { generateId } from '@core/id';
 import { insertColumnAtInColspanTable, deleteColumnAtInColspanTable } from '../../blocks/table-column-mutations';
+import { reconcileBordersAfterInsertColumnAt } from '../../blocks/table-border-sync';
 import { findTableBlock } from '../block-locator';
 
 export class InsertColumnCommand implements Command {
@@ -40,6 +41,8 @@ export class InsertColumnCommand implements Command {
     }
 
     this.newCellIds = data.rows.map(row => row.cells[insertAt]!.id);
+
+    reconcileBordersAfterInsertColumnAt(data, insertAt);
 
     this.operationRecords.push({
       id: generateId('op'),

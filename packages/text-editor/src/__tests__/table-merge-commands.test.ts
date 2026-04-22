@@ -12,6 +12,7 @@ import { DeleteColumnCommand } from '../engine/commands/delete-column-command';
 import { MergeCellsCommand } from '../engine/commands/merge-cells-command';
 import { ToggleCellBorderCommand } from '../engine/commands/toggle-cell-border-command';
 import { findBlockLocation } from '../engine/block-locator';
+import { bottomGridRowForCell } from '../blocks/table-row-mutations';
 
 function tableBlockFromData(data: TableData): BlockNode<TableData> {
   return {
@@ -82,6 +83,87 @@ describe('Table insert and merge guards', () => {
     expect(inserted.cells[0].colspan).toBe(2);
     expect(inserted.cells[0].absorbed).toBe(false);
     expect(inserted.cells[1].absorbed).toBe(true);
+  });
+
+  it('bottomGridRowForCell maps rowspan primaries, continuations, and plain cells to same bottom row', () => {
+    const doc = createDocument();
+    const data = buildTableData(3, 7, 'all');
+    const table = tableBlockFromData(data);
+    doc.children = [table];
+
+    new MergeCellsCommand(doc, table.id, {
+      startRow: 1,
+      startCol: 0,
+      endRow: 2,
+      endCol: 2,
+    }).execute();
+    new MergeCellsCommand(doc, table.id, {
+      startRow: 1,
+      startCol: 3,
+      endRow: 2,
+      endCol: 5,
+    }).execute();
+
+    const d = table.data as TableData;
+    expect(bottomGridRowForCell(d, 1, 0)).toBe(2);
+    expect(bottomGridRowForCell(d, 1, 3)).toBe(2);
+    expect(bottomGridRowForCell(d, 2, 0)).toBe(2);
+    expect(bottomGridRowForCell(d, 2, 6)).toBe(2);
+  });
+
+  it('InsertRowCommand after two 2x3 vertical merges adds a full non-absorbed row (menu uses bottom row 2)', () => {
+    const doc = createDocument();
+    const data = buildTableData(3, 7, 'all');
+    const table = tableBlockFromData(data);
+    doc.children = [table];
+
+    new MergeCellsCommand(doc, table.id, {
+      startRow: 1,
+      startCol: 0,
+      endRow: 2,
+      endCol: 2,
+    }).execute();
+    new MergeCellsCommand(doc, table.id, {
+      startRow: 1,
+      startCol: 3,
+      endRow: 2,
+      endCol: 5,
+    }).execute();
+
+    const d = table.data as TableData;
+    new InsertRowCommand(doc, table.id, 2, 2).execute();
+
+    expect(d.rows).toHaveLength(4);
+    const inserted = d.rows[3];
+    expect(inserted.cells).toHaveLength(7);
+    expect(inserted.cells.every(c => !c.absorbed && c.colspan === 1)).toBe(true);
+  });
+
+  it('InsertRowCommand after merges from primary row still adds full row when after/bottom row is 2', () => {
+    const doc = createDocument();
+    const data = buildTableData(3, 7, 'all');
+    const table = tableBlockFromData(data);
+    doc.children = [table];
+
+    new MergeCellsCommand(doc, table.id, {
+      startRow: 1,
+      startCol: 0,
+      endRow: 2,
+      endCol: 2,
+    }).execute();
+    new MergeCellsCommand(doc, table.id, {
+      startRow: 1,
+      startCol: 3,
+      endRow: 2,
+      endCol: 5,
+    }).execute();
+
+    const d = table.data as TableData;
+    expect(bottomGridRowForCell(d, 1, 0)).toBe(2);
+    new InsertRowCommand(doc, table.id, bottomGridRowForCell(d, 1, 0), bottomGridRowForCell(d, 1, 0)).execute();
+
+    expect(d.rows).toHaveLength(4);
+    expect(d.rows[3].cells.every(c => !c.absorbed && c.colspan === 1)).toBe(true);
   });
 
   it('InsertColumnCommand runs when a colspan merge exists (no rowspan)', () => {

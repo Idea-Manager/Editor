@@ -35,6 +35,10 @@ export class TopBar {
     this.disposers.length = 0;
   }
 
+  setDocument(doc: DocumentNode): void {
+    this.config.doc = doc;
+  }
+
   private build(): void {
     const { doc, undoRedoManager, i18n } = this.config;
     const t = i18n.t.bind(i18n);

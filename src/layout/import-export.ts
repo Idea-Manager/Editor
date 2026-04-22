@@ -1,12 +1,21 @@
 import type { DocumentNode } from '@core/model/interfaces';
 import type { EventBus } from '@core/events/event-bus';
 import type { I18nService } from '@core/i18n/i18n';
-import { DocumentSerializer, DocumentDeserializer, validateDocument } from '@core/index';
-import { showToast } from './toast';
+import {
+  DocumentSerializer,
+  DocumentDeserializer,
+  validateDocument,
+  migrateDocument,
+  LATEST_SCHEMA_VERSION,
+} from '@core/index';
+import { Modal } from '@shared/components/modal';
+import { showToast } from '@shared/components/toast';
 import { createIcon } from '../util/icon';
 
 const serializer = new DocumentSerializer();
 const deserializer = new DocumentDeserializer();
+const jsonPreviewModal = new Modal(document.body);
+const importConfirmModal = new Modal(document.body);
 
 export function exportJSON(doc: DocumentNode, i18n: I18nService): void {
   const json = serializer.export(doc);
@@ -48,11 +57,36 @@ export function importJSON(
     reader.onload = () => {
       const text = reader.result as string;
 
-      const preCheck = validateDocument((() => {
-        try { return JSON.parse(text); }
-        catch { return null; }
-      })());
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        showToast({
+          message: i18n.t('io.invalidDocument', { error: i18n.t('io.unknownError') }),
+          type: 'error',
+          duration: 5000,
+        });
+        return;
+      }
 
+      if (typeof parsed === 'object' && parsed !== null) {
+        const record = parsed as Record<string, unknown>;
+        const version = record.schemaVersion;
+        if (typeof version === 'number' && version < LATEST_SCHEMA_VERSION) {
+          try {
+            parsed = migrateDocument(parsed);
+          } catch (err) {
+            showToast({
+              message: i18n.t('io.invalidDocument', { error: (err as Error).message }),
+              type: 'error',
+              duration: 5000,
+            });
+            return;
+          }
+        }
+      }
+
+      const preCheck = validateDocument(parsed);
       if (!preCheck.valid) {
         showToast({
           message: i18n.t('io.invalidDocument', { error: preCheck.errors[0] ?? i18n.t('io.unknownError') }),
@@ -62,21 +96,54 @@ export function importJSON(
         return;
       }
 
-      const confirmed = confirm(i18n.t('io.confirmReplace'));
-      if (!confirmed) return;
+      const body = document.createElement('p');
+      body.className = 'idea-io-import-confirm__message';
+      body.textContent = i18n.t('io.confirmReplace');
 
-      try {
-        const newDoc = deserializer.import(text);
-        onReplace(newDoc);
-        eventBus.emit('doc:change', { document: newDoc });
-        showToast({ message: i18n.t('io.imported'), type: 'success' });
-      } catch (err) {
-        showToast({
-          message: i18n.t('io.importFailed', { error: (err as Error).message }),
-          type: 'error',
-          duration: 5000,
-        });
-      }
+      const actions = document.createElement('div');
+      actions.className = 'idea-io-import-confirm__actions';
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.type = 'button';
+      cancelBtn.className = 'idea-io-import-confirm__btn idea-io-import-confirm__btn--cancel';
+      cancelBtn.textContent = i18n.t('io.importConfirmCancel');
+      cancelBtn.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        importConfirmModal.hide();
+      });
+
+      const primaryBtn = document.createElement('button');
+      primaryBtn.type = 'button';
+      primaryBtn.className = 'idea-io-import-confirm__btn idea-io-import-confirm__btn--primary';
+      primaryBtn.textContent = i18n.t('io.importConfirmPrimary');
+      primaryBtn.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        importConfirmModal.hide();
+        try {
+          const newDoc = deserializer.import(text);
+          onReplace(newDoc);
+          eventBus.emit('doc:change', { document: newDoc });
+          showToast({ message: i18n.t('io.imported'), type: 'success' });
+        } catch (err) {
+          showToast({
+            message: i18n.t('io.importFailed', { error: (err as Error).message }),
+            type: 'error',
+            duration: 5000,
+          });
+        }
+      });
+
+      actions.appendChild(cancelBtn);
+      actions.appendChild(primaryBtn);
+
+      importConfirmModal.show({
+        title: i18n.t('io.importConfirmTitle'),
+        body,
+        footer: actions,
+        panelClass: 'idea-modal__panel--narrow',
+      });
     };
     reader.readAsText(file);
   });
@@ -87,30 +154,25 @@ export function importJSON(
 export function showJSONPreview(doc: DocumentNode, i18n: I18nService): void {
   const json = serializer.export(doc);
 
-  const backdrop = document.createElement('div');
-  backdrop.className = 'idea-json-preview-backdrop';
-
-  const modal = document.createElement('div');
-  modal.className = 'idea-json-preview-modal';
-
-  const header = document.createElement('div');
-  header.className = 'idea-json-preview-header';
-  header.textContent = i18n.t('io.previewTitle');
+  const titleEl = document.createElement('div');
+  titleEl.className = 'idea-modal__title';
+  titleEl.textContent = i18n.t('io.previewTitle');
 
   const closeBtn = document.createElement('button');
   closeBtn.type = 'button';
   closeBtn.className = 'idea-json-preview-close';
   closeBtn.appendChild(createIcon('close'));
-  closeBtn.addEventListener('click', () => backdrop.remove());
-  header.appendChild(closeBtn);
+  closeBtn.addEventListener('click', () => jsonPreviewModal.hide());
+
+  const headerRow = document.createElement('div');
+  headerRow.className = 'idea-json-preview-header';
+  headerRow.appendChild(titleEl);
+  headerRow.appendChild(closeBtn);
 
   const textarea = document.createElement('textarea');
   textarea.readOnly = true;
   textarea.value = json;
   textarea.className = 'idea-json-preview-textarea';
-
-  const footer = document.createElement('div');
-  footer.className = 'idea-json-preview-footer';
 
   const copyBtn = document.createElement('button');
   copyBtn.type = 'button';
@@ -121,15 +183,15 @@ export function showJSONPreview(doc: DocumentNode, i18n: I18nService): void {
       () => showToast({ message: i18n.t('io.jsonCopied'), type: 'success' }),
     );
   });
+
+  const footer = document.createElement('div');
+  footer.className = 'idea-json-preview-footer';
   footer.appendChild(copyBtn);
 
-  modal.appendChild(header);
-  modal.appendChild(textarea);
-  modal.appendChild(footer);
-  backdrop.appendChild(modal);
-  document.body.appendChild(backdrop);
-
-  backdrop.addEventListener('click', (e) => {
-    if (e.target === backdrop) backdrop.remove();
+  jsonPreviewModal.show({
+    header: headerRow,
+    body: textarea,
+    footer,
+    panelClass: 'idea-modal__panel--json-preview',
   });
 }

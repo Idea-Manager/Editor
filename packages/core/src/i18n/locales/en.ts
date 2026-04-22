@@ -95,8 +95,8 @@ export const en: TranslationDictionary = {
   'topbar.previewJson': 'Preview JSON',
 
   // Status bar
-  'status.wordSingular': '{count} word',
-  'status.wordPlural': '{count} words',
+  'status.characterSingular': '{count} character',
+  'status.characterPlural': '{count} characters',
   'status.blockSingular': '{count} block',
   'status.blockPlural': '{count} blocks',
 
@@ -111,6 +111,9 @@ export const en: TranslationDictionary = {
   'io.copyFailed': 'Failed to copy to clipboard',
   'io.invalidDocument': 'Invalid document: {error}',
   'io.unknownError': 'unknown error',
+  'io.importConfirmTitle': 'Import JSON?',
+  'io.importConfirmCancel': 'Cancel',
+  'io.importConfirmPrimary': 'Replace',
   'io.confirmReplace': 'This will replace the current document. Continue?',
   'io.imported': 'Document imported',
   'io.importFailed': 'Import failed: {error}',

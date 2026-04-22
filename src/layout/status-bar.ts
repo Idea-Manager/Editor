@@ -1,11 +1,11 @@
-import type { DocumentNode } from '@core/model/interfaces';
+import type { BlockNode, DocumentNode, TableData } from '@core/model/interfaces';
 import type { EventBus } from '@core/events/event-bus';
 import type { I18nService } from '@core/i18n/i18n';
 import './status-bar.scss';
 
 export class StatusBar {
   readonly element: HTMLElement;
-  private wordCountEl!: HTMLSpanElement;
+  private charCountEl!: HTMLSpanElement;
   private blockCountEl!: HTMLSpanElement;
   private readonly disposers: (() => void)[] = [];
 
@@ -32,9 +32,9 @@ export class StatusBar {
   }
 
   private build(): void {
-    this.wordCountEl = document.createElement('span');
+    this.charCountEl = document.createElement('span');
     this.blockCountEl = document.createElement('span');
-    this.element.appendChild(this.wordCountEl);
+    this.element.appendChild(this.charCountEl);
     this.element.appendChild(this.blockCountEl);
   }
 
@@ -46,20 +46,38 @@ export class StatusBar {
   }
 
   private update(): void {
-    let totalWords = 0;
+    let totalChars = 0;
     for (const block of this.doc.children) {
-      for (const run of block.children ?? []) {
-        const text = run.data?.text ?? '';
-        const words = text.trim().split(/\s+/).filter(Boolean);
-        totalWords += words.length;
-      }
+      totalChars += countCharactersInBlock(block);
     }
 
-    const wordKey = totalWords !== 1 ? 'status.wordPlural' : 'status.wordSingular';
-    this.wordCountEl.textContent = this.i18n.t(wordKey, { count: totalWords });
+    const charKey = totalChars !== 1 ? 'status.characterPlural' : 'status.characterSingular';
+    this.charCountEl.textContent = this.i18n.t(charKey, { count: totalChars });
 
     const blockCount = this.doc.children.length;
     const blockKey = blockCount !== 1 ? 'status.blockPlural' : 'status.blockSingular';
     this.blockCountEl.textContent = this.i18n.t(blockKey, { count: blockCount });
   }
+}
+
+function countCharactersInBlock(block: BlockNode): number {
+  if (block.type === 'table') {
+    const data = block.data as TableData;
+    let n = 0;
+    for (const row of data.rows) {
+      for (const cell of row.cells) {
+        if (cell.absorbed) continue;
+        for (const b of cell.blocks) {
+          n += countCharactersInBlock(b);
+        }
+      }
+    }
+    return n;
+  }
+
+  let n = 0;
+  for (const run of block.children ?? []) {
+    n += (run.data?.text ?? '').length;
+  }
+  return n;
 }

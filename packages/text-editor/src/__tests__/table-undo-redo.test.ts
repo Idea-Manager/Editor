@@ -85,7 +85,7 @@ describe('Table undo/redo and picker snapshot', () => {
     expect(tableStylesSnapshot(restored)).toEqual(tableStylesSnapshot(tableData));
   });
 
-  it('InsertRowCommand clones anchor row borders; insert column redo does not duplicate columns', () => {
+  it('InsertRowCommand shifts top-edge borders; insert column redo does not duplicate columns', () => {
     const doc = createDocument();
     const data = buildTableData(2, 2, 'inside');
     const table: BlockNode<TableData> = {
@@ -97,15 +97,13 @@ describe('Table undo/redo and picker snapshot', () => {
     };
     doc.children = [table];
 
-    const anchorStyles = data.rows[0].cells.map(c => ({ ...c.style }));
-
     const insRow = new InsertRowCommand(doc, table.id, -1, 0);
     const undoRedo = new UndoRedoManager(eventBus);
     undoRedo.push(insRow);
 
     expect(data.rows).toHaveLength(3);
-    const inserted = data.rows[0];
-    expect(inserted.cells.map(c => ({ ...c.style }))).toEqual(anchorStyles);
+    expect(data.rows[0].cells.every(c => c.style.borderTop === false)).toBe(true);
+    expect(data.rows[1].cells.every(c => c.style.borderTop === true)).toBe(true);
 
     undoRedo.undo();
     expect(data.rows).toHaveLength(2);

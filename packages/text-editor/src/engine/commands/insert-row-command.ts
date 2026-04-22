@@ -3,6 +3,7 @@ import type { Command } from '@core/commands/command';
 import type { OperationRecord } from '@core/operation-log/interfaces';
 import { generateId } from '@core/id';
 import { insertRowAfterInTable } from '../../blocks/table-row-mutations';
+import { reconcileBordersAfterInsertRowAt } from '../../blocks/table-border-sync';
 import { cloneTableData } from '../document-snapshot';
 import { findTableBlock } from '../block-locator';
 
@@ -39,6 +40,8 @@ export class InsertRowCommand implements Command {
     const ins = this.afterRowIndex + 1;
     const newRow = data.rows[ins] as TableRow;
     this.insertedRowId = newRow.id;
+
+    reconcileBordersAfterInsertRowAt(data, ins);
 
     this.operationRecords.push({
       id: generateId('op'),

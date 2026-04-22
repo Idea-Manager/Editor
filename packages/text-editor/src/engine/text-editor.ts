@@ -155,6 +155,20 @@ export class TextEditor extends HTMLElement {
     return this.selectionSync;
   }
 
+  /** Swap the document root (e.g. after JSON import). Clears undo/redo and resets selection. */
+  replaceDocument(doc: DocumentNode): void {
+    if (!this.ctx) return;
+    this.ctx.document = doc;
+    this.ctx.undoRedoManager.clear();
+    const first = doc.children[0];
+    if (first) {
+      this.ctx.selectionManager.setCollapsed(first.id, 0);
+    } else {
+      this.ctx.selectionManager.clear();
+    }
+    this.render();
+  }
+
   private render(): void {
     const renderCtx = {
       document: this.ctx.document,

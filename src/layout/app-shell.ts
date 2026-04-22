@@ -2,7 +2,6 @@ import type { DocumentNode } from '@core/model/interfaces';
 import type { EventBus } from '@core/events/event-bus';
 import type { UndoRedoManager } from '@core/history/undo-redo-manager';
 import type { I18nService } from '@core/i18n/i18n';
-import type { TextEditor } from '@text-editor/index';
 import { TopBar } from './top-bar';
 import { StatusBar } from './status-bar';
 import './app-shell.scss';
@@ -20,6 +19,7 @@ export class AppShell {
   private topBar!: TopBar;
   private statusBar!: StatusBar;
   private config: AppShellConfig;
+  private documentReplaceHook: ((doc: DocumentNode) => void) | null = null;
 
   constructor(config: AppShellConfig) {
     this.config = config;
@@ -36,9 +36,19 @@ export class AppShell {
     return this.topBar;
   }
 
+  getDocument(): DocumentNode {
+    return this.config.doc;
+  }
+
+  setDocumentReplaceHook(hook: (doc: DocumentNode) => void): void {
+    this.documentReplaceHook = hook;
+  }
+
   replaceDocument(doc: DocumentNode): void {
     this.config = { ...this.config, doc };
     this.statusBar.setDocument(doc);
+    this.topBar.setDocument(doc);
+    this.documentReplaceHook?.(doc);
   }
 
   private build(): void {

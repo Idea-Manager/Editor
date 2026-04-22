@@ -6,6 +6,7 @@ import {
   createHeading,
   createGraphicPage,
   createFrame,
+  createTextRun,
 } from '../../model/factory';
 import { DocumentNode } from '../../model/interfaces';
 
@@ -74,6 +75,25 @@ describe('Serialization round-trip', () => {
     expect(parsed).toHaveProperty('children');
     expect(parsed).toHaveProperty('graphicPages');
     expect(parsed).toHaveProperty('assets');
+  });
+
+  it('should round-trip text runs with href and color', () => {
+    const doc = createDocument();
+    doc.schemaVersion = 3;
+    const run = createTextRun('linked');
+    run.data.href = 'https://example.com';
+    run.data.color = '#ff0000';
+    const paragraph = createParagraph('');
+    paragraph.children = [run];
+    doc.children = [paragraph];
+
+    const json = serializer.export(doc);
+    const restored = deserializer.import(json);
+
+    const textRun = restored.children[0].children[0];
+    expect(textRun.data.text).toBe('linked');
+    expect(textRun.data.href).toBe('https://example.com');
+    expect(textRun.data.color).toBe('#ff0000');
   });
 });
 

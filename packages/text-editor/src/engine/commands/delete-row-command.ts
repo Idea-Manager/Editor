@@ -3,6 +3,7 @@ import type { Command } from '@core/commands/command';
 import type { OperationRecord } from '@core/operation-log/interfaces';
 import { generateId } from '@core/id';
 import { deleteRowAtInTable } from '../../blocks/table-row-mutations';
+import { reconcileBordersAfterDeleteRow } from '../../blocks/table-border-sync';
 import { cloneTableData } from '../document-snapshot';
 import { findTableBlock } from '../block-locator';
 
@@ -34,6 +35,8 @@ export class DeleteRowCommand implements Command {
       this.deletedRowId = '';
       return;
     }
+
+    reconcileBordersAfterDeleteRow(data);
 
     this.operationRecords.push({
       id: generateId('op'),

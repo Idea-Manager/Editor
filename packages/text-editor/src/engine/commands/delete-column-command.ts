@@ -4,6 +4,7 @@ import type { OperationRecord } from '@core/operation-log/interfaces';
 import { generateId } from '@core/id';
 import { cloneBlockNodeDeep } from '../document-snapshot';
 import { deleteColumnAtInColspanTable } from '../../blocks/table-column-mutations';
+import { reconcileBordersAfterDeleteColumn } from '../../blocks/table-border-sync';
 import { findTableBlock } from '../block-locator';
 
 function cloneCellForUndo(cell: TableCell): TableCell {
@@ -40,6 +41,8 @@ export class DeleteColumnCommand implements Command {
       this.deletedCells = [];
       return;
     }
+
+    reconcileBordersAfterDeleteColumn(data);
 
     this.operationRecords.push({
       id: generateId('op'),

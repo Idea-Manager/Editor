@@ -1,35 +1,12 @@
 @use '../styles/variables' as *;
-
-.idea-json-preview-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  z-index: 5000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.idea-json-preview-modal {
-  background: $white;
-  border-radius: 8px;
-  width: 640px;
-  max-width: 90vw;
-  max-height: 80vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
-}
+@use '../../shared/components/modal/modal.scss';
 
 .idea-json-preview-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  border-bottom: 1px solid $gray-200;
-  font-family: $font-family-base;
-  font-size: $font-size-base;
-  font-weight: 600;
+  gap: $spacing-sm;
+  width: 100%;
 }
 
 .idea-json-preview-close {
@@ -46,7 +23,10 @@
 
 .idea-json-preview-textarea {
   flex: 1;
-  padding: 16px;
+  min-height: 200px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: $spacing-md;
   border: none;
   outline: none;
   resize: none;
@@ -55,14 +35,14 @@
   line-height: 1.5;
   color: $gray-900;
   overflow: auto;
+  background: transparent;
 }
 
 .idea-json-preview-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  padding: 10px 16px;
-  border-top: 1px solid $gray-200;
+  gap: $spacing-sm;
+  width: 100%;
 }
 
 .idea-json-preview-copy {
@@ -74,4 +54,57 @@
   font-size: 13px;
   cursor: pointer;
   font-family: inherit;
+}
+
+p.idea-io-import-confirm__message {
+  margin: 0;
+  line-height: 1.5;
+  color: $color-text-secondary;
+  font-size: $font-size-sm;
+}
+
+.idea-io-import-confirm__actions {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: flex-end;
+  gap: $spacing-sm;
+  width: 100%;
+}
+
+.idea-io-import-confirm__btn {
+  box-sizing: border-box;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 $spacing-md;
+  border-radius: 4px;
+  font-size: $font-size-sm;
+  font-family: $font-family-base;
+  font-weight: 500;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: background-color 0.1s, color 0.1s, border-color 0.1s;
+
+  &--cancel {
+    background: $color-bg;
+    border: 1px solid $gray-300;
+    color: $gray-800;
+
+    &:hover {
+      background: $color-bg-subtle;
+      border-color: $gray-400;
+    }
+  }
+
+  &--primary {
+    background: $gray-900;
+    border: 1px solid $gray-900;
+    color: $white;
+
+    &:hover {
+      background: $gray-800;
+      border-color: $gray-800;
+    }
+  }
 }

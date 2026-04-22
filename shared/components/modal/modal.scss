@@ -86,4 +86,19 @@
     width: max-content;
     max-width: min(96vw, calc(100vw - #{2 * $spacing-lg}));
   }
+
+  /** Wide JSON preview (import/export) */
+  &__panel--json-preview {
+    width: min(640px, calc(100vw - #{2 * $spacing-lg}));
+    min-width: min(640px, calc(100vw - #{2 * $spacing-lg}));
+    min-height: min(80vh, 520px);
+    max-height: calc(100vh - #{$spacing-lg} * 2);
+
+    .idea-modal__body {
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+      min-height: 0;
+    }
+  }
 }

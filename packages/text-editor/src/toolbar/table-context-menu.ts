@@ -15,6 +15,7 @@ import { DeleteBlockCommand } from '../engine/commands/delete-block-command';
 import { createIcon } from '../../../../src/util/icon';
 import { ColorPicker } from '@shared/components/color-picker';
 import { getResolvedBorderValue } from '../blocks/table-border-sync';
+import { bottomGridRowForCell } from '../blocks/table-row-mutations';
 
 interface CellPosition {
   blockId: string;
@@ -221,6 +222,7 @@ export class TableContextMenu {
     const t = this.ctx.i18n.t.bind(this.ctx.i18n);
     const doc = this.ctx.document;
     const bid = pos.blockId;
+    const bottomRowForInsertBelow = bottomGridRowForCell(data, anchorRow, anchorCol);
 
     const items: { label: string; action: () => void; disabled?: boolean }[] = [
       {
@@ -230,7 +232,8 @@ export class TableContextMenu {
       },
       {
         label: t('table.insertRowBelow'),
-        action: () => this.exec(new InsertRowCommand(doc, bid, anchorRow, anchorRow)),
+        action: () =>
+          this.exec(new InsertRowCommand(doc, bid, bottomRowForInsertBelow, bottomRowForInsertBelow)),
         disabled: false,
       },
       {

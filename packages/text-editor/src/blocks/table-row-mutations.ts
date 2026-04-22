@@ -39,6 +39,13 @@ export function primaryCellCovering(
   return null;
 }
 
+/** Bottom grid row index covered by the primary that owns slot `(r, c)`. */
+export function bottomGridRowForCell(data: TableData, r: number, c: number): number {
+  const cov = primaryCellCovering(data, r, c);
+  if (!cov) return r;
+  return cov.row + (cov.cell.rowspan ?? 1) - 1;
+}
+
 function rowspanPrimaryRowForSlot(data: TableData, r: number, c: number): number {
   for (let r2 = r - 1; r2 >= 0; r2--) {
     const cell = data.rows[r2]!.cells[c]!;
@@ -102,14 +109,33 @@ export function insertRowAfterInTable(data: TableData, afterRowIndex: number, re
       });
     } else {
       const refCell = refRow.cells[c]!;
-      newRow.cells.push({
-        id: generateId('cell'),
-        blocks: refCell.absorbed ? [] : createDefaultCellBlocks(),
-        colspan: refCell.colspan,
-        rowspan: 1,
-        absorbed: refCell.absorbed,
-        style: { ...styleRef.style },
-      });
+      const owner = primaryCellCovering(data, refIdx, c);
+      const newRowBelowRowspanBottom =
+        refCell.absorbed &&
+        !absorbedSlotCoveredBySameRowColspan(data, refIdx, c) &&
+        owner &&
+        owner.cell.rowspan > 1 &&
+        owner.row + owner.cell.rowspan - 1 === refIdx;
+
+      if (newRowBelowRowspanBottom) {
+        newRow.cells.push({
+          id: generateId('cell'),
+          blocks: createDefaultCellBlocks(),
+          colspan: 1,
+          rowspan: 1,
+          absorbed: false,
+          style: { ...styleRef.style },
+        });
+      } else {
+        newRow.cells.push({
+          id: generateId('cell'),
+          blocks: refCell.absorbed ? [] : createDefaultCellBlocks(),
+          colspan: refCell.colspan,
+          rowspan: 1,
+          absorbed: refCell.absorbed,
+          style: { ...styleRef.style },
+        });
+      }
     }
   }
 
