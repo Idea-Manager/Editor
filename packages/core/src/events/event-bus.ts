@@ -16,7 +16,9 @@ export type EditorEvent =
   | 'history:undo'
   | 'history:redo'
   | 'operation:local'
-  | 'operation:remote';
+  | 'operation:remote'
+  | 'table:range-select-end'
+  | 'table:range-ui';
 
 type Handler<T = unknown> = (payload: T) => void;
 

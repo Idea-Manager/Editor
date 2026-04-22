@@ -1,10 +1,10 @@
-import type { BlockNode, DocumentNode, BlockType } from '@core/model/interfaces';
+import type { BlockNode, DocumentNode, BlockType, TableData } from '@core/model/interfaces';
 import type { Command } from '@core/commands/command';
 import type { OperationRecord } from '@core/operation-log/interfaces';
 import type { BlockRegistry } from '../../blocks/block-registry';
 import { generateId } from '@core/id';
 import { findBlockLocation } from '../block-locator';
-import { cloneBlockNodeDeep } from '../document-snapshot';
+import { cloneBlockNodeDeep, cloneTableData } from '../document-snapshot';
 
 export class InsertBlockCommand implements Command {
   readonly operationRecords: OperationRecord[] = [];
@@ -27,10 +27,16 @@ export class InsertBlockCommand implements Command {
     if (!this.blockTemplate) {
       const def = this.registry.get(this.newType);
       this.newBlockId = generateId('blk');
+      const initialData =
+        this.dataOverride && this.newType === 'table'
+          ? (cloneTableData(this.dataOverride as unknown as TableData) as BlockNode['data'])
+          : this.dataOverride
+            ? ({ ...this.dataOverride } as BlockNode['data'])
+            : def.defaultData();
       this.blockTemplate = {
         id: this.newBlockId,
         type: this.newType,
-        data: this.dataOverride ? { ...this.dataOverride } : def.defaultData(),
+        data: initialData,
         children:
           this.newType === 'table'
             ? []

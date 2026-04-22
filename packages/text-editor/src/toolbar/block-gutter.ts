@@ -305,17 +305,18 @@ export class BlockGutter {
   }
 
   private insertTableBlock(afterBlockId: string, result: TableSizePickerResult): void {
+    const tableData = buildTableDataFromSizePicker(result);
     const cmd = new InsertBlockCommand(
       this.ctx.document,
       afterBlockId,
       'table',
       this.ctx.blockRegistry,
+      tableData as unknown as Record<string, unknown>,
     );
     this.ctx.undoRedoManager.push(cmd);
 
     const newBlock = findBlockLocation(this.ctx.document, cmd.getNewBlockId())?.block;
     if (newBlock?.type === 'table') {
-      newBlock.data = buildTableDataFromSizePicker(result);
       const focusId = getFirstTableCellFirstBlockId(newBlock);
       if (focusId) this.ctx.selectionManager.setCollapsed(focusId, 0);
     }
@@ -324,18 +325,31 @@ export class BlockGutter {
   }
 
   private changeToTable(blockId: string, result: TableSizePickerResult): void {
+    const block = findBlockLocation(this.ctx.document, blockId)?.block;
+    if (block) {
+      const textLen = block.children.reduce((s, r) => s + r.data.text.length, 0);
+      if (textLen > 0) {
+        block.children = [{
+          id: block.children[0]?.id ?? '',
+          type: 'text',
+          data: { text: '', marks: [] },
+        }];
+      }
+    }
+
+    const tableData = buildTableDataFromSizePicker(result);
     const cmd = new ChangeBlockTypeCommand(
       this.ctx.document,
       blockId,
       'table',
       this.ctx.blockRegistry,
+      tableData as unknown as Record<string, unknown>,
     );
     this.ctx.undoRedoManager.push(cmd);
 
-    const block = findBlockLocation(this.ctx.document, blockId)?.block;
-    if (block?.type === 'table') {
-      block.data = buildTableDataFromSizePicker(result);
-      const focusId = getFirstTableCellFirstBlockId(block);
+    const updated = findBlockLocation(this.ctx.document, blockId)?.block;
+    if (updated?.type === 'table') {
+      const focusId = getFirstTableCellFirstBlockId(updated);
       if (focusId) this.ctx.selectionManager.setCollapsed(focusId, 0);
     }
 

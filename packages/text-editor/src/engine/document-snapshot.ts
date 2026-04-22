@@ -7,7 +7,7 @@ function cloneTextRuns(block: BlockNode): BlockNode['children'] {
   }));
 }
 
-function cloneTableData(data: TableData): TableData {
+export function cloneTableData(data: TableData): TableData {
   return {
     columnWidths: [...data.columnWidths],
     rows: data.rows.map(row => ({

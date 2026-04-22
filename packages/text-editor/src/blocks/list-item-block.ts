@@ -59,7 +59,12 @@ export class ListItemBlock implements BlockDefinition<ListItemData> {
       data: { ...node.data },
       children: node.children.map(run => ({
         ...run,
-        data: { ...run.data, marks: [...run.data.marks] },
+        data: {
+          ...run.data,
+          marks: [...run.data.marks],
+          ...(run.data.color !== undefined ? { color: run.data.color } : {}),
+          ...(run.data.href !== undefined ? { href: run.data.href } : {}),
+        },
       })),
       meta: node.meta ? { ...node.meta } : undefined,
     };
@@ -88,6 +93,8 @@ export class ListItemBlock implements BlockDefinition<ListItemData> {
         data: {
           text: run.data?.text ?? '',
           marks: [...(run.data?.marks ?? [])],
+          ...(run.data?.color !== undefined ? { color: run.data.color } : {}),
+          ...(run.data?.href !== undefined ? { href: run.data.href } : {}),
         },
       })) as TextRun[],
       meta: obj.meta ? { ...obj.meta } : undefined,

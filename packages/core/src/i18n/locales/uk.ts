@@ -16,6 +16,12 @@ export const uk: TranslationDictionary = {
   'toolbar.alignLeft': 'Вирівняти ліворуч',
   'toolbar.alignCenter': 'Вирівняти по центру',
   'toolbar.alignRight': 'Вирівняти праворуч',
+  'toolbar.textColor': 'Колір тексту',
+  'toolbar.addLink': 'Додати посилання',
+  'toolbar.linkUrlPlaceholder': 'https://…',
+  'toolbar.linkOpenNewTab': 'Відкрити посилання в новій вкладці',
+  'toolbar.linkEdit': 'Редагувати посилання',
+  'toolbar.linkCopy': 'Копіювати посилання',
 
   // Block gutter
   'gutter.addBlock': 'Додати блок нижче',
@@ -32,7 +38,6 @@ export const uk: TranslationDictionary = {
   'table.insertColumnRight': 'Вставити стовпець праворуч',
   'table.deleteColumn': 'Видалити стовпець',
   'table.mergeCells': 'Об\'єднати комірки',
-  'table.splitCell': 'Розділити комірку',
   'table.cellBorders': 'Межі комірки',
   'table.borderTop': 'Верх',
   'table.borderRight': 'Право',
@@ -44,6 +49,11 @@ export const uk: TranslationDictionary = {
   'table.bgGray100': 'Сірий 100',
   'table.bgGray200': 'Сірий 200',
   'table.bgGray300': 'Сірий 300',
+
+  // Color picker
+  'colorPicker.custom': 'Власний колір',
+  'colorPicker.select': 'Вибрати',
+  'colorPicker.cancel': 'Скасувати',
 
   // Table size picker
   'table.insertTable': 'Вставити таблицю',

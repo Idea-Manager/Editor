@@ -1,0 +1,159 @@
+@use '../../../src/styles/variables' as *;
+
+.idea-color-picker {
+  position: fixed;
+  z-index: 120;
+  left: 0;
+  top: 0;
+
+  &__panel {
+    width: 220px;
+    padding: $spacing-sm;
+    background: $color-bg;
+    border: 1px solid $color-border;
+    border-radius: 10px;
+    box-shadow: 0 4px 16px rgba($black, 0.12);
+  }
+
+  &__sv-wrap {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 8px 8px 4px 4px;
+    overflow: hidden;
+    cursor: crosshair;
+    touch-action: none;
+  }
+
+  &__sv {
+    position: absolute;
+    inset: 0;
+    --idea-cp-hue: 0;
+    background:
+      linear-gradient(to top, $black, transparent),
+      linear-gradient(to right, $white, hsl(var(--idea-cp-hue), 100%, 50%));
+  }
+
+  &__sv-thumb {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    transform: translate(-50%, -50%);
+    border: 2px solid $white;
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px rgba($black, 0.35);
+    pointer-events: none;
+    background: var(--idea-cp-thumb, $white);
+  }
+
+  &__hue {
+    position: relative;
+    height: 12px;
+    margin-top: $spacing-sm;
+    border-radius: 999px;
+    cursor: pointer;
+    touch-action: none;
+    background: linear-gradient(
+      to right,
+      hsl(0, 100%, 50%),
+      hsl(60, 100%, 50%),
+      hsl(120, 100%, 50%),
+      hsl(180, 100%, 50%),
+      hsl(240, 100%, 50%),
+      hsl(300, 100%, 50%),
+      hsl(360, 100%, 50%)
+    );
+  }
+
+  &__hue-thumb {
+    position: absolute;
+    top: 50%;
+    width: 16px;
+    height: 16px;
+    transform: translate(-50%, -50%);
+    border: 2px solid $white;
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px rgba($black, 0.25);
+    pointer-events: none;
+    background: var(--idea-cp-hue-thumb, hsl(0, 100%, 50%));
+  }
+
+  &__alpha {
+    position: relative;
+    height: 12px;
+    margin-top: $spacing-sm;
+    border-radius: 999px;
+    cursor: pointer;
+    touch-action: none;
+    background-color: $gray-200;
+    background-image:
+      linear-gradient(45deg, $gray-300 25%, transparent 25%),
+      linear-gradient(-45deg, $gray-300 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, $gray-300 75%),
+      linear-gradient(-45deg, transparent 75%, $gray-300 75%);
+    background-size: 8px 8px;
+    background-position: 0 0, 0 4px, 4px -4px, -4px 0;
+  }
+
+  &__alpha-fill {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    --idea-cp-rgb: 255, 255, 255;
+    background: linear-gradient(
+      to right,
+      rgba(var(--idea-cp-rgb), 0),
+      rgba(var(--idea-cp-rgb), 1)
+    );
+    pointer-events: none;
+  }
+
+  &__alpha-thumb {
+    position: absolute;
+    top: 50%;
+    width: 16px;
+    height: 16px;
+    transform: translate(-50%, -50%);
+    border: 2px solid $white;
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px rgba($black, 0.25);
+    pointer-events: none;
+    background: var(--idea-cp-thumb, $white);
+  }
+
+  &__footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: $spacing-xs;
+    margin-top: $spacing-md;
+  }
+
+  &__btn {
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-family: $font-family-base;
+    font-size: $font-size-sm;
+    cursor: pointer;
+    border: 1px solid transparent;
+
+    &--secondary {
+      background: $color-bg;
+      border-color: $color-border;
+      color: $color-text-secondary;
+
+      &:hover {
+        background: $color-bg-subtle;
+      }
+    }
+
+    &--primary {
+      background: $gray-900;
+      color: $white;
+      border-color: $gray-900;
+
+      &:hover {
+        background: $gray-800;
+      }
+    }
+  }
+}

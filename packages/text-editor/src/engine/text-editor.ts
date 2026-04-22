@@ -21,16 +21,19 @@ import { InputInterceptor } from './input-interceptor';
 import { SlashPalette } from '../toolbar/slash-palette';
 import { ClipboardHandler } from './clipboard-handler';
 import { FloatingToolbar } from '../toolbar/floating-toolbar';
+import { LinkHoverPopover } from '../toolbar/link-hover-popover';
 import { TableContextMenu } from '../toolbar/table-context-menu';
 import { BlockGutter } from '../toolbar/block-gutter';
 import textEditorStyles from './text-editor.scss?inline';
 import slashPaletteStyles from '../toolbar/slash-palette.scss?inline';
 import floatingToolbarStyles from '../toolbar/floating-toolbar.scss?inline';
+import linkHoverPopoverStyles from '../toolbar/link-hover-popover.scss?inline';
 import tableContextMenuStyles from '../toolbar/table-context-menu.scss?inline';
 import blockGutterStyles from '../toolbar/block-gutter.scss?inline';
 import blockTypeMenuStyles from '../toolbar/block-type-menu.scss?inline';
 import tableSizePickerStyles from '../toolbar/table-size-picker.scss?inline';
 import modalStyles from '@shared/components/modal/modal.scss?inline';
+import colorPickerStyles from '@shared/components/color-picker/color-picker.scss?inline';
 
 const STYLE_ID = 'idea-editor-styles';
 
@@ -42,11 +45,13 @@ function injectStyles(): void {
     textEditorStyles,
     slashPaletteStyles,
     floatingToolbarStyles,
+    linkHoverPopoverStyles,
     tableContextMenuStyles,
     blockGutterStyles,
     blockTypeMenuStyles,
     tableSizePickerStyles,
     modalStyles,
+    colorPickerStyles,
   ].join('\n');
   document.head.appendChild(style);
 }
@@ -60,6 +65,7 @@ export class TextEditor extends HTMLElement {
   private slashPalette!: SlashPalette;
   private clipboardHandler!: ClipboardHandler;
   private floatingToolbar!: FloatingToolbar;
+  private linkHoverPopover!: LinkHoverPopover;
   private tableContextMenu!: TableContextMenu;
   private blockGutter!: BlockGutter;
   private readonly eventDisposers: (() => void)[] = [];
@@ -108,6 +114,7 @@ export class TextEditor extends HTMLElement {
 
     this.clipboardHandler = new ClipboardHandler(this.ctx, this.blockRenderer, this.selectionSync);
     this.floatingToolbar = new FloatingToolbar(this.ctx, this, this.selectionSync);
+    this.linkHoverPopover = new LinkHoverPopover(this.ctx);
     this.tableContextMenu = new TableContextMenu(this.ctx, this);
     this.blockGutter = new BlockGutter(this.ctx, this);
     this.blockGutter.setSlashPalette(this.slashPalette);
@@ -127,6 +134,7 @@ export class TextEditor extends HTMLElement {
     this.slashPalette?.destroy();
     this.clipboardHandler?.destroy();
     this.floatingToolbar?.destroy();
+    this.linkHoverPopover?.destroy();
     this.tableContextMenu?.destroy();
     this.blockGutter?.destroy();
     this.eventDisposers.forEach(fn => fn());

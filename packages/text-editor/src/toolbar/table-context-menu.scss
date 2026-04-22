@@ -119,5 +119,17 @@
       border-color: $gray-900;
       box-shadow: 0 0 0 1px $gray-900;
     }
+
+    &--custom {
+      background: conic-gradient(
+        hsl(0, 100%, 50%),
+        hsl(60, 100%, 50%),
+        hsl(120, 100%, 50%),
+        hsl(180, 100%, 50%),
+        hsl(240, 100%, 50%),
+        hsl(300, 100%, 50%),
+        hsl(360, 100%, 50%)
+      );
+    }
   }
 }

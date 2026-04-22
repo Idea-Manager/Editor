@@ -26,6 +26,10 @@ export interface TextRun {
   data: {
     text: string;
     marks: InlineMark[];
+    /** CSS color string (e.g. hex, rgba); omit for inherited color. */
+    color?: string;
+    /** Link URL for this run; omit when not a link. */
+    href?: string;
   };
 }
 

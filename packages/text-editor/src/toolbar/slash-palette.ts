@@ -282,17 +282,18 @@ export class SlashPalette {
       }
     }
 
+    const tableData = buildTableDataFromSizePicker(result);
     const cmd = new ChangeBlockTypeCommand(
       this.ctx.document,
       blockId,
       'table',
       this.ctx.blockRegistry,
+      tableData as unknown as Record<string, unknown>,
     );
     this.ctx.undoRedoManager.push(cmd);
 
     const updatedBlock = findBlockLocation(this.ctx.document, blockId)?.block;
     if (updatedBlock?.type === 'table') {
-      updatedBlock.data = buildTableDataFromSizePicker(result);
       const focusId = getFirstTableCellFirstBlockId(updatedBlock);
       if (focusId) this.ctx.selectionManager.setCollapsed(focusId, 0);
     }
@@ -301,17 +302,18 @@ export class SlashPalette {
   }
 
   private insertTableBlock(afterBlockId: string, result: TableSizePickerResult): void {
+    const tableData = buildTableDataFromSizePicker(result);
     const cmd = new InsertBlockCommand(
       this.ctx.document,
       afterBlockId,
       'table',
       this.ctx.blockRegistry,
+      tableData as unknown as Record<string, unknown>,
     );
     this.ctx.undoRedoManager.push(cmd);
 
     const newBlock = findBlockLocation(this.ctx.document, cmd.getNewBlockId())?.block;
     if (newBlock?.type === 'table') {
-      newBlock.data = buildTableDataFromSizePicker(result);
       const focusId = getFirstTableCellFirstBlockId(newBlock);
       if (focusId) this.ctx.selectionManager.setCollapsed(focusId, 0);
     }

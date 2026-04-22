@@ -22,6 +22,10 @@ export function renderInline(runs: TextRun[]): DocumentFragment {
       continue;
     }
 
+    if (run.data.color && !run.data.href) {
+      span.style.color = run.data.color;
+    }
+
     const sortedMarks = [...run.data.marks].sort(
       (a, b) => MARK_ORDER.indexOf(a) - MARK_ORDER.indexOf(b),
     );
@@ -34,6 +38,18 @@ export function renderInline(runs: TextRun[]): DocumentFragment {
       const wrapper = document.createElement(tag);
       wrapper.appendChild(innermost);
       innermost = wrapper;
+    }
+
+    if (run.data.href) {
+      const anchor = document.createElement('a');
+      anchor.href = run.data.href;
+      anchor.target = '_blank';
+      anchor.rel = 'noopener noreferrer';
+      if (run.data.color) {
+        anchor.style.color = run.data.color;
+      }
+      anchor.appendChild(innermost);
+      innermost = anchor;
     }
 
     span.appendChild(innermost);

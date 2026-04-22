@@ -19,6 +19,8 @@ export { BlockRenderer } from './renderer/block-renderer';
 export { renderInline } from './inline/inline-renderer';
 export { InlineMarkManager } from './inline/inline-mark-manager';
 export { ToggleMarkCommand } from './inline/toggle-mark-command';
+export { SetTextColorCommand } from './inline/set-text-color-command';
+export { SetLinkCommand } from './inline/set-link-command';
 
 export { IntentClassifier } from './engine/intent-classifier';
 export type { EditIntent } from './engine/intent-classifier';
@@ -36,16 +38,19 @@ export { OutdentListCommand } from './engine/commands/outdent-list-command';
 export { SetAlignCommand } from './engine/commands/set-align-command';
 export { InsertRowCommand } from './engine/commands/insert-row-command';
 export { DeleteRowCommand } from './engine/commands/delete-row-command';
+export { DeleteRowsCommand } from './engine/commands/delete-rows-command';
 export { InsertColumnCommand } from './engine/commands/insert-column-command';
 export { DeleteColumnCommand } from './engine/commands/delete-column-command';
+export { DeleteColumnsCommand } from './engine/commands/delete-columns-command';
 export { MergeCellsCommand } from './engine/commands/merge-cells-command';
-export { SplitCellCommand } from './engine/commands/split-cell-command';
 export { ToggleCellBorderCommand } from './engine/commands/toggle-cell-border-command';
+export { ToggleCellBorderSelectionCommand } from './engine/commands/toggle-cell-border-selection-command';
 export { SetEmbedUrlCommand } from './engine/commands/set-embed-url-command';
 export { InsertBlockCommand } from './engine/commands/insert-block-command';
 export { DeleteBlockCommand } from './engine/commands/delete-block-command';
 export { MoveBlockCommand } from './engine/commands/move-block-command';
 export { SetCellBackgroundCommand } from './engine/commands/set-cell-background-command';
+export { SetCellsBackgroundCommand } from './engine/commands/set-cells-background-command';
 
 export { ClipboardHandler } from './engine/clipboard-handler';
 

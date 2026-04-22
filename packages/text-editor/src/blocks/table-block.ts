@@ -3,6 +3,7 @@ import type { Command } from '@core/commands/command';
 import type { BlockDefinition } from './block-definition';
 import type { BlockRegistry } from './block-registry';
 import type { RenderContext } from '../engine/render-context';
+import type { CellRange } from '../engine/commands/merge-cells-command';
 import type { EditorContext } from '../engine/editor-context';
 import { generateId } from '@core/id';
 import { createDefaultCellBlocks } from './table-cell-defaults';
@@ -11,6 +12,7 @@ import { deserializeCellBlocks } from './cell-block-deserialize';
 import { collectRenderedBlockListElements } from '../renderer/block-renderer';
 import { reconcileChildren } from '../engine/reconciler';
 import { DEFAULT_TABLE_COL_WIDTH, defaultTableData } from './table-data-factory';
+import { absorbedSlotCoveredBySameRowColspan, countPrimaryCellsInRange } from './table-range-utils';
 
 const MIN_COL_WEIGHT = 8;
 
@@ -110,14 +112,21 @@ export class TableBlock implements BlockDefinition<TableData> {
     grid.style.gridTemplateRows = `repeat(${numRows}, auto)`;
 
     grid.querySelectorAll('.idea-table-col-resizer').forEach(el => el.remove());
+    grid.querySelectorAll('.idea-table-cell').forEach(el => {
+      el.classList.remove('idea-table-cell--selected', 'idea-table-cell--range-anchor');
+    });
 
     const resizerTargets: { el: HTMLElement; boundaryCol: number }[] = [];
 
     for (let r = 0; r < numRows; r++) {
       let col = 0;
-      for (const cell of node.data.rows[r].cells) {
+      const rowCells = node.data.rows[r].cells;
+      for (let c = 0; c < rowCells.length; c++) {
+        const cell = rowCells[c];
         if (cell.absorbed) {
-          col++;
+          if (!absorbedSlotCoveredBySameRowColspan(node.data, r, c)) {
+            col++;
+          }
           continue;
         }
 
@@ -157,6 +166,10 @@ export class TableBlock implements BlockDefinition<TableData> {
     }
 
     this.attachColumnResize(grid, node, resizerTargets);
+    if (!grid.dataset.tableSelectionAttached) {
+      grid.dataset.tableSelectionAttached = '1';
+      this.attachCellSelection(grid, node, ctx);
+    }
     return true;
   }
 
@@ -183,9 +196,13 @@ export class TableBlock implements BlockDefinition<TableData> {
 
     for (let r = 0; r < numRows; r++) {
       let col = 0;
-      for (const cell of node.data.rows[r].cells) {
+      const rowCells = node.data.rows[r].cells;
+      for (let c = 0; c < rowCells.length; c++) {
+        const cell = rowCells[c];
         if (cell.absorbed) {
-          col++;
+          if (!absorbedSlotCoveredBySameRowColspan(node.data, r, c)) {
+            col++;
+          }
           continue;
         }
 
@@ -220,9 +237,12 @@ export class TableBlock implements BlockDefinition<TableData> {
     }
 
     this.attachColumnResize(grid, node, resizerTargets);
-    this.attachCellSelection(grid, node);
 
     wrapper.appendChild(grid);
+    // Selection handlers need grid.parentElement (the wrapper); append grid first.
+    grid.dataset.tableSelectionAttached = '1';
+    this.attachCellSelection(grid, node, ctx);
+
     return wrapper;
   }
 
@@ -298,8 +318,18 @@ export class TableBlock implements BlockDefinition<TableData> {
     }
   }
 
-  private attachCellSelection(grid: HTMLElement, node: BlockNode<TableData>): void {
-    let selecting = false;
+  private attachCellSelection(grid: HTMLElement, node: BlockNode<TableData>, ctx: RenderContext): void {
+    const eventBus = ctx.eventBus;
+    const wrapper = grid.parentElement as HTMLElement;
+    const LONG_MS = 480;
+    const MOVE_CANCEL_SQ = 8 * 8;
+
+    let longPressTimer: ReturnType<typeof setTimeout> | null = null;
+    let pointerDown = false;
+    let startX = 0;
+    let startY = 0;
+    let pendingAnchorId = '';
+    let tableSelectActive = false;
     let startCellId = '';
     let currentCellId = '';
 
@@ -314,13 +344,13 @@ export class TableBlock implements BlockDefinition<TableData> {
 
     const clearSelection = () => {
       grid.querySelectorAll('.idea-table-cell--selected').forEach(el => {
-        el.classList.remove('idea-table-cell--selected');
+        el.classList.remove('idea-table-cell--selected', 'idea-table-cell--range-anchor');
       });
     };
 
-    const highlightRange = (startId: string, endId: string) => {
+    const highlightRange = (anchorId: string, endId: string) => {
       clearSelection();
-      const s = getCellPos(startId);
+      const s = getCellPos(anchorId);
       const e = getCellPos(endId);
       if (!s || !e) return;
 
@@ -333,41 +363,166 @@ export class TableBlock implements BlockDefinition<TableData> {
         for (let c = minC; c <= maxC; c++) {
           const cell = node.data.rows[r].cells[c];
           if (cell.absorbed) continue;
-          const cellEl = grid.querySelector(`[data-cell-id="${cell.id}"]`);
+          const cellEl = grid.querySelector(`[data-cell-id="${CSS.escape(cell.id)}"]`);
           cellEl?.classList.add('idea-table-cell--selected');
+          if (cell.id === anchorId) {
+            cellEl?.classList.add('idea-table-cell--range-anchor');
+          }
         }
       }
     };
 
-    grid.addEventListener('mousedown', (e) => {
-      const target = (e.target as HTMLElement).closest<HTMLElement>('[data-cell-id]');
-      if (!target) return;
-      if ((e.target as HTMLElement).classList.contains('idea-table-col-resizer')) return;
-
-      startCellId = target.getAttribute('data-cell-id') ?? '';
-      currentCellId = startCellId;
-      selecting = true;
-      clearSelection();
-    });
-
-    grid.addEventListener('mousemove', (e) => {
-      if (!selecting) return;
-      const target = (e.target as HTMLElement).closest<HTMLElement>('[data-cell-id]');
-      if (!target) return;
-
-      const cellId = target.getAttribute('data-cell-id') ?? '';
-      if (cellId !== currentCellId) {
-        currentCellId = cellId;
-        highlightRange(startCellId, currentCellId);
+    const clearLongPressTimer = () => {
+      if (longPressTimer !== null) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
       }
-    });
-
-    const onMouseUp = () => {
-      selecting = false;
     };
 
-    grid.addEventListener('mouseup', onMouseUp);
-    document.addEventListener('mouseup', onMouseUp);
+    const onDocMoveSelect = (ev: MouseEvent) => {
+      if (!tableSelectActive) return;
+      const el = document.elementFromPoint(ev.clientX, ev.clientY);
+      const cellEl = el?.closest<HTMLElement>('[data-cell-id]');
+      if (!cellEl || !grid.contains(cellEl)) return;
+      const id = cellEl.getAttribute('data-cell-id') ?? '';
+      if (id && id !== currentCellId) {
+        currentCellId = id;
+        highlightRange(startCellId, currentCellId);
+      }
+    };
+
+    const endTableRangeInteraction = () => {
+      wrapper.classList.remove('idea-block--table--range-select');
+      eventBus.emit('table:range-ui', { active: false });
+    };
+
+    const startTableRangeInteraction = () => {
+      wrapper.classList.add('idea-block--table--range-select');
+      window.getSelection()?.removeAllRanges();
+      eventBus.emit('table:range-ui', { active: true });
+    };
+
+    const onDocUpSelect = (ev: MouseEvent) => {
+      if (!tableSelectActive) return;
+      tableSelectActive = false;
+      document.removeEventListener('mousemove', onDocMoveSelect);
+      document.removeEventListener('mouseup', onDocUpSelect);
+
+      const s = getCellPos(startCellId);
+      const e = getCellPos(currentCellId);
+      if (s && e) {
+        const range: CellRange = {
+          startRow: Math.min(s.row, e.row),
+          startCol: Math.min(s.col, e.col),
+          endRow: Math.max(s.row, e.row),
+          endCol: Math.max(s.col, e.col),
+        };
+        const dx = ev.clientX - startX;
+        const dy = ev.clientY - startY;
+        const pointerMoved = dx * dx + dy * dy > MOVE_CANCEL_SQ;
+        const spanMultipleCells = startCellId !== currentCellId;
+        const multiPrimary = countPrimaryCellsInRange(node.data, range) >= 2;
+        if (!multiPrimary && !pointerMoved && !spanMultipleCells) {
+          clearSelection();
+          endTableRangeInteraction();
+          return;
+        }
+        eventBus.emit('table:range-select-end', {
+          clientX: ev.clientX,
+          clientY: ev.clientY,
+          blockId: node.id,
+          anchorCellId: startCellId,
+          range,
+          tableWrapper: wrapper,
+        });
+      } else {
+        clearSelection();
+        endTableRangeInteraction();
+      }
+    };
+
+    const onPendingMove = (ev: MouseEvent) => {
+      if (!pointerDown || tableSelectActive) return;
+      const dx = ev.clientX - startX;
+      const dy = ev.clientY - startY;
+      if (dx * dx + dy * dy > MOVE_CANCEL_SQ) {
+        clearLongPressTimer();
+      }
+    };
+
+    const onPendingUp = () => {
+      pointerDown = false;
+      clearLongPressTimer();
+      document.removeEventListener('mousemove', onPendingMove);
+      document.removeEventListener('mouseup', onPendingUp, true);
+    };
+
+    const onKeyDown = (ev: KeyboardEvent) => {
+      if (ev.key !== 'Escape') return;
+      if (!tableSelectActive && !grid.querySelector('.idea-table-cell--selected')) return;
+      clearLongPressTimer();
+      pointerDown = false;
+      tableSelectActive = false;
+      document.removeEventListener('mousemove', onDocMoveSelect);
+      document.removeEventListener('mouseup', onDocUpSelect);
+      document.removeEventListener('mousemove', onPendingMove);
+      document.removeEventListener('mouseup', onPendingUp, true);
+      clearSelection();
+      endTableRangeInteraction();
+    };
+    document.addEventListener('keydown', onKeyDown);
+
+    const onSelectStart = (e: Event) => {
+      if (!wrapper.classList.contains('idea-block--table--range-select')) return;
+      if (wrapper.contains(e.target as Node)) e.preventDefault();
+    };
+    document.addEventListener('selectstart', onSelectStart, true);
+
+    grid.addEventListener('mousedown', (e: MouseEvent) => {
+      if (e.button !== 0) return;
+      const target = (e.target as HTMLElement).closest<HTMLElement>('[data-cell-id]');
+      if (!target || !grid.contains(target)) return;
+      if ((e.target as HTMLElement).classList.contains('idea-table-col-resizer')) return;
+
+      const cellId = target.getAttribute('data-cell-id') ?? '';
+      const inner = target.querySelector<HTMLElement>('.idea-table-cell__inner');
+      const onInner = !!(inner && inner.contains(e.target as Node));
+
+      startX = e.clientX;
+      startY = e.clientY;
+      pendingAnchorId = cellId;
+      pointerDown = true;
+      tableSelectActive = false;
+
+      if (onInner) {
+        clearLongPressTimer();
+        longPressTimer = setTimeout(() => {
+          longPressTimer = null;
+          if (!pointerDown) return;
+          document.removeEventListener('mousemove', onPendingMove);
+          document.removeEventListener('mouseup', onPendingUp, true);
+          tableSelectActive = true;
+          startCellId = pendingAnchorId;
+          currentCellId = startCellId;
+          startTableRangeInteraction();
+          clearSelection();
+          highlightRange(startCellId, currentCellId);
+          document.addEventListener('mousemove', onDocMoveSelect);
+          document.addEventListener('mouseup', onDocUpSelect);
+        }, LONG_MS);
+        document.addEventListener('mousemove', onPendingMove);
+        document.addEventListener('mouseup', onPendingUp, { capture: true });
+      } else {
+        tableSelectActive = true;
+        startCellId = cellId;
+        currentCellId = cellId;
+        startTableRangeInteraction();
+        clearSelection();
+        highlightRange(startCellId, currentCellId);
+        document.addEventListener('mousemove', onDocMoveSelect);
+        document.addEventListener('mouseup', onDocUpSelect);
+      }
+    });
   }
 
   serialize(node: BlockNode<TableData>): BlockNode<TableData> {

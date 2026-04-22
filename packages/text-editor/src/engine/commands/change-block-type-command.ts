@@ -1,9 +1,10 @@
-import type { DocumentNode, BlockType, TextRun } from '@core/model/interfaces';
+import type { DocumentNode, BlockType, TextRun, TableData } from '@core/model/interfaces';
 import type { Command } from '@core/commands/command';
 import type { OperationRecord } from '@core/operation-log/interfaces';
 import { generateId } from '@core/id';
 import type { BlockRegistry } from '../../blocks/block-registry';
 import { findBlockLocation } from '../block-locator';
+import { cloneTableData } from '../document-snapshot';
 
 export class ChangeBlockTypeCommand implements Command {
   readonly operationRecords: OperationRecord[] = [];
@@ -24,15 +25,27 @@ export class ChangeBlockTypeCommand implements Command {
     if (!block) return;
 
     this.oldType = block.type;
-    this.oldData = { ...block.data };
+    this.oldData =
+      block.type === 'table'
+        ? (cloneTableData(block.data as TableData) as unknown as Record<string, unknown>)
+        : { ...block.data };
     this.oldChildren = block.children.map(run => ({
       ...run,
-      data: { text: run.data.text, marks: [...run.data.marks] },
+      data: {
+        text: run.data.text,
+        marks: [...run.data.marks],
+        ...(run.data.color !== undefined ? { color: run.data.color } : {}),
+        ...(run.data.href !== undefined ? { href: run.data.href } : {}),
+      },
     }));
 
     const def = this.registry.get(this.newType);
     block.type = this.newType;
-    block.data = this.dataOverride ? { ...this.dataOverride } : def.defaultData();
+    block.data = this.dataOverride
+      ? this.newType === 'table'
+        ? (cloneTableData(this.dataOverride as unknown as TableData) as typeof block.data)
+        : ({ ...this.dataOverride } as typeof block.data)
+      : def.defaultData();
     if (this.newType === 'table') {
       block.children = [];
     }
@@ -72,10 +85,18 @@ export class ChangeBlockTypeCommand implements Command {
     if (!block) return;
 
     block.type = this.oldType;
-    block.data = { ...this.oldData };
+    block.data =
+      this.oldType === 'table'
+        ? (cloneTableData(this.oldData as unknown as TableData) as typeof block.data)
+        : ({ ...this.oldData } as typeof block.data);
     block.children = this.oldChildren.map(run => ({
       ...run,
-      data: { text: run.data.text, marks: [...run.data.marks] },
+      data: {
+        text: run.data.text,
+        marks: [...run.data.marks],
+        ...(run.data.color !== undefined ? { color: run.data.color } : {}),
+        ...(run.data.href !== undefined ? { href: run.data.href } : {}),
+      },
     }));
   }
 }

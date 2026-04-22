@@ -1,0 +1,42 @@
+@use '../../../../src/styles/variables' as *;
+
+.idea-link-hover-popover {
+  position: fixed;
+  z-index: 92;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: $spacing-xs;
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba($black, 0.08);
+  font-family: $font-family-base;
+  pointer-events: auto;
+  user-select: none;
+
+  &__btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: $color-text;
+    cursor: pointer;
+    transition: background-color 0.1s;
+
+    .material-symbols-outlined {
+      font-size: 20px;
+      line-height: 1;
+      display: block;
+    }
+
+    &:hover {
+      background: $color-bg-subtle;
+    }
+  }
+}

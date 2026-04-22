@@ -1,9 +1,18 @@
-import type { DocumentNode, TableData, TableCell } from '@core/model/interfaces';
+import type { DocumentNode, TableCell, TableData } from '@core/model/interfaces';
 import type { Command } from '@core/commands/command';
 import type { OperationRecord } from '@core/operation-log/interfaces';
 import { generateId } from '@core/id';
-import { tableHasMergedCells } from '../../blocks/table-merge-guards';
+import { cloneBlockNodeDeep } from '../document-snapshot';
+import { deleteColumnAtInColspanTable } from '../../blocks/table-column-mutations';
 import { findTableBlock } from '../block-locator';
+
+function cloneCellForUndo(cell: TableCell): TableCell {
+  return {
+    ...cell,
+    style: { ...cell.style },
+    blocks: cell.blocks.map(cloneBlockNodeDeep),
+  };
+}
 
 export class DeleteColumnCommand implements Command {
   readonly operationRecords: OperationRecord[] = [];
@@ -22,15 +31,14 @@ export class DeleteColumnCommand implements Command {
 
     const data = block.data as TableData;
     if (data.columnWidths.length <= 1) return;
-    if (tableHasMergedCells(data)) return;
+    if (this.colIndex < 0 || this.colIndex >= data.columnWidths.length) return;
 
-    this.deletedWidth = data.columnWidths[this.colIndex];
-    data.columnWidths.splice(this.colIndex, 1);
+    this.deletedWidth = data.columnWidths[this.colIndex]!;
+    this.deletedCells = data.rows.map(row => cloneCellForUndo(row.cells[this.colIndex]!));
 
-    this.deletedCells = [];
-    for (const row of data.rows) {
-      this.deletedCells.push(row.cells[this.colIndex]);
-      row.cells.splice(this.colIndex, 1);
+    if (!deleteColumnAtInColspanTable(data, this.colIndex)) {
+      this.deletedCells = [];
+      return;
     }
 
     this.operationRecords.push({
@@ -51,12 +59,20 @@ export class DeleteColumnCommand implements Command {
   undo(): void {
     const block = findTableBlock(this.doc, this.blockId);
     if (!block) return;
+    if (this.deletedCells.length === 0) return;
 
     const data = block.data as TableData;
     data.columnWidths.splice(this.colIndex, 0, this.deletedWidth);
 
     for (let i = 0; i < data.rows.length; i++) {
-      data.rows[i].cells.splice(this.colIndex, 0, this.deletedCells[i]);
+      const cell = this.deletedCells[i];
+      if (cell) {
+        data.rows[i].cells.splice(this.colIndex, 0, {
+          ...cell,
+          style: { ...cell.style },
+          blocks: cell.blocks.map(cloneBlockNodeDeep),
+        });
+      }
     }
   }
 }

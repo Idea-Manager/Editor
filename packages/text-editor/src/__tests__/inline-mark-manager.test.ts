@@ -132,6 +132,34 @@ describe('InlineMarkManager', () => {
     expect(after).toHaveLength(1);
     expect(after[0].data.text).toBe(' world');
   });
+
+  it('expandContiguousStyledRange spans adjacent runs with same marks, color, and href', () => {
+    const block: BlockNode<ParagraphData> = {
+      id: 'blk_test',
+      type: 'paragraph',
+      data: { align: 'left' },
+      children: [
+        {
+          id: 'txt_a',
+          type: 'text',
+          data: { text: 'aa', marks: [], href: 'https://x.test' },
+        },
+        {
+          id: 'txt_b',
+          type: 'text',
+          data: { text: 'bb', marks: [], href: 'https://x.test' },
+        },
+        {
+          id: 'txt_c',
+          type: 'text',
+          data: { text: 'cc', marks: [], href: 'https://y.test' },
+        },
+      ],
+    };
+
+    const r = mgr.expandContiguousStyledRange(block, 'txt_b');
+    expect(r).toEqual({ start: 0, end: 4 });
+  });
 });
 
 describe('ToggleMarkCommand', () => {

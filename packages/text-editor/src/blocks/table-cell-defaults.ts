@@ -19,7 +19,12 @@ export function blocksFromLegacyCellContent(runs: TextRun[] | undefined): BlockN
   const safe = (runs ?? []).map(r => ({
     id: r.id,
     type: 'text' as const,
-    data: { text: r.data?.text ?? '', marks: [...(r.data?.marks ?? [])] },
+    data: {
+      text: r.data?.text ?? '',
+      marks: [...(r.data?.marks ?? [])],
+      ...(r.data?.color !== undefined ? { color: r.data.color } : {}),
+      ...(r.data?.href !== undefined ? { href: r.data.href } : {}),
+    },
   }));
   if (safe.length === 0) {
     return createDefaultCellBlocks();

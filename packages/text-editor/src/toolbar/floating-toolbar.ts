@@ -2,12 +2,15 @@ import type { BlockNode, BlockSelection, InlineMark, BlockType } from '@core/mod
 import type { EditorContext } from '../engine/editor-context';
 import type { PaletteItem } from '../blocks/block-registry';
 import { ToggleMarkCommand } from '../inline/toggle-mark-command';
+import { SetTextColorCommand } from '../inline/set-text-color-command';
 import { InlineMarkManager } from '../inline/inline-mark-manager';
+import { openLinkUrlFlyout } from './link-url-flyout';
 import { ChangeBlockTypeCommand } from '../engine/commands/change-block-type-command';
 import { SetAlignCommand, type Alignment } from '../engine/commands/set-align-command';
 import { createIcon } from '../../../../src/util/icon';
 import { getBlockById, getSelectionSpansInDocumentOrder } from '../engine/block-locator';
 import { SelectionSync, escapeSelectorAttr } from '../engine/selection-sync';
+import { ColorPicker } from '@shared/components/color-picker';
 
 const MARK_BUTTONS: { mark: InlineMark; icon: string }[] = [
   { mark: 'bold', icon: 'format_bold' },
@@ -25,8 +28,13 @@ const CONVERTIBLE_BLOCK_TYPES: BlockType[] = ['paragraph', 'heading', 'list_item
 
 export class FloatingToolbar {
   private overlay: HTMLDivElement | null = null;
+  private colorPicker: ColorPicker | null = null;
+  private linkFlyout: HTMLDivElement | null = null;
+  private linkFlyoutClose: (() => void) | null = null;
   private visible = false;
   private showTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Suppress toolbar during table cell range drag or while table context menu is open. */
+  private tableRangeUiActive = false;
   private readonly markManager = new InlineMarkManager();
   private readonly disposers: (() => void)[] = [];
   private readonly selectionSync: SelectionSync;
@@ -59,8 +67,26 @@ export class FloatingToolbar {
       this.onSelectionChange();
     });
 
+    const unsubTableRangeUi = this.ctx.eventBus.on('table:range-ui', (p: { active: boolean }) => {
+      this.tableRangeUiActive = p.active;
+      if (p.active) {
+        if (this.showTimer) {
+          clearTimeout(this.showTimer);
+          this.showTimer = null;
+        }
+        this.hide();
+      } else {
+        this.onSelectionChange();
+      }
+    });
+
     const onMousedown = (e: MouseEvent) => {
-      if (this.overlay && !this.overlay.contains(e.target as Node)) {
+      const target = e.target as Node;
+      const outsideToolbar = this.overlay && !this.overlay.contains(target);
+      const outsidePicker = !this.colorPicker?.element?.contains(target);
+      const outsideLinkFlyout = !this.linkFlyout?.contains(target);
+      const outsideLinkHover = !(target as Element).closest?.('.idea-link-hover-popover');
+      if (outsideToolbar && outsidePicker && outsideLinkFlyout && outsideLinkHover) {
         this.hide();
       }
     };
@@ -68,10 +94,20 @@ export class FloatingToolbar {
     document.addEventListener('mousedown', onMousedown);
 
     this.disposers.push(unsub);
+    this.disposers.push(unsubTableRangeUi);
     this.disposers.push(() => document.removeEventListener('mousedown', onMousedown));
   }
 
   private onSelectionChange(): void {
+    if (this.tableRangeUiActive) {
+      if (this.showTimer) {
+        clearTimeout(this.showTimer);
+        this.showTimer = null;
+      }
+      this.hide();
+      return;
+    }
+
     const sel = this.ctx.selectionManager.get();
 
     if (!sel || sel.isCollapsed) {
@@ -90,6 +126,8 @@ export class FloatingToolbar {
   }
 
   private showAtSelection(): void {
+    if (this.tableRangeUiActive) return;
+
     const sel = this.ctx.selectionManager.get();
     if (!sel || sel.isCollapsed) return;
 
@@ -103,11 +141,24 @@ export class FloatingToolbar {
   }
 
   hide(): void {
+    this.hideLinkFlyout();
+    this.clearColorPicker();
     if (this.overlay) {
       this.overlay.remove();
       this.overlay = null;
     }
     this.visible = false;
+  }
+
+  private clearColorPicker(): void {
+    this.colorPicker?.hide();
+    this.colorPicker = null;
+  }
+
+  private hideLinkFlyout(): void {
+    if (this.linkFlyoutClose) {
+      this.linkFlyoutClose();
+    }
   }
 
   private getConvertiblePaletteItems(): PaletteItem[] {
@@ -160,6 +211,32 @@ export class FloatingToolbar {
 
       this.overlay.appendChild(btn);
     }
+
+    const sepColor = document.createElement('div');
+    sepColor.classList.add('idea-floating-toolbar__separator');
+    this.overlay.appendChild(sepColor);
+
+    const colorBtn = document.createElement('button');
+    colorBtn.type = 'button';
+    colorBtn.classList.add('idea-floating-toolbar__btn', 'idea-floating-toolbar__btn--color');
+    colorBtn.title = this.ctx.i18n.t('toolbar.textColor');
+    colorBtn.appendChild(createIcon('format_color_text'));
+    colorBtn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      this.openTextColorPicker(e);
+    });
+    this.overlay.appendChild(colorBtn);
+
+    const linkBtn = document.createElement('button');
+    linkBtn.type = 'button';
+    linkBtn.classList.add('idea-floating-toolbar__btn', 'idea-floating-toolbar__btn--link');
+    linkBtn.title = this.ctx.i18n.t('toolbar.addLink');
+    linkBtn.appendChild(createIcon('link_2'));
+    linkBtn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      this.openLinkFlyout(e);
+    });
+    this.overlay.appendChild(linkBtn);
 
     const sep1 = document.createElement('div');
     sep1.classList.add('idea-floating-toolbar__separator');
@@ -285,11 +362,9 @@ export class FloatingToolbar {
     }
   }
 
-  private positionOverlay(): void {
-    if (!this.overlay) return;
-
+  private getSelectionBoundingRect(): DOMRect | null {
     const sel = this.ctx.selectionManager.get();
-    if (!sel || sel.isCollapsed) return;
+    if (!sel || sel.isCollapsed) return null;
 
     let rect = this.selectionSync.getSelectionClientRect(this.ctx.rootElement, sel);
 
@@ -309,6 +384,14 @@ export class FloatingToolbar {
       }
     }
 
+    if (!rect) return null;
+    return rect;
+  }
+
+  private positionOverlay(): void {
+    if (!this.overlay) return;
+
+    const rect = this.getSelectionBoundingRect();
     if (!rect) return;
 
     const margin = 8;
@@ -340,6 +423,139 @@ export class FloatingToolbar {
 
     place();
     requestAnimationFrame(place);
+  }
+
+  private resolveInitialTextColorForPicker(sel: BlockSelection): string {
+    const spans = getSelectionSpansInDocumentOrder(this.ctx.document, sel);
+    if (spans && spans.length > 0) {
+      let acc: string | undefined;
+      let first = true;
+      for (const span of spans) {
+        const c = this.markManager.getUniformTextColorInRange(span.block, span.start, span.end);
+        if (first) {
+          acc = c;
+          first = false;
+        } else if ((c ?? '') !== (acc ?? '')) {
+          return this.fallbackComputedTextColor();
+        }
+      }
+      if (acc !== undefined) return acc;
+      return this.fallbackComputedTextColor();
+    }
+
+    const block = getBlockById(this.ctx.document, sel.anchorBlockId);
+    if (!block) return '#000000';
+    const lo = Math.min(sel.anchorOffset, sel.focusOffset);
+    const hi = Math.max(sel.anchorOffset, sel.focusOffset);
+    const c = this.markManager.getUniformTextColorInRange(block, lo, hi);
+    if (c !== undefined) return c;
+    return this.fallbackComputedTextColor();
+  }
+
+  private fallbackComputedTextColor(): string {
+    const win = this.ctx.rootElement.ownerDocument.defaultView;
+    const domSel = win?.getSelection();
+    if (domSel && domSel.rangeCount > 0) {
+      const range = domSel.getRangeAt(0);
+      let node: Node | null = range.startContainer;
+      if (node.nodeType === Node.TEXT_NODE) node = node.parentElement;
+      const el = node as HTMLElement | null;
+      if (el && win) {
+        const computed = win.getComputedStyle(el).color;
+        if (computed) return computed;
+      }
+    }
+    return '#000000';
+  }
+
+  private resolveInitialHrefForInput(sel: BlockSelection): string | undefined {
+    const spans = getSelectionSpansInDocumentOrder(this.ctx.document, sel);
+    if (spans && spans.length > 0) {
+      let acc: string | undefined;
+      let first = true;
+      for (const span of spans) {
+        const h = this.markManager.getUniformHrefInRange(span.block, span.start, span.end);
+        if (first) {
+          acc = h;
+          first = false;
+        } else if ((h ?? '') !== (acc ?? '')) {
+          return undefined;
+        }
+      }
+      return acc;
+    }
+
+    const block = getBlockById(this.ctx.document, sel.anchorBlockId);
+    if (!block) return undefined;
+    const lo = Math.min(sel.anchorOffset, sel.focusOffset);
+    const hi = Math.max(sel.anchorOffset, sel.focusOffset);
+    return this.markManager.getUniformHrefInRange(block, lo, hi);
+  }
+
+  private openLinkFlyout(_e: MouseEvent): void {
+    const sel = this.ctx.selectionManager.get();
+    if (!sel || sel.isCollapsed) return;
+
+    this.hideLinkFlyout();
+    this.clearColorPicker();
+
+    const initialHref = this.resolveInitialHrefForInput(sel);
+    const spans = getSelectionSpansInDocumentOrder(this.ctx.document, sel);
+    if (!spans || spans.length === 0) return;
+
+    const { element, close } = openLinkUrlFlyout({
+      ctx: this.ctx,
+      markManager: this.markManager,
+      getAnchorRect: () => this.getSelectionBoundingRect(),
+      preferBelow: true,
+      initialHref,
+      targets: spans.map(s => ({ block: s.block, start: s.start, end: s.end })),
+      onAfterCommit: () => this.updateActiveStates(),
+      onClosed: () => {
+        this.linkFlyout = null;
+        this.linkFlyoutClose = null;
+      },
+    });
+
+    this.linkFlyout = element;
+    this.linkFlyoutClose = () => close();
+  }
+
+  private openTextColorPicker(e: MouseEvent): void {
+    const sel = this.ctx.selectionManager.get();
+    if (!sel || sel.isCollapsed) return;
+
+    this.hideLinkFlyout();
+    this.clearColorPicker();
+    const initial = this.resolveInitialTextColorForPicker(sel);
+    const picker = new ColorPicker();
+    this.colorPicker = picker;
+    const t = this.ctx.i18n.t.bind(this.ctx.i18n);
+    picker.show({
+      anchorX: e.clientX,
+      anchorY: e.clientY,
+      initialColor: initial,
+      initialColorParseAs: 'color',
+      labels: {
+        select: t('colorPicker.select'),
+        cancel: t('colorPicker.cancel'),
+      },
+      onSelect: (color) => {
+        const spans = getSelectionSpansInDocumentOrder(this.ctx.document, sel);
+        if (!spans || spans.length === 0) return;
+        for (const span of spans) {
+          this.ctx.undoRedoManager.push(
+            new SetTextColorCommand(span.block, span.start, span.end, color, this.markManager),
+          );
+        }
+        this.ctx.eventBus.emit('doc:change', { document: this.ctx.document });
+        this.clearColorPicker();
+        this.updateActiveStates();
+      },
+      onCancel: () => {
+        this.clearColorPicker();
+      },
+    });
   }
 
   private toggleMark(mark: InlineMark): void {

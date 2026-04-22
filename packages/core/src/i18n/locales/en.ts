@@ -16,6 +16,12 @@ export const en: TranslationDictionary = {
   'toolbar.alignLeft': 'Align left',
   'toolbar.alignCenter': 'Align center',
   'toolbar.alignRight': 'Align right',
+  'toolbar.textColor': 'Text color',
+  'toolbar.addLink': 'Add link',
+  'toolbar.linkUrlPlaceholder': 'https://…',
+  'toolbar.linkOpenNewTab': 'Open link in new tab',
+  'toolbar.linkEdit': 'Edit link',
+  'toolbar.linkCopy': 'Copy link',
 
   // Block gutter
   'gutter.addBlock': 'Add block below',
@@ -32,7 +38,6 @@ export const en: TranslationDictionary = {
   'table.insertColumnRight': 'Insert Column Right',
   'table.deleteColumn': 'Delete Column',
   'table.mergeCells': 'Merge Cells',
-  'table.splitCell': 'Split Cell',
   'table.cellBorders': 'Cell Borders',
   'table.borderTop': 'Top',
   'table.borderRight': 'Right',
@@ -44,6 +49,11 @@ export const en: TranslationDictionary = {
   'table.bgGray100': 'Gray 100',
   'table.bgGray200': 'Gray 200',
   'table.bgGray300': 'Gray 300',
+
+  // Color picker
+  'colorPicker.custom': 'Custom color',
+  'colorPicker.select': 'Select',
+  'colorPicker.cancel': 'Cancel',
 
   // Table size picker
   'table.insertTable': 'Insert Table',
