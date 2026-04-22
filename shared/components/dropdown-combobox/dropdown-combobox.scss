@@ -1,0 +1,90 @@
+@use '../../../src/styles/variables' as *;
+
+.idea-dropdown-combobox {
+  position: relative;
+  width: 100%;
+  max-width: 120px;
+
+  &__field {
+    display: flex;
+    align-items: stretch;
+    border: 1px solid $color-border;
+    border-radius: 4px;
+    background: $color-bg;
+    overflow: hidden;
+  }
+
+  &__input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    padding: $spacing-xs $spacing-sm;
+    font-size: $font-size-sm;
+    font-family: $font-family-base;
+    color: $color-text;
+    background: transparent;
+
+    &:focus {
+      outline: none;
+    }
+  }
+
+  &__unit {
+    flex: 0 0 auto;
+    align-self: center;
+    padding-right: $spacing-xs;
+    font-size: $font-size-sm;
+    font-family: $font-family-base;
+    color: $color-text-secondary;
+    user-select: none;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+
+  &--with-unit &__input {
+    padding-right: $spacing-xs;
+  }
+
+  &__toggle {
+    flex: 0 0 28px;
+    border: none;
+    border-left: 1px solid $color-border;
+    background: $color-bg-subtle;
+    cursor: pointer;
+    font-size: 10px;
+    line-height: 1;
+    color: $color-text-secondary;
+
+    &:hover {
+      background: $color-bg;
+    }
+  }
+
+  /** Position and visibility are set in JS when the list is portaled to `document.body`. */
+  &__list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    overflow: auto;
+    border: 1px solid $color-border;
+    border-radius: 4px;
+    background: $color-bg;
+    box-shadow: 0 4px 12px rgba($black, 0.12);
+  }
+
+  &__option {
+    padding: $spacing-xs $spacing-sm;
+    font-size: $font-size-sm;
+    font-family: $font-family-base;
+    cursor: pointer;
+
+    &:hover,
+    &--current {
+      background: $color-bg-subtle;
+    }
+  }
+
+  &--open &__field {
+    border-color: $gray-400;
+  }
+}

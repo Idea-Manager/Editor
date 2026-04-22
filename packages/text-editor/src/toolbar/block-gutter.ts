@@ -1,24 +1,29 @@
-import type { BlockType } from '@core/model/interfaces';
+import type { BlockNode, BlockType } from '@core/model/interfaces';
 import type { EditorContext } from '../engine/editor-context';
 import type { SlashPalette } from './slash-palette';
 import { BlockTypeMenu } from './block-type-menu';
 import { TableSizePicker, type TableSizePickerResult } from './table-size-picker';
 import { InsertBlockCommand } from '../engine/commands/insert-block-command';
 import { ChangeBlockTypeCommand } from '../engine/commands/change-block-type-command';
+import { DeleteBlockCommand } from '../engine/commands/delete-block-command';
 import { MoveBlockCommand } from '../engine/commands/move-block-command';
 import { createIcon } from '../../../../src/util/icon';
-import { findBlockLocation, getFirstTableCellFirstBlockId } from '../engine/block-locator';
+import { findBlockLocation, findTableCell, getFirstTableCellFirstBlockId, type BlockLocation } from '../engine/block-locator';
 import { buildTableDataFromSizePicker } from '../blocks/table-data-factory';
+import { Modal } from '@shared/components/modal';
 
 export class BlockGutter {
   private gutterEl: HTMLDivElement | null = null;
   private dragBtn: HTMLButtonElement | null = null;
+  private trashBtn: HTMLButtonElement | null = null;
   private hoveredBlockId: string | null = null;
   private blockTypeMenu: BlockTypeMenu;
   private tableSizePicker: TableSizePicker;
   private slashPalette: SlashPalette | null = null;
   private dragBlockId: string | null = null;
   private dropIndicator: HTMLDivElement | null = null;
+  private readonly removeConfirmModal = new Modal(this.host);
+  private trashRowEl: HTMLDivElement | null = null;
   private readonly disposers: (() => void)[] = [];
 
   constructor(
@@ -36,6 +41,7 @@ export class BlockGutter {
   }
 
   destroy(): void {
+    this.removeConfirmModal.hide();
     this.blockTypeMenu.hide();
     this.tableSizePicker.hide();
     this.removeGutter();
@@ -67,8 +73,35 @@ export class BlockGutter {
     dragBtn.addEventListener('dragstart', (e) => this.onDragStart(e));
     dragBtn.addEventListener('dragend', () => this.onDragEnd());
 
-    this.gutterEl.appendChild(addBtn);
-    this.gutterEl.appendChild(dragBtn);
+    const topRow = document.createElement('div');
+    topRow.classList.add('idea-block-gutter__row');
+    topRow.appendChild(addBtn);
+    topRow.appendChild(dragBtn);
+
+    const trashBtn = document.createElement('button');
+    this.trashBtn = trashBtn;
+    const trashRow = document.createElement('div');
+    this.trashRowEl = trashRow;
+    trashRow.classList.add('idea-block-gutter__row', 'idea-block-gutter__row--trash');
+    trashBtn.classList.add('idea-block-gutter__btn', 'idea-block-gutter__btn--trash');
+    trashBtn.type = 'button';
+    trashBtn.title = this.ctx.i18n.t('gutter.removeBlock');
+    trashBtn.setAttribute('aria-label', this.ctx.i18n.t('gutter.removeBlock'));
+    trashRow.style.display = 'none';
+    trashBtn.appendChild(createIcon('delete'));
+    trashBtn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+    trashBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.onRemoveBlockClick();
+    });
+    trashRow.appendChild(trashBtn);
+
+    this.gutterEl.appendChild(topRow);
+    this.gutterEl.appendChild(trashRow);
 
     this.host.appendChild(this.gutterEl);
     this.gutterEl.classList.add('idea-block-gutter--hidden');
@@ -85,7 +118,7 @@ export class BlockGutter {
     const root = this.ctx.rootElement;
 
     const onMousemove = (e: MouseEvent) => {
-      if (this.blockTypeMenu.isVisible() || this.tableSizePicker.isVisible() || this.slashPalette?.isVisible()) return;
+      if (this.blockTypeMenu.isVisible() || this.tableSizePicker.isVisible() || this.removeConfirmModal.isVisible() || this.slashPalette?.isVisible()) return;
       if (this.dragBlockId) return;
 
       const target = e.target as HTMLElement;
@@ -115,7 +148,7 @@ export class BlockGutter {
     };
 
     const onMouseleave = (e: MouseEvent) => {
-      if (this.blockTypeMenu.isVisible() || this.tableSizePicker.isVisible() || this.slashPalette?.isVisible()) return;
+      if (this.blockTypeMenu.isVisible() || this.tableSizePicker.isVisible() || this.removeConfirmModal.isVisible() || this.slashPalette?.isVisible()) return;
       const related = e.relatedTarget as HTMLElement | null;
       if (related && this.gutterEl?.contains(related)) return;
       this.hoveredBlockId = null;
@@ -123,7 +156,7 @@ export class BlockGutter {
     };
 
     const onGutterMouseleave = (e: MouseEvent) => {
-      if (this.blockTypeMenu.isVisible() || this.tableSizePicker.isVisible() || this.slashPalette?.isVisible()) return;
+      if (this.blockTypeMenu.isVisible() || this.tableSizePicker.isVisible() || this.removeConfirmModal.isVisible() || this.slashPalette?.isVisible()) return;
       const related = e.relatedTarget as HTMLElement | null;
       if (related && root.contains(related)) return;
       this.hoveredBlockId = null;
@@ -221,6 +254,8 @@ export class BlockGutter {
       this.dragBtn.style.display = '';
       this.dragBtn.setAttribute('draggable', 'true');
     }
+
+    this.updateTrashButtonVisibility(this.hoveredBlockId!);
   }
 
   private hideGutter(): void {
@@ -231,6 +266,125 @@ export class BlockGutter {
     if (this.dragBtn) {
       this.dragBtn.style.display = '';
       this.dragBtn.setAttribute('draggable', 'true');
+    }
+    if (this.trashRowEl) {
+      this.trashRowEl.style.display = 'none';
+    }
+  }
+
+  private updateTrashButtonVisibility(blockId: string): void {
+    if (!this.trashRowEl) return;
+    const loc = findBlockLocation(this.ctx.document, blockId);
+    if (!loc) {
+      this.trashRowEl.style.display = 'none';
+      return;
+    }
+    const show =
+      loc.block.type !== 'paragraph' && loc.block.type !== 'heading';
+    this.trashRowEl.style.display = show ? 'flex' : 'none';
+  }
+
+  private onRemoveBlockClick(): void {
+    const blockId = this.hoveredBlockId;
+    if (!blockId) return;
+    const loc = findBlockLocation(this.ctx.document, blockId);
+    if (!loc) return;
+    if (loc.block.type === 'paragraph' || loc.block.type === 'heading') return;
+    this.showRemoveConfirmModal(blockId);
+  }
+
+  private showRemoveConfirmModal(blockId: string): void {
+    const t = this.ctx.i18n.t.bind(this.ctx.i18n);
+    const body = document.createElement('p');
+    body.classList.add('idea-block-gutter__confirm-message');
+    body.textContent = t('gutter.confirmRemoveMessage');
+
+    const actions = document.createElement('div');
+    actions.classList.add('idea-block-gutter__modal-footer-actions');
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.type = 'button';
+    cancelBtn.classList.add('idea-block-gutter__modal-btn', 'idea-block-gutter__modal-btn--cancel');
+    cancelBtn.textContent = t('gutter.modalCancel');
+    cancelBtn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.removeConfirmModal.hide();
+    });
+
+    const confirmBtn = document.createElement('button');
+    confirmBtn.type = 'button';
+    confirmBtn.classList.add('idea-block-gutter__modal-btn', 'idea-block-gutter__modal-btn--confirm');
+    confirmBtn.textContent = t('gutter.modalConfirm');
+    confirmBtn.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      this.removeConfirmModal.hide();
+      this.performRemoveBlock(blockId);
+    });
+
+    actions.appendChild(cancelBtn);
+    actions.appendChild(confirmBtn);
+
+    this.removeConfirmModal.show({
+      title: t('gutter.confirmRemoveTitle'),
+      body,
+      footer: actions,
+      panelClass: 'idea-modal__panel--narrow',
+    });
+  }
+
+  private performRemoveBlock(blockId: string): void {
+    const loc = findBlockLocation(this.ctx.document, blockId);
+    if (!loc) return;
+    if (loc.block.type === 'paragraph' || loc.block.type === 'heading') return;
+
+    const docIdx =
+      loc.parentKind === 'document'
+        ? this.ctx.document.children.findIndex(b => b.id === blockId)
+        : -1;
+
+    this.ctx.undoRedoManager.push(new DeleteBlockCommand(this.ctx.document, blockId));
+
+    if (loc.parentKind === 'document' && docIdx !== -1) {
+      this.focusAfterRemove(docIdx);
+    } else if (loc.parentKind === 'table-cell') {
+      this.focusAfterRemoveInTableCell(loc);
+    }
+
+    this.hoveredBlockId = null;
+    this.hideGutter();
+    this.ctx.eventBus.emit('doc:change', { document: this.ctx.document });
+  }
+
+  private focusAfterRemove(removedIndex: number): void {
+    const sm = this.ctx.selectionManager;
+    const doc = this.ctx.document;
+    if (doc.children.length === 0) return;
+    if (removedIndex > 0) {
+      const prev = doc.children[removedIndex - 1];
+      const len = prev.children.reduce((s, r) => s + r.data.text.length, 0);
+      sm.setCollapsed(prev.id, len);
+    } else {
+      sm.setCollapsed(doc.children[0].id, 0);
+    }
+  }
+
+  private focusAfterRemoveInTableCell(loc: BlockLocation): void {
+    const sm = this.ctx.selectionManager;
+    if (!sm || !loc.tableBlockId || !loc.cellId) return;
+    const cell = findTableCell(this.ctx.document, loc.tableBlockId, loc.cellId);
+    if (!cell || cell.blocks.length === 0) return;
+
+    const n = cell.blocks.length;
+    const i = loc.index;
+    const textLen = (b: BlockNode) => b.children.reduce((s, r) => s + r.data.text.length, 0);
+
+    if (i < n) {
+      sm.setCollapsed(cell.blocks[i].id, 0);
+    } else {
+      const prev = cell.blocks[n - 1];
+      sm.setCollapsed(prev.id, textLen(prev));
     }
   }
 

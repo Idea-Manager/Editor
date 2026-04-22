@@ -4,8 +4,9 @@ import type { OperationRecord } from '@core/operation-log/interfaces';
 import { generateId } from '@core/id';
 import { findTableBlock } from '../block-locator';
 import {
-  applyBorderWithAdjacentSync,
   findCellGridPosition,
+  getResolvedBorderValue,
+  resolveBorderToggleTargets,
   type BorderSide,
 } from '../../blocks/table-border-sync';
 
@@ -32,24 +33,21 @@ export class ToggleCellBorderCommand implements Command {
     const pos = findCellGridPosition(data, this.cellId);
     if (!pos) return;
 
-    const cell = data.rows[pos.row].cells[pos.col];
-    const oldPrimary = cell.style[this.side];
-    const newValue = !oldPrimary;
+    const before = getResolvedBorderValue(data, pos.row, pos.col, this.side);
+    const targets = resolveBorderToggleTargets(data, pos.row, pos.col, this.side);
+    if (targets.length === 0) return;
+
+    const newValue = !before;
 
     this.patches = [];
-
     const recordPatch = (cellId: string, side: BorderSide, oldValue: boolean) => {
       this.patches.push({ cellId, side, oldValue });
     };
-
-    const apply = (target: TableCell, s: BorderSide, v: boolean) => {
-      target.style[s] = v;
-    };
-
-    recordPatch(cell.id, this.side, oldPrimary);
-    cell.style[this.side] = newValue;
-
-    applyBorderWithAdjacentSync(data, pos.row, pos.col, this.side, newValue, recordPatch, apply);
+    for (const t of targets) {
+      const c = data.rows[t.row].cells[t.col];
+      recordPatch(c.id, t.side, c.style[t.side]);
+      c.style[t.side] = newValue;
+    }
 
     this.operationRecords.push({
       id: generateId('op'),
@@ -60,7 +58,7 @@ export class ToggleCellBorderCommand implements Command {
       payload: {
         nodeId: this.cellId,
         path: `style.${this.side}`,
-        oldValue: oldPrimary,
+        oldValue: before,
         newValue,
       },
     });
@@ -72,7 +70,7 @@ export class ToggleCellBorderCommand implements Command {
 
     const data = block.data as TableData;
     for (let i = this.patches.length - 1; i >= 0; i--) {
-      const { cellId, side, oldValue } = this.patches[i];
+      const { cellId, side, oldValue } = this.patches[i]!;
       for (const row of data.rows) {
         const c = row.cells.find(x => x.id === cellId);
         if (c) {

@@ -26,6 +26,12 @@ export const uk: TranslationDictionary = {
   // Block gutter
   'gutter.addBlock': 'Додати блок нижче',
   'gutter.dragToReorder': 'Перетягніть для зміни порядку',
+  'gutter.removeBlock': 'Видалити блок',
+  'gutter.confirmRemoveTitle': 'Видалити цей блок?',
+  'gutter.confirmRemoveMessage':
+    'Блок і все його вміст буде видалено. Можна скасувати дією скасування в редакторі.',
+  'gutter.modalCancel': 'Скасувати',
+  'gutter.modalConfirm': 'Підтвердити',
 
   // Slash palette
   'slash.noResults': 'Нічого не знайдено',
@@ -59,6 +65,9 @@ export const uk: TranslationDictionary = {
   'table.insertTable': 'Вставити таблицю',
   'table.createTableTitle': 'Створити таблицю',
   'table.borders': 'Межі',
+  'table.borderThickness': 'Товщина меж (1px; 8px]',
+  'table.borderThicknessPx': 'px',
+  'table.thicknessPreviewHint': 'Перегляд: товщина лінії межі',
   'table.allBorders': 'Усі межі',
   'table.noBorders': 'Без меж',
   'table.outsideOnly': 'Тільки зовнішні',

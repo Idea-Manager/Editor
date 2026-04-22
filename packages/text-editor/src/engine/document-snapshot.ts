@@ -19,6 +19,7 @@ export function cloneTableData(data: TableData): TableData {
         blocks: cell.blocks.map(cloneBlockNodeDeep),
       })),
     })),
+    ...(data.borderWidth != null ? { borderWidth: data.borderWidth } : {}),
   };
 }
 
@@ -73,6 +74,7 @@ export function remapBlockNodeIds(block: BlockNode): BlockNode {
             blocks: cell.blocks.map(remapBlockNodeIds),
           })),
         })),
+        ...(data.borderWidth != null ? { borderWidth: data.borderWidth } : {}),
       },
       meta: block.meta ? { ...block.meta } : undefined,
     };

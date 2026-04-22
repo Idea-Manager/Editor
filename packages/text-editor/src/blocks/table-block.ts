@@ -12,6 +12,7 @@ import { deserializeCellBlocks } from './cell-block-deserialize';
 import { collectRenderedBlockListElements } from '../renderer/block-renderer';
 import { reconcileChildren } from '../engine/reconciler';
 import { DEFAULT_TABLE_COL_WIDTH, defaultTableData } from './table-data-factory';
+import { normalizeTableBorders } from './table-border-sync';
 import { absorbedSlotCoveredBySameRowColspan, countPrimaryCellsInRange } from './table-range-utils';
 
 const MIN_COL_WEIGHT = 8;
@@ -22,6 +23,7 @@ const tableStableRoots = new Map<string, { signature: string; el: HTMLElement }>
 /** Layout-only: column widths excluded so column resize does not force a full rebuild. */
 function tableStructureSignature(node: BlockNode<TableData>): string {
   return JSON.stringify({
+    borderWidth: node.data.borderWidth,
     rows: node.data.rows.map(r => ({
       id: r.id,
       cells: r.cells.map(c => ({
@@ -110,6 +112,8 @@ export class TableBlock implements BlockDefinition<TableData> {
 
     grid.style.gridTemplateColumns = columnTemplatePercent(weights);
     grid.style.gridTemplateRows = `repeat(${numRows}, auto)`;
+    const w = node.data.borderWidth ?? 1;
+    grid.style.setProperty('--idea-table-border-width', `${w}px`);
 
     grid.querySelectorAll('.idea-table-col-resizer').forEach(el => el.remove());
     grid.querySelectorAll('.idea-table-cell').forEach(el => {
@@ -191,6 +195,8 @@ export class TableBlock implements BlockDefinition<TableData> {
 
     grid.style.gridTemplateColumns = columnTemplatePercent(weights);
     grid.style.gridTemplateRows = `repeat(${numRows}, auto)`;
+    const w = node.data.borderWidth ?? 1;
+    grid.style.setProperty('--idea-table-border-width', `${w}px`);
 
     const resizerTargets: { el: HTMLElement; boundaryCol: number }[] = [];
 
@@ -539,6 +545,7 @@ export class TableBlock implements BlockDefinition<TableData> {
             style: { ...c.style },
           })),
         })),
+        ...(node.data.borderWidth != null ? { borderWidth: node.data.borderWidth } : {}),
       },
       children: node.children ?? [],
       meta: node.meta ? { ...node.meta } : undefined,
@@ -549,35 +556,42 @@ export class TableBlock implements BlockDefinition<TableData> {
     const obj = raw as BlockNode<TableData>;
     type LegacyCell = TableCell & { content?: TextRun[] };
 
+    const columnWidths = [
+      ...(obj.data?.columnWidths ?? [
+        DEFAULT_TABLE_COL_WIDTH,
+        DEFAULT_TABLE_COL_WIDTH,
+        DEFAULT_TABLE_COL_WIDTH,
+      ]),
+    ];
+    const rows: TableRow[] = (obj.data?.rows ?? []).map((r: TableRow) => ({
+      id: r.id,
+      cells: r.cells.map((c: LegacyCell) => ({
+        id: c.id,
+        blocks: deserializeCellBlocks(c.blocks, c.content),
+        colspan: c.colspan ?? 1,
+        rowspan: c.rowspan ?? 1,
+        absorbed: c.absorbed ?? false,
+        style: {
+          borderTop: c.style?.borderTop ?? true,
+          borderRight: c.style?.borderRight ?? true,
+          borderBottom: c.style?.borderBottom ?? true,
+          borderLeft: c.style?.borderLeft ?? true,
+          background: c.style?.background,
+        },
+      })),
+    }));
+    const data: TableData = {
+      columnWidths,
+      rows,
+      ...(obj.data != null && obj.data.borderWidth != null
+        ? { borderWidth: obj.data.borderWidth as number }
+        : {}),
+    };
+    normalizeTableBorders(data);
     return {
       id: obj.id,
       type: 'table',
-      data: {
-        columnWidths: [
-          ...(obj.data?.columnWidths ?? [
-            DEFAULT_TABLE_COL_WIDTH,
-            DEFAULT_TABLE_COL_WIDTH,
-            DEFAULT_TABLE_COL_WIDTH,
-          ]),
-        ],
-        rows: (obj.data?.rows ?? []).map((r: TableRow) => ({
-          id: r.id,
-          cells: r.cells.map((c: LegacyCell) => ({
-            id: c.id,
-            blocks: deserializeCellBlocks(c.blocks, c.content),
-            colspan: c.colspan ?? 1,
-            rowspan: c.rowspan ?? 1,
-            absorbed: c.absorbed ?? false,
-            style: {
-              borderTop: c.style?.borderTop ?? true,
-              borderRight: c.style?.borderRight ?? true,
-              borderBottom: c.style?.borderBottom ?? true,
-              borderLeft: c.style?.borderLeft ?? true,
-              background: c.style?.background,
-            },
-          })),
-        })),
-      },
+      data,
       children: [],
       meta: obj.meta ? { ...obj.meta } : undefined,
     };

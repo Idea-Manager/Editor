@@ -34,6 +34,7 @@ import blockTypeMenuStyles from '../toolbar/block-type-menu.scss?inline';
 import tableSizePickerStyles from '../toolbar/table-size-picker.scss?inline';
 import modalStyles from '@shared/components/modal/modal.scss?inline';
 import colorPickerStyles from '@shared/components/color-picker/color-picker.scss?inline';
+import dropdownComboboxStyles from '@shared/components/dropdown-combobox/dropdown-combobox.scss?inline';
 
 const STYLE_ID = 'idea-editor-styles';
 
@@ -52,6 +53,7 @@ function injectStyles(): void {
     tableSizePickerStyles,
     modalStyles,
     colorPickerStyles,
+    dropdownComboboxStyles,
   ].join('\n');
   document.head.appendChild(style);
 }

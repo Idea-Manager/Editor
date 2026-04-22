@@ -108,6 +108,8 @@ export interface TableRow {
 export interface TableData {
   rows: TableRow[];
   columnWidths: number[];
+  /** Border line thickness in px (1–8). Omitted = 1. */
+  borderWidth?: number;
 }
 
 // ─── Selection ───────────────────────────────────────────────────────────────

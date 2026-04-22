@@ -26,7 +26,7 @@ describe('Table undo/redo and picker snapshot', () => {
     registry.register(new ParagraphBlock());
     registry.register(new TableBlock());
 
-    const picker = { rows: 2, cols: 3, borderPreset: 'inside' as const };
+    const picker = { rows: 2, cols: 3, borderPreset: 'inside' as const, borderWidth: 1 };
     const tableData = buildTableDataFromSizePicker(picker);
     const cmd = new InsertBlockCommand(
       doc,
@@ -61,7 +61,7 @@ describe('Table undo/redo and picker snapshot', () => {
     registry.register(new TableBlock());
 
     const blockId = doc.children[0].id;
-    const picker = { rows: 2, cols: 2, borderPreset: 'inside' as const };
+    const picker = { rows: 2, cols: 2, borderPreset: 'inside' as const, borderWidth: 1 };
     const tableData = buildTableDataFromSizePicker(picker);
     const cmd = new ChangeBlockTypeCommand(
       doc,
@@ -132,7 +132,7 @@ describe('Table undo/redo and picker snapshot', () => {
     registry.register(new ParagraphBlock());
     registry.register(new TableBlock());
 
-    const picker = { rows: 2, cols: 2, borderPreset: 'inside' as const };
+    const picker = { rows: 2, cols: 2, borderPreset: 'inside' as const, borderWidth: 1 };
     const tableData = buildTableDataFromSizePicker(picker);
     const cmd = new InsertBlockCommand(
       doc,

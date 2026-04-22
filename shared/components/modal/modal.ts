@@ -5,6 +5,8 @@ export interface ModalShowOptions {
   header?: HTMLElement | null;
   body: HTMLElement;
   footer?: HTMLElement | null;
+  /** Extra class on the panel (e.g. for narrow confirm dialogs). */
+  panelClass?: string;
   /** Called when the modal is dismissed (Escape, backdrop click, or `hide()`). */
   onDismiss?: () => void;
 }
@@ -33,6 +35,9 @@ export class Modal {
 
     const panel = document.createElement('div');
     panel.classList.add('idea-modal__panel');
+    if (options.panelClass) {
+      panel.classList.add(options.panelClass);
+    }
 
     if (options.header) {
       const headerWrap = document.createElement('div');

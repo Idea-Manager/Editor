@@ -1,4 +1,5 @@
 import type { TableData, TableCell } from '@core/model/interfaces';
+import { absorbedSlotCoveredBySameRowColspan } from './table-range-utils';
 
 export type BorderSide = 'borderTop' | 'borderRight' | 'borderBottom' | 'borderLeft';
 
@@ -14,67 +15,100 @@ function findCellGridPosition(data: TableData, cellId: string): { row: number; c
 }
 
 /**
- * Applies a border value on one side and mirrors it on adjacent cells so shared edges stay consistent.
- * Records patches for undo (caller records primary cell before calling).
+ * One logical line per flag: L/T for internals; bottom on last row; right on last col.
+ * Strips legacy mirrored borderBottom / borderRight on non-owner cells.
  */
-export function applyBorderWithAdjacentSync(
+export function normalizeTableBorders(data: TableData): void {
+  const numRows = data.rows.length;
+  const numCols = data.columnWidths.length;
+  for (let r = 0; r < numRows; r++) {
+    let col = 0;
+    const rowCells = data.rows[r].cells;
+    for (let c = 0; c < rowCells.length; c++) {
+      const cell = rowCells[c];
+      if (cell.absorbed) {
+        if (!absorbedSlotCoveredBySameRowColspan(data, r, c)) {
+          col++;
+        }
+        continue;
+      }
+      const rs = cell.rowspan ?? 1;
+      const cs = cell.colspan ?? 1;
+      const lastRow = r + rs - 1;
+      const lastCol = col + cs - 1;
+      if (lastRow < numRows - 1) {
+        cell.style.borderBottom = false;
+      }
+      if (lastCol < numCols - 1) {
+        cell.style.borderRight = false;
+      }
+      col += cs;
+    }
+  }
+}
+
+export interface BorderToggleTarget {
+  row: number;
+  col: number;
+  side: BorderSide;
+}
+
+/**
+ * User-facing “top/left/…” of the primary cell at (row, col) → canonical storage
+ * (single owner per table edge, supports rowspan / colspan like prior sync).
+ */
+export function resolveBorderToggleTargets(
   data: TableData,
   row: number,
   col: number,
-  side: BorderSide,
-  newValue: boolean,
-  recordPatch: (cellId: string, side: BorderSide, oldValue: boolean) => void,
-  apply: (cell: TableCell, side: BorderSide, value: boolean) => void,
-): void {
+  userSide: BorderSide,
+): BorderToggleTarget[] {
   const numRows = data.rows.length;
   const numCols = data.columnWidths.length;
   const cell = data.rows[row].cells[col];
+  if (cell.absorbed) return [];
   const rs = cell.rowspan ?? 1;
   const cs = cell.colspan ?? 1;
 
-  const touch = (target: TableCell, s: BorderSide, v: boolean) => {
-    recordPatch(target.id, s, target.style[s]);
-    apply(target, s, v);
-  };
-
-  switch (side) {
+  switch (userSide) {
     case 'borderTop':
-      if (row > 0) {
-        const prevRow = data.rows[row - 1].cells;
-        for (let cc = col; cc < col + cs && cc < numCols; cc++) {
-          const n = prevRow[cc];
-          if (!n.absorbed) touch(n, 'borderBottom', newValue);
-        }
+      return [{ row, col, side: 'borderTop' }];
+    case 'borderLeft':
+      return [{ row, col, side: 'borderLeft' }];
+    case 'borderRight': {
+      if (col + cs < numCols) {
+        return [{ row, col: col + cs, side: 'borderLeft' }];
       }
-      break;
-    case 'borderBottom':
+      return [{ row, col, side: 'borderRight' }];
+    }
+    case 'borderBottom': {
       if (row + rs < numRows) {
+        const out: BorderToggleTarget[] = [];
         const nextRow = data.rows[row + rs].cells;
         for (let cc = col; cc < col + cs && cc < numCols; cc++) {
           const n = nextRow[cc];
-          if (!n.absorbed) touch(n, 'borderTop', newValue);
+          if (!n.absorbed) {
+            out.push({ row: row + rs, col: cc, side: 'borderTop' });
+          }
         }
+        return out;
       }
-      break;
-    case 'borderLeft':
-      if (col > 0) {
-        for (let rr = row; rr < row + rs && rr < numRows; rr++) {
-          const n = data.rows[rr].cells[col - 1];
-          if (!n.absorbed) touch(n, 'borderRight', newValue);
-        }
-      }
-      break;
-    case 'borderRight':
-      if (col + cs < numCols) {
-        for (let rr = row; rr < row + rs && rr < numRows; rr++) {
-          const n = data.rows[rr].cells[col + cs];
-          if (!n.absorbed) touch(n, 'borderLeft', newValue);
-        }
-      }
-      break;
+      return [{ row, col, side: 'borderBottom' }];
+    }
     default:
-      break;
+      return [];
   }
+}
+
+export function getResolvedBorderValue(
+  data: TableData,
+  row: number,
+  col: number,
+  userSide: BorderSide,
+): boolean {
+  const targets = resolveBorderToggleTargets(data, row, col, userSide);
+  if (targets.length === 0) return false;
+  return targets.every(t => !!data.rows[t.row].cells[t.col].style[t.side]);
 }
 
 export { findCellGridPosition };

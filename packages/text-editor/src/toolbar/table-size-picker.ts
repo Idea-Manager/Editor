@@ -1,7 +1,14 @@
 import type { I18nService } from '@core/i18n/i18n';
 import { Modal } from '@shared/components/modal';
 import { createIcon } from '../../../../src/util/icon';
-import type { BorderPreset, TableSizePickerResult } from '../blocks/table-data-factory';
+import { createDropdownCombobox } from '@shared/components/dropdown-combobox';
+import {
+  DEFAULT_TABLE_BORDER_WIDTH,
+  TABLE_BORDER_WIDTH_MAX,
+  TABLE_BORDER_WIDTH_MIN,
+  type BorderPreset,
+  type TableSizePickerResult,
+} from '../blocks/table-data-factory';
 
 export type { BorderPreset, TableSizePickerResult } from '../blocks/table-data-factory';
 
@@ -13,8 +20,11 @@ export class TableSizePicker {
   private lockedRow = 0;
   private lockedCol = 0;
   private borderPreset: BorderPreset = 'all';
+  private borderWidth: number = DEFAULT_TABLE_BORDER_WIDTH;
   private sizeLabel: HTMLSpanElement | null = null;
   private gridContainer: HTMLDivElement | null = null;
+  private thicknessPreviewLine: HTMLDivElement | null = null;
+  private commitThicknessFromCombobox: (() => void) | null = null;
 
   constructor(
     private readonly host: HTMLElement,
@@ -37,6 +47,7 @@ export class TableSizePicker {
     this.lockedRow = 2;
     this.lockedCol = 2;
     this.borderPreset = 'all';
+    this.borderWidth = DEFAULT_TABLE_BORDER_WIDTH;
 
     const body = document.createElement('div');
     body.classList.add('idea-table-picker');
@@ -96,6 +107,69 @@ export class TableSizePicker {
     borderSection.appendChild(borderButtons);
     body.appendChild(borderSection);
 
+    const widthSection = document.createElement('div');
+    widthSection.classList.add('idea-table-picker__thickness');
+
+    const widthLabel = document.createElement('span');
+    widthLabel.classList.add('idea-table-picker__thickness-label');
+    widthLabel.textContent = this.i18n.t('table.borderThickness');
+    widthSection.appendChild(widthLabel);
+
+    const widthOptions: { value: string; label: string }[] = Array.from(
+      { length: TABLE_BORDER_WIDTH_MAX - TABLE_BORDER_WIDTH_MIN + 1 },
+      (_, i) => {
+        const n = TABLE_BORDER_WIDTH_MIN + i;
+        return { value: String(n), label: String(n) };
+      },
+    );
+    const applyBorderWidth = (v: string) => {
+      const n = parseInt(v, 10);
+      this.borderWidth = Number.isFinite(n)
+        ? Math.min(TABLE_BORDER_WIDTH_MAX, Math.max(TABLE_BORDER_WIDTH_MIN, n))
+        : DEFAULT_TABLE_BORDER_WIDTH;
+    };
+    const combo = createDropdownCombobox({
+      options: widthOptions,
+      value: String(this.borderWidth),
+      allowCustomInput: true,
+      inputMode: 'number',
+      numericMin: TABLE_BORDER_WIDTH_MIN,
+      numericMax: TABLE_BORDER_WIDTH_MAX,
+      unit: this.i18n.t('table.borderThicknessPx'),
+      onInput: (raw) => {
+        if (raw.length === 0) return;
+        const n = parseInt(raw, 10);
+        if (Number.isFinite(n) && n >= TABLE_BORDER_WIDTH_MIN && n <= TABLE_BORDER_WIDTH_MAX) {
+          applyBorderWidth(String(n));
+          this.updateThicknessPreview();
+        }
+      },
+      onChange: (v) => {
+        applyBorderWidth(v);
+        this.updateThicknessPreview();
+      },
+    });
+    this.commitThicknessFromCombobox = combo.commit;
+
+    const thicknessRow = document.createElement('div');
+    thicknessRow.classList.add('idea-table-picker__thickness-row');
+    thicknessRow.appendChild(combo.root);
+
+    const previewBox = document.createElement('div');
+    previewBox.classList.add('idea-table-picker__thickness-preview');
+    previewBox.title = this.i18n.t('table.thicknessPreviewHint');
+    const previewLine = document.createElement('div');
+    previewLine.classList.add('idea-table-picker__thickness-line');
+    previewLine.setAttribute('aria-hidden', 'true');
+    previewBox.appendChild(previewLine);
+    thicknessRow.appendChild(previewBox);
+    this.thicknessPreviewLine = previewLine;
+
+    widthSection.appendChild(thicknessRow);
+    body.appendChild(widthSection);
+
+    this.updateThicknessPreview();
+
     const actions = document.createElement('div');
     actions.classList.add('idea-table-picker__actions');
 
@@ -117,12 +191,15 @@ export class TableSizePicker {
     createBtn.addEventListener('mousedown', (e) => {
       e.preventDefault();
       e.stopPropagation();
+      this.commitThicknessFromCombobox?.();
+      this.updateThicknessPreview();
       const effRow = this.effectiveRow();
       const effCol = this.effectiveCol();
       onConfirm({
         rows: effRow + 1,
         cols: effCol + 1,
         borderPreset: this.borderPreset,
+        borderWidth: this.borderWidth,
       });
       this.hide();
     });
@@ -134,6 +211,7 @@ export class TableSizePicker {
       title: this.i18n.t('table.createTableTitle'),
       body,
       footer: actions,
+      panelClass: 'idea-modal__panel--table-picker',
       onDismiss: () => onCancel(),
     });
   }
@@ -142,6 +220,15 @@ export class TableSizePicker {
     this.modal.hide();
     this.gridContainer = null;
     this.sizeLabel = null;
+    this.thicknessPreviewLine = null;
+    this.commitThicknessFromCombobox = null;
+  }
+
+  private updateThicknessPreview(): void {
+    const line = this.thicknessPreviewLine;
+    if (!line) return;
+    const w = Math.min(TABLE_BORDER_WIDTH_MAX, Math.max(TABLE_BORDER_WIDTH_MIN, this.borderWidth));
+    line.style.height = `${w}px`;
   }
 
   private effectiveRow(): number {

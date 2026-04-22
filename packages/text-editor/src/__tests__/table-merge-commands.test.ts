@@ -149,7 +149,7 @@ describe('Table insert and merge guards', () => {
     expect(loc?.tableBlockId).toBe(innerTable.id);
   });
 
-  it('ToggleCellBorderCommand mirrors bottom border to neighbor cell top', () => {
+  it('ToggleCellBorderCommand toggles the shared horizontal edge (bottom of selection → next row top)', () => {
     const doc = createDocument();
     const data = buildTableData(2, 2, 'all');
     const table = tableBlockFromData(data);
@@ -157,7 +157,7 @@ describe('Table insert and merge guards', () => {
 
     const topLeft = data.rows[0].cells[0];
     const bottomLeft = data.rows[1].cells[0];
-    expect(topLeft.style.borderBottom).toBe(true);
+    expect(topLeft.style.borderBottom).toBe(false);
     expect(bottomLeft.style.borderTop).toBe(true);
 
     new ToggleCellBorderCommand(doc, table.id, topLeft.id, 'borderBottom').execute();

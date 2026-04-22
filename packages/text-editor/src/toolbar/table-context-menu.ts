@@ -1,6 +1,6 @@
-import type { TableData, TableCell } from '@core/model/interfaces';
+import type { BlockNode, TableData, TableCell } from '@core/model/interfaces';
 import type { EditorContext } from '../engine/editor-context';
-import { findTableBlock } from '../engine/block-locator';
+import { findTableBlock, findBlockLocation, findTableCell, type BlockLocation } from '../engine/block-locator';
 import { countPrimaryCellsInRange, primaryCellIdsInRange } from '../blocks/table-range-utils';
 import { InsertRowCommand } from '../engine/commands/insert-row-command';
 import { DeleteRowCommand } from '../engine/commands/delete-row-command';
@@ -11,8 +11,10 @@ import { ToggleCellBorderCommand, type BorderSide } from '../engine/commands/tog
 import { ToggleCellBorderSelectionCommand } from '../engine/commands/toggle-cell-border-selection-command';
 import { SetCellBackgroundCommand } from '../engine/commands/set-cell-background-command';
 import { SetCellsBackgroundCommand } from '../engine/commands/set-cells-background-command';
+import { DeleteBlockCommand } from '../engine/commands/delete-block-command';
 import { createIcon } from '../../../../src/util/icon';
 import { ColorPicker } from '@shared/components/color-picker';
+import { getResolvedBorderValue } from '../blocks/table-border-sync';
 
 interface CellPosition {
   blockId: string;
@@ -220,9 +222,6 @@ export class TableContextMenu {
     const doc = this.ctx.document;
     const bid = pos.blockId;
 
-    const deleteRowsDisabled = data.rows.length <= 1;
-    const deleteColsDisabled = data.columnWidths.length <= 1;
-
     const items: { label: string; action: () => void; disabled?: boolean }[] = [
       {
         label: t('table.insertRowAbove'),
@@ -236,8 +235,11 @@ export class TableContextMenu {
       },
       {
         label: t('table.deleteRow'),
-        action: () => this.exec(new DeleteRowCommand(doc, bid, anchorRow)),
-        disabled: deleteRowsDisabled,
+        action: () =>
+          data.rows.length <= 1
+            ? this.execDeleteTableBlock(bid)
+            : this.exec(new DeleteRowCommand(doc, bid, anchorRow)),
+        disabled: false,
       },
       { label: '---', action: () => {} },
       {
@@ -252,8 +254,11 @@ export class TableContextMenu {
       },
       {
         label: t('table.deleteColumn'),
-        action: () => this.exec(new DeleteColumnCommand(doc, bid, anchorCol)),
-        disabled: deleteColsDisabled,
+        action: () =>
+          data.columnWidths.length <= 1
+            ? this.execDeleteTableBlock(bid)
+            : this.exec(new DeleteColumnCommand(doc, bid, anchorCol)),
+        disabled: false,
       },
       { label: '---', action: () => {} },
       {
@@ -288,7 +293,7 @@ export class TableContextMenu {
 
     if (anchorCell) {
       this.appendSeparator();
-      this.appendBorderToggles(bid, cellIds, anchorCell.style);
+      this.appendBorderToggles(bid, cellIds, data, pos.rowIndex, pos.colIndex);
       this.appendSeparator();
       this.appendBackgroundPicker(bid, cellIds, anchorCell.style.background);
     }
@@ -322,7 +327,9 @@ export class TableContextMenu {
   private appendBorderToggles(
     blockId: string,
     cellIds: string[],
-    style: { borderTop: boolean; borderRight: boolean; borderBottom: boolean; borderLeft: boolean },
+    data: TableData,
+    anchorRow: number,
+    anchorCol: number,
   ): void {
     if (!this.overlay) return;
 
@@ -336,10 +343,30 @@ export class TableContextMenu {
 
     const t = this.ctx.i18n.t.bind(this.ctx.i18n);
     const sides: { side: BorderSide; icon: string; title: string; active: boolean }[] = [
-      { side: 'borderTop', icon: 'border_top', title: t('table.borderTop'), active: style.borderTop },
-      { side: 'borderRight', icon: 'border_right', title: t('table.borderRight'), active: style.borderRight },
-      { side: 'borderBottom', icon: 'border_bottom', title: t('table.borderBottom'), active: style.borderBottom },
-      { side: 'borderLeft', icon: 'border_left', title: t('table.borderLeft'), active: style.borderLeft },
+      {
+        side: 'borderTop',
+        icon: 'border_top',
+        title: t('table.borderTop'),
+        active: getResolvedBorderValue(data, anchorRow, anchorCol, 'borderTop'),
+      },
+      {
+        side: 'borderRight',
+        icon: 'border_right',
+        title: t('table.borderRight'),
+        active: getResolvedBorderValue(data, anchorRow, anchorCol, 'borderRight'),
+      },
+      {
+        side: 'borderBottom',
+        icon: 'border_bottom',
+        title: t('table.borderBottom'),
+        active: getResolvedBorderValue(data, anchorRow, anchorCol, 'borderBottom'),
+      },
+      {
+        side: 'borderLeft',
+        icon: 'border_left',
+        title: t('table.borderLeft'),
+        active: getResolvedBorderValue(data, anchorRow, anchorCol, 'borderLeft'),
+      },
     ];
 
     const doc = this.ctx.document;
@@ -493,5 +520,55 @@ export class TableContextMenu {
   private exec(cmd: import('@core/commands/command').Command): void {
     this.ctx.undoRedoManager.push(cmd);
     this.ctx.eventBus.emit('doc:change', { document: this.ctx.document });
+  }
+
+  private execDeleteTableBlock(blockId: string): void {
+    const loc = findBlockLocation(this.ctx.document, blockId);
+    if (!loc) return;
+
+    const docIdx =
+      loc.parentKind === 'document'
+        ? this.ctx.document.children.findIndex(b => b.id === blockId)
+        : -1;
+
+    this.ctx.undoRedoManager.push(new DeleteBlockCommand(this.ctx.document, blockId));
+
+    if (loc.parentKind === 'document' && docIdx !== -1) {
+      this.focusAfterTableRemoved(docIdx);
+    } else if (loc.parentKind === 'table-cell') {
+      this.focusAfterDeleteInTableCell(loc);
+    }
+    this.ctx.eventBus.emit('doc:change', { document: this.ctx.document });
+  }
+
+  private focusAfterTableRemoved(removedIndex: number): void {
+    const sm = this.ctx.selectionManager;
+    const doc = this.ctx.document;
+    if (doc.children.length === 0) return;
+    if (removedIndex > 0) {
+      const prev = doc.children[removedIndex - 1];
+      const len = prev.children.reduce((s, r) => s + r.data.text.length, 0);
+      sm.setCollapsed(prev.id, len);
+    } else {
+      sm.setCollapsed(doc.children[0].id, 0);
+    }
+  }
+
+  private focusAfterDeleteInTableCell(loc: BlockLocation): void {
+    const sm = this.ctx.selectionManager;
+    if (!sm || !loc.tableBlockId || !loc.cellId) return;
+    const cell = findTableCell(this.ctx.document, loc.tableBlockId, loc.cellId);
+    if (!cell || cell.blocks.length === 0) return;
+
+    const n = cell.blocks.length;
+    const i = loc.index;
+    const textLen = (b: BlockNode) => b.children.reduce((s, r) => s + r.data.text.length, 0);
+
+    if (i < n) {
+      sm.setCollapsed(cell.blocks[i].id, 0);
+    } else {
+      const prev = cell.blocks[n - 1];
+      sm.setCollapsed(prev.id, textLen(prev));
+    }
   }
 }

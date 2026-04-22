@@ -4,6 +4,49 @@
   font-family: $font-family-base;
   font-size: $font-size-sm;
   user-select: none;
+  max-width: 100%;
+  box-sizing: border-box;
+
+  &__thickness-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: $spacing-sm;
+    flex-wrap: nowrap;
+  }
+
+  &__thickness-row .idea-dropdown-combobox {
+    flex: 0 0 120px;
+    width: 120px;
+    max-width: 120px;
+  }
+
+  &__thickness-preview {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 32px;
+    padding: 0 $spacing-xs;
+    box-sizing: border-box;
+    background: $white;
+    border: 1px solid $color-border;
+    border-radius: 4px;
+  }
+
+  &__thickness-line {
+    display: block;
+    width: 100%;
+    max-width: 44px;
+    min-width: 28px;
+    margin: 0;
+    background: $gray-900;
+    border: none;
+    border-radius: 0;
+    box-sizing: border-box;
+  }
 
   &__size-label {
     display: block;
@@ -42,6 +85,19 @@
 
   &__borders {
     margin-bottom: 0;
+  }
+
+  &__thickness {
+    margin-top: $spacing-sm;
+    margin-bottom: 0;
+    min-width: 0;
+  }
+
+  &__thickness-label {
+    display: block;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    margin-bottom: $spacing-xs;
   }
 
   &__borders-label {
@@ -92,16 +148,20 @@
 
   &__actions {
     display: flex;
-    justify-content: flex-end;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
     gap: $spacing-sm;
+    width: 100%;
   }
 
   &__cancel-btn {
-    padding: $spacing-xs $spacing-sm;
+    padding: 10px 18px;
+    min-height: 40px;
     background: $color-bg;
     border: 1px solid $color-border;
     border-radius: 4px;
-    font-size: $font-size-sm;
+    font-size: $font-size-base;
     font-family: $font-family-base;
     color: $color-text-secondary;
     cursor: pointer;
@@ -112,11 +172,12 @@
   }
 
   &__create-btn {
-    padding: $spacing-xs $spacing-md;
+    padding: 10px 22px;
+    min-height: 40px;
     background: $gray-900;
     border: none;
     border-radius: 4px;
-    font-size: $font-size-sm;
+    font-size: $font-size-base;
     font-family: $font-family-base;
     color: $white;
     cursor: pointer;

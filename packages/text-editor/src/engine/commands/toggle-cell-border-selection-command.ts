@@ -4,8 +4,9 @@ import type { OperationRecord } from '@core/operation-log/interfaces';
 import { generateId } from '@core/id';
 import { findTableBlock } from '../block-locator';
 import {
-  applyBorderWithAdjacentSync,
   findCellGridPosition,
+  getResolvedBorderValue,
+  resolveBorderToggleTargets,
   type BorderSide,
 } from '../../blocks/table-border-sync';
 
@@ -13,7 +14,16 @@ export type { BorderSide };
 
 type BorderPatch = { cellId: string; side: BorderSide; oldValue: boolean };
 
-/** Toggle one border side on each listed primary cell (per-cell XOR), with adjacent sync; single undo. */
+/**
+ * Deduplicate resolved (row,col,side) so a shared physical edge is toggled once.
+ */
+function targetKey(t: { row: number; col: number; side: BorderSide }): string {
+  return `${t.row},${t.col},${t.side}`;
+}
+
+/**
+ * For each unique primary cell, flip that cell’s border side; union over resolved targets, one write per (cell,side).
+ */
 export class ToggleCellBorderSelectionCommand implements Command {
   readonly operationRecords: OperationRecord[] = [];
   private patches: BorderPatch[] = [];
@@ -30,52 +40,47 @@ export class ToggleCellBorderSelectionCommand implements Command {
     if (!block) return;
 
     const data = block.data as TableData;
-    const seen = new Set<string>();
     this.patches = [];
 
-    const recordPatch = (cellId: string, side: BorderSide, oldValue: boolean) => {
-      this.patches.push({ cellId, side, oldValue });
+    const recordPatch = (cellId: string, s: BorderSide, oldValue: boolean) => {
+      this.patches.push({ cellId, side: s, oldValue });
     };
-
-    const apply = (target: TableCell, s: BorderSide, v: boolean) => {
-      target.style[s] = v;
-    };
+    const seenTarget = new Set<string>();
+    const seenInput = new Set<string>();
 
     for (const cellId of this.cellIds) {
-      if (seen.has(cellId)) continue;
-      seen.add(cellId);
-
+      if (seenInput.has(cellId)) continue;
+      seenInput.add(cellId);
       const pos = findCellGridPosition(data, cellId);
       if (!pos) continue;
+      if (data.rows[pos.row].cells[pos.col].absorbed) continue;
 
-      const cell = data.rows[pos.row].cells[pos.col];
-      if (cell.absorbed) continue;
-
-      const oldPrimary = cell.style[this.side];
-      const newValue = !oldPrimary;
-
-      recordPatch(cell.id, this.side, oldPrimary);
-      cell.style[this.side] = newValue;
-      applyBorderWithAdjacentSync(data, pos.row, pos.col, this.side, newValue, recordPatch, apply);
+      const newValue = !getResolvedBorderValue(data, pos.row, pos.col, this.side);
+      for (const t of resolveBorderToggleTargets(data, pos.row, pos.col, this.side)) {
+        const k = targetKey(t);
+        if (seenTarget.has(k)) continue;
+        seenTarget.add(k);
+        const c = data.rows[t.row].cells[t.col];
+        recordPatch(c.id, t.side, c.style[t.side]);
+        c.style[t.side] = newValue;
+      }
     }
 
     if (this.patches.length === 0) return;
 
-    if (this.operationRecords.length === 0) {
-      this.operationRecords.push({
-        id: generateId('op'),
-        actorId: 'local',
-        timestamp: Date.now(),
-        wallClock: Date.now(),
-        type: 'node:update',
-        payload: {
-          nodeId: block.id,
-          path: `style.${this.side}`,
-          oldValue: null,
-          newValue: null,
-        },
-      });
-    }
+    this.operationRecords.push({
+      id: generateId('op'),
+      actorId: 'local',
+      timestamp: Date.now(),
+      wallClock: Date.now(),
+      type: 'node:update',
+      payload: {
+        nodeId: block.id,
+        path: `style.${this.side}`,
+        oldValue: null,
+        newValue: null,
+      },
+    });
   }
 
   undo(): void {

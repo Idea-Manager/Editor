@@ -57,9 +57,33 @@
   &__footer {
     flex-shrink: 0;
     display: flex;
+    flex-direction: row;
     justify-content: flex-end;
+    align-items: stretch;
     gap: $spacing-sm;
     padding: $spacing-sm $spacing-md $spacing-md;
     border-top: 1px solid $color-border;
+    min-width: 0;
+
+    /** One wrapper (e.g. action row) spans full width for equal flex children inside */
+    > *:only-child {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+  }
+
+  /** Narrow, fixed-geometry dialogs (e.g. gutter block delete confirm) */
+  &__panel--narrow {
+    min-width: 350px;
+    max-width: min(350px, calc(100vw - #{2 * $spacing-md}));
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /** Shrink-wrap to content (e.g. create table) */
+  &__panel--table-picker {
+    min-width: 0;
+    width: max-content;
+    max-width: min(96vw, calc(100vw - #{2 * $spacing-lg}));
   }
 }

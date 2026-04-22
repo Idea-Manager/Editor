@@ -26,6 +26,12 @@ export const en: TranslationDictionary = {
   // Block gutter
   'gutter.addBlock': 'Add block below',
   'gutter.dragToReorder': 'Drag to reorder',
+  'gutter.removeBlock': 'Remove block',
+  'gutter.confirmRemoveTitle': 'Remove this block?',
+  'gutter.confirmRemoveMessage':
+    'This block will be deleted, including all of its content. You can undo this with the editor undo action.',
+  'gutter.modalCancel': 'Cancel',
+  'gutter.modalConfirm': 'Confirm',
 
   // Slash palette
   'slash.noResults': 'No results',
@@ -59,6 +65,9 @@ export const en: TranslationDictionary = {
   'table.insertTable': 'Insert Table',
   'table.createTableTitle': 'Create table',
   'table.borders': 'Borders',
+  'table.borderThickness': 'Border thickness (1px; 8px]',
+  'table.borderThicknessPx': 'px',
+  'table.thicknessPreviewHint': 'Preview: selected border line thickness',
   'table.allBorders': 'All Borders',
   'table.noBorders': 'No Borders',
   'table.outsideOnly': 'Outside Only',

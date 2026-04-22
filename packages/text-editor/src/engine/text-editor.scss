@@ -167,19 +167,19 @@
     align-self: stretch;
 
     &--border-top {
-      border-top: 1px solid $gray-300;
+      border-top: var(--idea-table-border-width, 1px) solid $gray-300;
     }
 
     &--border-right {
-      border-right: 1px solid $gray-300;
+      border-right: var(--idea-table-border-width, 1px) solid $gray-300;
     }
 
     &--border-bottom {
-      border-bottom: 1px solid $gray-300;
+      border-bottom: var(--idea-table-border-width, 1px) solid $gray-300;
     }
 
     &--border-left {
-      border-left: 1px solid $gray-300;
+      border-left: var(--idea-table-border-width, 1px) solid $gray-300;
     }
 
     &--selected {
