@@ -13,6 +13,8 @@ import { SetLinkCommand } from '../inline/set-link-command';
 import { SetTextColorCommand } from '../inline/set-text-color-command';
 import { SetCellBackgroundCommand } from '../engine/commands/set-cell-background-command';
 import { buildTableData } from '../blocks/table-data-factory';
+import { getBlockById } from '../engine/block-locator';
+import { cloneBlockNodeDeep } from '../engine/document-snapshot';
 
 function tableBlockFromData(data: TableData): BlockNode<TableData> {
   return {
@@ -34,7 +36,7 @@ describe('Inline and cell commands with undo/redo', () => {
     const bus = new EventBus();
     const history = new UndoRedoManager(bus);
 
-    history.push(new SetLinkCommand(block, 0, 5, 'https://example.com', mgr));
+    history.push(new SetLinkCommand(doc, block.id, 0, 5, 'https://example.com', mgr));
     expect(block.children[0].data.href).toBe('https://example.com');
 
     history.undo();
@@ -51,7 +53,7 @@ describe('Inline and cell commands with undo/redo', () => {
     const bus = new EventBus();
     const history = new UndoRedoManager(bus);
 
-    history.push(new SetTextColorCommand(block, 0, 5, '#ff0000', mgr));
+    history.push(new SetTextColorCommand(doc, block.id, 0, 5, '#ff0000', mgr));
     expect(block.children[0].data.color).toBe('#ff0000');
 
     history.undo();
@@ -78,5 +80,30 @@ describe('Inline and cell commands with undo/redo', () => {
 
     history.redo();
     expect(cell.style.background).toBe('#eeeeee');
+  });
+
+  it('SetTextColorCommand redo targets live block after cell paragraph is re-cloned (same id)', () => {
+    const doc = createDocument();
+    const data = buildTableData(1, 1, 'all');
+    const table = tableBlockFromData(data);
+    doc.children = [table];
+    const cell = data.rows[0].cells[0];
+    const para = cell.blocks[0];
+    if (!para) throw new Error('expected paragraph in cell');
+    const bus = new EventBus();
+    const history = new UndoRedoManager(bus);
+
+    history.push(new SetTextColorCommand(doc, para.id, 0, 5, '#ff0000', mgr));
+    history.undo();
+
+    cell.blocks[0] = cloneBlockNodeDeep(para);
+    const live = getBlockById(doc, para.id);
+    expect(live).toBeDefined();
+    expect(live).not.toBe(para);
+    expect(live!.children[0].data.color).toBeUndefined();
+
+    history.redo();
+    const afterRedo = getBlockById(doc, para.id);
+    expect(afterRedo?.children[0].data.color).toBe('#ff0000');
   });
 });

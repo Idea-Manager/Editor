@@ -123,7 +123,7 @@ export function openLinkUrlFlyout(opts: OpenLinkUrlFlyoutOptions & { preferBelow
     const href = v === '' ? undefined : v;
     for (const t of opts.targets) {
       opts.ctx.undoRedoManager.push(
-        new SetLinkCommand(t.block, t.start, t.end, href, opts.markManager),
+        new SetLinkCommand(opts.ctx.document, t.block.id, t.start, t.end, href, opts.markManager),
       );
     }
     opts.ctx.eventBus.emit('doc:change', { document: opts.ctx.document });

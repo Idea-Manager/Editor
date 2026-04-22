@@ -310,11 +310,11 @@ export class InputInterceptor {
     const sel = this.ctx.selectionManager.get();
     if (!sel || sel.isCollapsed) return;
 
-    const block = findBlockLocation(this.ctx.document, sel.anchorBlockId)?.block;
-    if (!block) return;
+    if (!findBlockLocation(this.ctx.document, sel.anchorBlockId)) return;
 
     const cmd = new ToggleMarkCommand(
-      block,
+      this.ctx.document,
+      sel.anchorBlockId,
       mark,
       Math.min(sel.anchorOffset, sel.focusOffset),
       Math.max(sel.anchorOffset, sel.focusOffset),

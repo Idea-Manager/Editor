@@ -545,7 +545,14 @@ export class FloatingToolbar {
         if (!spans || spans.length === 0) return;
         for (const span of spans) {
           this.ctx.undoRedoManager.push(
-            new SetTextColorCommand(span.block, span.start, span.end, color, this.markManager),
+            new SetTextColorCommand(
+              this.ctx.document,
+              span.block.id,
+              span.start,
+              span.end,
+              color,
+              this.markManager,
+            ),
           );
         }
         this.ctx.eventBus.emit('doc:change', { document: this.ctx.document });
@@ -567,7 +574,8 @@ export class FloatingToolbar {
 
     for (const span of spans) {
       const cmd = new ToggleMarkCommand(
-        span.block,
+        this.ctx.document,
+        span.block.id,
         mark,
         span.start,
         span.end,

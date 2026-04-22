@@ -1,4 +1,4 @@
-import { createParagraph, createTextRun } from '@core/model/factory';
+import { createDocument, createParagraph, createTextRun } from '@core/model/factory';
 import { InlineMarkManager } from '../inline/inline-mark-manager';
 import { ToggleMarkCommand } from '../inline/toggle-mark-command';
 import type { BlockNode, ParagraphData } from '@core/model/interfaces';
@@ -170,8 +170,10 @@ describe('ToggleMarkCommand', () => {
   });
 
   it('executes and produces operation records', () => {
+    const doc = createDocument();
     const block = createParagraph('Hello');
-    const cmd = new ToggleMarkCommand(block, 'bold', 0, 5, mgr);
+    doc.children = [block];
+    const cmd = new ToggleMarkCommand(doc, block.id, 'bold', 0, 5, mgr);
 
     cmd.execute();
 
@@ -181,9 +183,11 @@ describe('ToggleMarkCommand', () => {
   });
 
   it('undo restores original children', () => {
+    const doc = createDocument();
     const block = createParagraph('Hello');
+    doc.children = [block];
     const originalText = block.children[0].data.text;
-    const cmd = new ToggleMarkCommand(block, 'bold', 0, 5, mgr);
+    const cmd = new ToggleMarkCommand(doc, block.id, 'bold', 0, 5, mgr);
 
     cmd.execute();
     expect(block.children[0].data.marks).toContain('bold');
