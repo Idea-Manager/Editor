@@ -355,8 +355,6 @@ export class SlashPalette {
     }
 
     if (!rect) {
-      this.overlay.style.top = '0px';
-      this.overlay.style.left = '0px';
       return;
     }
 

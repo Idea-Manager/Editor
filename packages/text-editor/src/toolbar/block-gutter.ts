@@ -87,7 +87,6 @@ export class BlockGutter {
     trashBtn.type = 'button';
     trashBtn.title = this.ctx.i18n.t('gutter.removeBlock');
     trashBtn.setAttribute('aria-label', this.ctx.i18n.t('gutter.removeBlock'));
-    trashRow.style.display = 'none';
     trashBtn.appendChild(createIcon('delete'));
     trashBtn.addEventListener('mousedown', (e) => {
       e.preventDefault();
@@ -251,7 +250,6 @@ export class BlockGutter {
     this.gutterEl.style.left = `${leftRef - hostRect.left - gutterWidth - 4}px`;
 
     if (this.dragBtn) {
-      this.dragBtn.style.display = '';
       this.dragBtn.setAttribute('draggable', 'true');
     }
 
@@ -264,11 +262,10 @@ export class BlockGutter {
       this.gutterEl.classList.add('idea-block-gutter--hidden');
     }
     if (this.dragBtn) {
-      this.dragBtn.style.display = '';
       this.dragBtn.setAttribute('draggable', 'true');
     }
     if (this.trashRowEl) {
-      this.trashRowEl.style.display = 'none';
+      this.trashRowEl.classList.remove('idea-block-gutter__row--trash-visible');
     }
   }
 
@@ -276,12 +273,12 @@ export class BlockGutter {
     if (!this.trashRowEl) return;
     const loc = findBlockLocation(this.ctx.document, blockId);
     if (!loc) {
-      this.trashRowEl.style.display = 'none';
+      this.trashRowEl.classList.remove('idea-block-gutter__row--trash-visible');
       return;
     }
     const show =
       loc.block.type !== 'paragraph' && loc.block.type !== 'heading';
-    this.trashRowEl.style.display = show ? 'flex' : 'none';
+    this.trashRowEl.classList.toggle('idea-block-gutter__row--trash-visible', show);
   }
 
   private onRemoveBlockClick(): void {
