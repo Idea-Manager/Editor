@@ -10,7 +10,14 @@ const sidebars: SidebarsConfig = {
     {
       type: 'category',
       label: 'Text editor',
-      items: ['text-editor/overview'],
+      items: [
+        'text-editor/overview',
+        'text-editor/custom-blocks',
+        'text-editor/toolbars',
+        'text-editor/i18n',
+        'text-editor/theming',
+        'text-editor/clipboard',
+      ],
     },
     {
       type: 'category',

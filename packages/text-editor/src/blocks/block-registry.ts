@@ -1,8 +1,9 @@
 import type { BlockType } from '@core/model/interfaces';
 import type { BlockDefinition } from './block-definition';
 
+/** Block definition with any data payload (used for registries and editor options). */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnyBlockDefinition = BlockDefinition<any>;
+export type AnyBlockDefinition = BlockDefinition<any>;
 
 export interface PaletteItem {
   id: string;

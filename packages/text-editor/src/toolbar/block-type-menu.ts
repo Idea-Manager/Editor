@@ -1,7 +1,7 @@
 import type { BlockType } from '@core/model/interfaces';
 import type { I18nService } from '@core/i18n/i18n';
 import type { BlockRegistry, PaletteItem } from '../blocks/block-registry';
-import { createIcon } from '../../../../src/util/icon';
+import { createIcon } from '../icons/create-icon';
 
 export type BlockTypeMenuAction = 'insert' | 'change';
 

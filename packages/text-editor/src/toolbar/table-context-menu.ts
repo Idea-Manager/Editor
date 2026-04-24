@@ -12,10 +12,12 @@ import { ToggleCellBorderSelectionCommand } from '../engine/commands/toggle-cell
 import { SetCellBackgroundCommand } from '../engine/commands/set-cell-background-command';
 import { SetCellsBackgroundCommand } from '../engine/commands/set-cells-background-command';
 import { DeleteBlockCommand } from '../engine/commands/delete-block-command';
-import { createIcon } from '../../../../src/util/icon';
+import { createIcon } from '../icons/create-icon';
 import { ColorPicker } from '@shared/components/color-picker';
 import { getResolvedBorderValue } from '../blocks/table-border-sync';
 import { bottomGridRowForCell } from '../blocks/table-row-mutations';
+import type { ResolvedTableContextMenuConfig, TableContextMenuConfig } from './toolbar-options';
+import { resolveTableContextMenuConfig } from './toolbar-options';
 
 interface CellPosition {
   blockId: string;
@@ -63,11 +65,14 @@ export class TableContextMenu {
   /** Table wrapper whose cell highlights / range-select class we clear when the menu closes. */
   private menuTableWrapper: HTMLElement | null = null;
   private readonly disposers: (() => void)[] = [];
+  private readonly menuConfig: ResolvedTableContextMenuConfig;
 
   constructor(
     private readonly ctx: EditorContext,
     private readonly host: HTMLElement,
+    menuConfig?: TableContextMenuConfig,
   ) {
+    this.menuConfig = resolveTableContextMenuConfig(menuConfig);
     this.attach();
   }
 
@@ -224,52 +229,65 @@ export class TableContextMenu {
     const bid = pos.blockId;
     const bottomRowForInsertBelow = bottomGridRowForCell(data, anchorRow, anchorCol);
 
-    const items: { label: string; action: () => void; disabled?: boolean }[] = [
-      {
-        label: t('table.insertRowAbove'),
-        action: () => this.exec(new InsertRowCommand(doc, bid, anchorRow - 1, anchorRow)),
-        disabled: false,
-      },
-      {
-        label: t('table.insertRowBelow'),
-        action: () =>
-          this.exec(new InsertRowCommand(doc, bid, bottomRowForInsertBelow, bottomRowForInsertBelow)),
-        disabled: false,
-      },
-      {
-        label: t('table.deleteRow'),
-        action: () =>
-          data.rows.length <= 1
-            ? this.execDeleteTableBlock(bid)
-            : this.exec(new DeleteRowCommand(doc, bid, anchorRow)),
-        disabled: false,
-      },
-      { label: '---', action: () => {} },
-      {
-        label: t('table.insertColumnLeft'),
-        action: () => this.exec(new InsertColumnCommand(doc, bid, anchorCol - 1, anchorCol)),
-        disabled: false,
-      },
-      {
-        label: t('table.insertColumnRight'),
-        action: () => this.exec(new InsertColumnCommand(doc, bid, anchorCol, anchorCol)),
-        disabled: false,
-      },
-      {
-        label: t('table.deleteColumn'),
-        action: () =>
-          data.columnWidths.length <= 1
-            ? this.execDeleteTableBlock(bid)
-            : this.exec(new DeleteColumnCommand(doc, bid, anchorCol)),
-        disabled: false,
-      },
-      { label: '---', action: () => {} },
-      {
+    const cfg = this.menuConfig;
+    const items: { label: string; action: () => void; disabled?: boolean }[] = [];
+
+    if (cfg.showRowOperations) {
+      items.push(
+        {
+          label: t('table.insertRowAbove'),
+          action: () => this.exec(new InsertRowCommand(doc, bid, anchorRow - 1, anchorRow)),
+          disabled: false,
+        },
+        {
+          label: t('table.insertRowBelow'),
+          action: () =>
+            this.exec(new InsertRowCommand(doc, bid, bottomRowForInsertBelow, bottomRowForInsertBelow)),
+          disabled: false,
+        },
+        {
+          label: t('table.deleteRow'),
+          action: () =>
+            data.rows.length <= 1
+              ? this.execDeleteTableBlock(bid)
+              : this.exec(new DeleteRowCommand(doc, bid, anchorRow)),
+          disabled: false,
+        },
+      );
+    }
+
+    if (cfg.showColumnOperations) {
+      if (items.length > 0) items.push({ label: '---', action: () => {} });
+      items.push(
+        {
+          label: t('table.insertColumnLeft'),
+          action: () => this.exec(new InsertColumnCommand(doc, bid, anchorCol - 1, anchorCol)),
+          disabled: false,
+        },
+        {
+          label: t('table.insertColumnRight'),
+          action: () => this.exec(new InsertColumnCommand(doc, bid, anchorCol, anchorCol)),
+          disabled: false,
+        },
+        {
+          label: t('table.deleteColumn'),
+          action: () =>
+            data.columnWidths.length <= 1
+              ? this.execDeleteTableBlock(bid)
+              : this.exec(new DeleteColumnCommand(doc, bid, anchorCol)),
+          disabled: false,
+        },
+      );
+    }
+
+    if (cfg.showMergeCells) {
+      if (items.length > 0) items.push({ label: '---', action: () => {} });
+      items.push({
         label: t('table.mergeCells'),
         action: () => this.exec(new MergeCellsCommand(doc, bid, range)),
         disabled: !canMerge,
-      },
-    ];
+      });
+    }
 
     for (const item of items) {
       if (item.label === '---') {
@@ -294,11 +312,15 @@ export class TableContextMenu {
       this.overlay.appendChild(btn);
     }
 
-    if (anchorCell) {
-      this.appendSeparator();
-      this.appendBorderToggles(bid, cellIds, data, pos.rowIndex, pos.colIndex);
-      this.appendSeparator();
-      this.appendBackgroundPicker(bid, cellIds, anchorCell.style.background);
+    if (anchorCell && (cfg.showCellBorders || cfg.showCellBackground)) {
+      if (cfg.showCellBorders) {
+        this.appendSeparator();
+        this.appendBorderToggles(bid, cellIds, data, pos.rowIndex, pos.colIndex);
+      }
+      if (cfg.showCellBackground) {
+        this.appendSeparator();
+        this.appendBackgroundPicker(bid, cellIds, anchorCell.style.background);
+      }
     }
 
     this.overlay.style.left = `${x}px`;

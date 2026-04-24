@@ -1,13 +1,14 @@
 import type { BlockNode, BlockType } from '@core/model/interfaces';
 import type { EditorContext } from '../engine/editor-context';
-import type { SlashPalette } from './slash-palette';
+import type { BlockGutterConfig, ResolvedBlockGutterConfig, SlashPaletteLike } from './toolbar-options';
+import { resolveBlockGutterConfig } from './toolbar-options';
 import { BlockTypeMenu } from './block-type-menu';
 import { TableSizePicker, type TableSizePickerResult } from './table-size-picker';
 import { InsertBlockCommand } from '../engine/commands/insert-block-command';
 import { ChangeBlockTypeCommand } from '../engine/commands/change-block-type-command';
 import { DeleteBlockCommand } from '../engine/commands/delete-block-command';
 import { MoveBlockCommand } from '../engine/commands/move-block-command';
-import { createIcon } from '../../../../src/util/icon';
+import { createIcon } from '../icons/create-icon';
 import { findBlockLocation, findTableCell, getFirstTableCellFirstBlockId, type BlockLocation } from '../engine/block-locator';
 import { buildTableDataFromSizePicker } from '../blocks/table-data-factory';
 import { Modal } from '@shared/components/modal';
@@ -19,24 +20,27 @@ export class BlockGutter {
   private hoveredBlockId: string | null = null;
   private blockTypeMenu: BlockTypeMenu;
   private tableSizePicker: TableSizePicker;
-  private slashPalette: SlashPalette | null = null;
+  private slashPalette: SlashPaletteLike | null = null;
   private dragBlockId: string | null = null;
   private dropIndicator: HTMLDivElement | null = null;
   private readonly removeConfirmModal = new Modal(this.host);
   private trashRowEl: HTMLDivElement | null = null;
   private readonly disposers: (() => void)[] = [];
+  private readonly gutterConfig: ResolvedBlockGutterConfig;
 
   constructor(
     private readonly ctx: EditorContext,
     private readonly host: HTMLElement,
+    gutterConfig?: BlockGutterConfig,
   ) {
+    this.gutterConfig = resolveBlockGutterConfig(gutterConfig);
     this.blockTypeMenu = new BlockTypeMenu(ctx.blockRegistry, host, ctx.i18n);
     this.tableSizePicker = new TableSizePicker(host, ctx.i18n);
     this.createGutter();
     this.attach();
   }
 
-  setSlashPalette(palette: SlashPalette): void {
+  setSlashPalette(palette: SlashPaletteLike): void {
     this.slashPalette = palette;
   }
 
@@ -54,53 +58,66 @@ export class BlockGutter {
     this.gutterEl = document.createElement('div');
     this.gutterEl.classList.add('idea-block-gutter');
 
-    const addBtn = document.createElement('button');
-    addBtn.classList.add('idea-block-gutter__btn');
-    addBtn.title = this.ctx.i18n.t('gutter.addBlock');
-    addBtn.appendChild(createIcon('add'));
-    addBtn.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      this.openSlashPalette(addBtn);
-    });
-
-    const dragBtn = document.createElement('button');
-    this.dragBtn = dragBtn;
-    dragBtn.classList.add('idea-block-gutter__btn', 'idea-block-gutter__btn--drag');
-    dragBtn.title = this.ctx.i18n.t('gutter.dragToReorder');
-    dragBtn.setAttribute('draggable', 'true');
-    dragBtn.appendChild(createIcon('drag_indicator'));
-    dragBtn.addEventListener('dragstart', (e) => this.onDragStart(e));
-    dragBtn.addEventListener('dragend', () => this.onDragEnd());
-
     const topRow = document.createElement('div');
     topRow.classList.add('idea-block-gutter__row');
-    topRow.appendChild(addBtn);
-    topRow.appendChild(dragBtn);
 
-    const trashBtn = document.createElement('button');
-    this.trashBtn = trashBtn;
-    const trashRow = document.createElement('div');
-    this.trashRowEl = trashRow;
-    trashRow.classList.add('idea-block-gutter__row', 'idea-block-gutter__row--trash');
-    trashBtn.classList.add('idea-block-gutter__btn', 'idea-block-gutter__btn--trash');
-    trashBtn.type = 'button';
-    trashBtn.title = this.ctx.i18n.t('gutter.removeBlock');
-    trashBtn.setAttribute('aria-label', this.ctx.i18n.t('gutter.removeBlock'));
-    trashBtn.appendChild(createIcon('delete'));
-    trashBtn.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-    });
-    trashBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      this.onRemoveBlockClick();
-    });
-    trashRow.appendChild(trashBtn);
+    if (this.gutterConfig.showAddButton) {
+      const addBtn = document.createElement('button');
+      addBtn.classList.add('idea-block-gutter__btn');
+      addBtn.title = this.ctx.i18n.t('gutter.addBlock');
+      addBtn.appendChild(createIcon('add'));
+      addBtn.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.openSlashPalette(addBtn);
+      });
+      topRow.appendChild(addBtn);
+    }
 
-    this.gutterEl.appendChild(topRow);
-    this.gutterEl.appendChild(trashRow);
+    if (this.gutterConfig.showDragHandle) {
+      const dragBtn = document.createElement('button');
+      this.dragBtn = dragBtn;
+      dragBtn.classList.add('idea-block-gutter__btn', 'idea-block-gutter__btn--drag');
+      dragBtn.title = this.ctx.i18n.t('gutter.dragToReorder');
+      dragBtn.setAttribute('draggable', 'true');
+      dragBtn.appendChild(createIcon('drag_indicator'));
+      dragBtn.addEventListener('dragstart', (e) => this.onDragStart(e));
+      dragBtn.addEventListener('dragend', () => this.onDragEnd());
+      topRow.appendChild(dragBtn);
+    } else {
+      this.dragBtn = null;
+    }
+
+    if (topRow.childNodes.length > 0) {
+      this.gutterEl.appendChild(topRow);
+    }
+
+    if (this.gutterConfig.showDeleteButton) {
+      const trashBtn = document.createElement('button');
+      this.trashBtn = trashBtn;
+      const trashRow = document.createElement('div');
+      this.trashRowEl = trashRow;
+      trashRow.classList.add('idea-block-gutter__row', 'idea-block-gutter__row--trash');
+      trashBtn.classList.add('idea-block-gutter__btn', 'idea-block-gutter__btn--trash');
+      trashBtn.type = 'button';
+      trashBtn.title = this.ctx.i18n.t('gutter.removeBlock');
+      trashBtn.setAttribute('aria-label', this.ctx.i18n.t('gutter.removeBlock'));
+      trashBtn.appendChild(createIcon('delete'));
+      trashBtn.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      });
+      trashBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.onRemoveBlockClick();
+      });
+      trashRow.appendChild(trashBtn);
+      this.gutterEl.appendChild(trashRow);
+    } else {
+      this.trashBtn = null;
+      this.trashRowEl = null;
+    }
 
     this.host.appendChild(this.gutterEl);
     this.gutterEl.classList.add('idea-block-gutter--hidden');
@@ -294,7 +311,8 @@ export class BlockGutter {
     const t = this.ctx.i18n.t.bind(this.ctx.i18n);
     const body = document.createElement('p');
     body.classList.add('idea-block-gutter__confirm-message');
-    body.textContent = t('gutter.confirmRemoveMessage');
+    const msgKey = this.gutterConfig.confirmRemoveMessageKey ?? 'gutter.confirmRemoveMessage';
+    body.textContent = t(msgKey);
 
     const actions = document.createElement('div');
     actions.classList.add('idea-block-gutter__modal-footer-actions');

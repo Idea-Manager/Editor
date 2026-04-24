@@ -3,7 +3,7 @@ import type { EditorContext } from '../engine/editor-context';
 import { getBlockById } from '../engine/block-locator';
 import { InlineMarkManager } from '../inline/inline-mark-manager';
 import { openLinkUrlFlyout } from './link-url-flyout';
-import { createIcon } from '../../../../src/util/icon';
+import { createIcon } from '../icons/create-icon';
 
 function positionQuickPopoverAbove(
   el: HTMLElement,

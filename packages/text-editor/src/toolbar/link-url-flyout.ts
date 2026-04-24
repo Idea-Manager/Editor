@@ -2,7 +2,7 @@ import type { BlockNode } from '@core/model/interfaces';
 import type { EditorContext } from '../engine/editor-context';
 import { SetLinkCommand } from '../inline/set-link-command';
 import { InlineMarkManager } from '../inline/inline-mark-manager';
-import { createIcon } from '../../../../src/util/icon';
+import { createIcon } from '../icons/create-icon';
 
 export type LinkUrlFlyoutTarget = { block: BlockNode; start: number; end: number };
 

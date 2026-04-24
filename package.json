@@ -8,6 +8,7 @@
     "build": "webpack --config webpack/webpack.prod.js",
     "build:analyze": "ANALYZE=true webpack --config webpack/webpack.prod.js",
     "test": "jest",
+    "check:text-editor-imports": "node scripts/check-text-editor-imports.mjs",
     "docs:dev": "npm --prefix website run start",
     "docs:build": "npm --prefix website run build",
     "docs:serve": "npm --prefix website run serve"

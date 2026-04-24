@@ -2,7 +2,7 @@ import type { ListItemData } from '@core/model/interfaces';
 import type { EditorContext } from './editor-context';
 import type { BlockRenderer } from '../renderer/block-renderer';
 import type { SelectionSync } from './selection-sync';
-import type { SlashPalette } from '../toolbar/slash-palette';
+import type { SlashPaletteLike } from '../toolbar/toolbar-options';
 import { IntentClassifier } from './intent-classifier';
 import type { EditIntent } from './intent-classifier';
 import { InsertTextCommand } from './commands/insert-text-command';
@@ -22,7 +22,7 @@ export class InputInterceptor {
   private readonly classifier = new IntentClassifier();
   private readonly markManager = new InlineMarkManager();
   private readonly disposers: (() => void)[] = [];
-  private slashPalette: SlashPalette | null = null;
+  private slashPalette: SlashPaletteLike | null = null;
 
   constructor(
     private readonly ctx: EditorContext,
@@ -32,7 +32,7 @@ export class InputInterceptor {
     this.attach();
   }
 
-  setSlashPalette(palette: SlashPalette): void {
+  setSlashPalette(palette: SlashPaletteLike): void {
     this.slashPalette = palette;
   }
 

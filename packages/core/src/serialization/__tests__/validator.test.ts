@@ -33,10 +33,19 @@ describe('validateDocument', () => {
     expect(result.errors.some(e => e.includes('type'))).toBe(true);
   });
 
-  it('should reject a document with invalid block type', () => {
+  it('should accept a document with a custom plugin block type string', () => {
     const doc = createDocument();
     doc.children = [
-      { id: 'blk_x', type: 'invalid_type' as any, data: {}, children: [] },
+      { id: 'blk_x', type: 'my_plugin_block', data: {}, children: [] },
+    ];
+    const result = validateDocument(doc);
+    expect(result.valid).toBe(true);
+  });
+
+  it('should reject a block with empty type', () => {
+    const doc = createDocument();
+    doc.children = [
+      { id: 'blk_x', type: '', data: {}, children: [] },
     ];
     const result = validateDocument(doc);
     expect(result.valid).toBe(false);

@@ -46,7 +46,8 @@ export type BlockType =
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export interface BlockNode<TData = any> {
   id: string;
-  type: BlockType;
+  /** Block kind; built-in values are in {@link BlockType}. Custom blocks use arbitrary non-empty strings. */
+  type: string;
   children: TextRun[];
   data: TData;
   meta?: NodeMeta;

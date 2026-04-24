@@ -1,4 +1,4 @@
-import type { DocumentNode, BlockType, TextRun, TableData } from '@core/model/interfaces';
+import type { DocumentNode, TextRun, TableData } from '@core/model/interfaces';
 import type { Command } from '@core/commands/command';
 import type { OperationRecord } from '@core/operation-log/interfaces';
 import { generateId } from '@core/id';
@@ -8,14 +8,14 @@ import { cloneTableData } from '../document-snapshot';
 
 export class ChangeBlockTypeCommand implements Command {
   readonly operationRecords: OperationRecord[] = [];
-  private oldType: BlockType = 'paragraph';
+  private oldType = 'paragraph';
   private oldData: Record<string, unknown> = {};
   private oldChildren: TextRun[] = [];
 
   constructor(
     private readonly doc: DocumentNode,
     private readonly blockId: string,
-    private readonly newType: BlockType,
+    private readonly newType: string,
     private readonly registry: BlockRegistry,
     private readonly dataOverride?: Record<string, unknown>,
   ) {}

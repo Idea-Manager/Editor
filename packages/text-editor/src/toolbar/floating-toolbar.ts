@@ -7,10 +7,14 @@ import { InlineMarkManager } from '../inline/inline-mark-manager';
 import { openLinkUrlFlyout } from './link-url-flyout';
 import { ChangeBlockTypeCommand } from '../engine/commands/change-block-type-command';
 import { SetAlignCommand, type Alignment } from '../engine/commands/set-align-command';
-import { createIcon } from '../../../../src/util/icon';
+import { createIcon } from '../icons/create-icon';
 import { getBlockById, getSelectionSpansInDocumentOrder } from '../engine/block-locator';
 import { SelectionSync, escapeSelectorAttr } from '../engine/selection-sync';
 import { ColorPicker } from '@shared/components/color-picker';
+import {
+  mergeFloatingToolbarConfig,
+  type FloatingToolbarConfig,
+} from './toolbar-options';
 
 const MARK_BUTTONS: { mark: InlineMark; icon: string }[] = [
   { mark: 'bold', icon: 'format_bold' },
@@ -24,8 +28,6 @@ const ALIGN_BUTTONS: { align: Alignment; icon: string; titleKey: string }[] = [
   { align: 'right', icon: 'format_align_right', titleKey: 'toolbar.alignRight' },
 ];
 
-const CONVERTIBLE_BLOCK_TYPES: BlockType[] = ['paragraph', 'heading', 'list_item'];
-
 export class FloatingToolbar {
   private overlay: HTMLDivElement | null = null;
   private colorPicker: ColorPicker | null = null;
@@ -38,13 +40,16 @@ export class FloatingToolbar {
   private readonly markManager = new InlineMarkManager();
   private readonly disposers: (() => void)[] = [];
   private readonly selectionSync: SelectionSync;
+  private readonly toolbarConfig: FloatingToolbarConfig;
 
   constructor(
     private readonly ctx: EditorContext,
     private readonly host: HTMLElement,
     selectionSync?: SelectionSync,
+    config?: Partial<FloatingToolbarConfig>,
   ) {
     this.selectionSync = selectionSync ?? new SelectionSync();
+    this.toolbarConfig = mergeFloatingToolbarConfig(config);
     this.attach();
   }
 
@@ -162,8 +167,9 @@ export class FloatingToolbar {
   }
 
   private getConvertiblePaletteItems(): PaletteItem[] {
-    return this.ctx.blockRegistry.getPaletteItems().filter(
-      item => CONVERTIBLE_BLOCK_TYPES.includes(item.type as BlockType),
+    const types = this.toolbarConfig.convertibleBlockTypes;
+    return this.ctx.blockRegistry.getPaletteItems().filter(item =>
+      (types as readonly string[]).includes(item.type),
     );
   }
 
@@ -198,70 +204,90 @@ export class FloatingToolbar {
     this.overlay = document.createElement('div');
     this.overlay.classList.add('idea-floating-toolbar');
 
-    for (const { mark, icon } of MARK_BUTTONS) {
-      const btn = document.createElement('button');
-      btn.classList.add('idea-floating-toolbar__btn', 'idea-floating-toolbar__btn--mark');
-      btn.setAttribute('data-mark', mark);
-      btn.appendChild(createIcon(icon));
+    const s = this.toolbarConfig.sections;
+    let prevSection = false;
 
-      btn.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        this.toggleMark(mark);
-      });
+    const between = () => {
+      if (!prevSection) return;
+      const sep = document.createElement('div');
+      sep.classList.add('idea-floating-toolbar__separator');
+      this.overlay!.appendChild(sep);
+    };
 
-      this.overlay.appendChild(btn);
+    if (s.marks) {
+      between();
+      for (const { mark, icon } of MARK_BUTTONS) {
+        const btn = document.createElement('button');
+        btn.classList.add('idea-floating-toolbar__btn', 'idea-floating-toolbar__btn--mark');
+        btn.setAttribute('data-mark', mark);
+        btn.appendChild(createIcon(icon));
+
+        btn.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          this.toggleMark(mark);
+        });
+
+        this.overlay.appendChild(btn);
+      }
+      prevSection = true;
     }
 
-    const sepColor = document.createElement('div');
-    sepColor.classList.add('idea-floating-toolbar__separator');
-    this.overlay.appendChild(sepColor);
+    if (s.color || s.link) {
+      between();
+      if (s.color) {
+        const colorBtn = document.createElement('button');
+        colorBtn.type = 'button';
+        colorBtn.classList.add('idea-floating-toolbar__btn', 'idea-floating-toolbar__btn--color');
+        colorBtn.title = this.ctx.i18n.t('toolbar.textColor');
+        colorBtn.appendChild(createIcon('format_color_text'));
+        colorBtn.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          this.openTextColorPicker(e);
+        });
+        this.overlay.appendChild(colorBtn);
+      }
 
-    const colorBtn = document.createElement('button');
-    colorBtn.type = 'button';
-    colorBtn.classList.add('idea-floating-toolbar__btn', 'idea-floating-toolbar__btn--color');
-    colorBtn.title = this.ctx.i18n.t('toolbar.textColor');
-    colorBtn.appendChild(createIcon('format_color_text'));
-    colorBtn.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      this.openTextColorPicker(e);
-    });
-    this.overlay.appendChild(colorBtn);
-
-    const linkBtn = document.createElement('button');
-    linkBtn.type = 'button';
-    linkBtn.classList.add('idea-floating-toolbar__btn', 'idea-floating-toolbar__btn--link');
-    linkBtn.title = this.ctx.i18n.t('toolbar.addLink');
-    linkBtn.appendChild(createIcon('link_2'));
-    linkBtn.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      this.openLinkFlyout(e);
-    });
-    this.overlay.appendChild(linkBtn);
-
-    const sep1 = document.createElement('div');
-    sep1.classList.add('idea-floating-toolbar__separator');
-    this.overlay.appendChild(sep1);
-
-    for (const { align, icon, titleKey } of ALIGN_BUTTONS) {
-      const btn = document.createElement('button');
-      btn.classList.add('idea-floating-toolbar__btn', 'idea-floating-toolbar__btn--align');
-      btn.setAttribute('data-align', align);
-      btn.title = this.ctx.i18n.t(titleKey);
-      btn.appendChild(createIcon(icon));
-
-      btn.addEventListener('mousedown', (e) => {
-        e.preventDefault();
-        this.setAlign(align);
-      });
-
-      this.overlay.appendChild(btn);
+      if (s.link) {
+        const linkBtn = document.createElement('button');
+        linkBtn.type = 'button';
+        linkBtn.classList.add('idea-floating-toolbar__btn', 'idea-floating-toolbar__btn--link');
+        linkBtn.title = this.ctx.i18n.t('toolbar.addLink');
+        linkBtn.appendChild(createIcon('link_2'));
+        linkBtn.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          this.openLinkFlyout(e);
+        });
+        this.overlay.appendChild(linkBtn);
+      }
+      prevSection = true;
     }
 
-    if (this.getConvertiblePaletteItems().length > 0) {
-      const sep2 = document.createElement('div');
-      sep2.classList.add('idea-floating-toolbar__separator');
-      sep2.setAttribute('data-role', 'block-type-sep');
-      this.overlay.appendChild(sep2);
+    if (s.align) {
+      between();
+      for (const { align, icon, titleKey } of ALIGN_BUTTONS) {
+        const btn = document.createElement('button');
+        btn.classList.add('idea-floating-toolbar__btn', 'idea-floating-toolbar__btn--align');
+        btn.setAttribute('data-align', align);
+        btn.title = this.ctx.i18n.t(titleKey);
+        btn.appendChild(createIcon(icon));
+
+        btn.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          this.setAlign(align);
+        });
+
+        this.overlay.appendChild(btn);
+      }
+      prevSection = true;
+    }
+
+    if (s.blockConvert && this.getConvertiblePaletteItems().length > 0) {
+      if (prevSection) {
+        const sep2 = document.createElement('div');
+        sep2.classList.add('idea-floating-toolbar__separator');
+        sep2.setAttribute('data-role', 'block-type-sep');
+        this.overlay.appendChild(sep2);
+      }
 
       const select = document.createElement('select');
       select.classList.add('idea-floating-toolbar__select');
@@ -285,6 +311,31 @@ export class FloatingToolbar {
       });
 
       this.overlay.appendChild(select);
+      prevSection = true;
+    }
+
+    if (this.toolbarConfig.extraButtons.length > 0) {
+      between();
+
+      const wrap = document.createElement('div');
+      wrap.classList.add('idea-floating-toolbar__extra');
+      wrap.setAttribute('data-role', 'floating-toolbar-extra');
+
+      for (const eb of this.toolbarConfig.extraButtons) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.classList.add('idea-floating-toolbar__btn', 'idea-floating-toolbar__btn--extra');
+        btn.setAttribute('data-extra-id', eb.id);
+        btn.title = this.ctx.i18n.t(eb.titleKey);
+        btn.appendChild(createIcon(eb.icon));
+        btn.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          eb.onClick(this.ctx);
+          this.updateActiveStates();
+        });
+        wrap.appendChild(btn);
+      }
+      this.overlay.appendChild(wrap);
     }
 
     this.host.appendChild(this.overlay);
@@ -318,6 +369,8 @@ export class FloatingToolbar {
       );
     }
 
+    const convertibleTypes = this.toolbarConfig.convertibleBlockTypes as readonly string[];
+
     const buttons = this.overlay.querySelectorAll('.idea-floating-toolbar__btn[data-mark]');
     buttons.forEach(btn => {
       const mark = btn.getAttribute('data-mark') as InlineMark;
@@ -335,7 +388,15 @@ export class FloatingToolbar {
       btn.classList.toggle('idea-floating-toolbar__btn--active', allMatch);
     });
 
-    const convertibleBlocks = toolbarBlocks.filter(b => CONVERTIBLE_BLOCK_TYPES.includes(b.type));
+    this.overlay.querySelectorAll<HTMLButtonElement>('.idea-floating-toolbar__btn--extra[data-extra-id]').forEach(btn => {
+      const id = btn.getAttribute('data-extra-id');
+      const eb = this.toolbarConfig.extraButtons.find(x => x.id === id);
+      if (eb?.isActive) {
+        btn.classList.toggle('idea-floating-toolbar__btn--active', eb.isActive(this.ctx));
+      }
+    });
+
+    const convertibleBlocks = toolbarBlocks.filter(b => convertibleTypes.includes(b.type));
     const select = this.overlay.querySelector('[data-role="block-type"]') as HTMLSelectElement;
     const blockTypeSep = this.overlay.querySelector('[data-role="block-type-sep"]') as HTMLElement | null;
     const showBlockType = convertibleBlocks.length > 0;
@@ -605,7 +666,7 @@ export class FloatingToolbar {
     if (!sel) return;
 
     for (const b of this.getToolbarTargetBlocks(sel)) {
-      if (!CONVERTIBLE_BLOCK_TYPES.includes(b.type)) continue;
+      if (!(this.toolbarConfig.convertibleBlockTypes as readonly string[]).includes(b.type)) continue;
       this.ctx.undoRedoManager.push(
         new ChangeBlockTypeCommand(
           this.ctx.document,

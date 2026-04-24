@@ -21,6 +21,7 @@ import {
   getSelectionStartAfterDelete,
 } from './block-locator';
 import { IDEA_EDITOR_CLIPBOARD_MIME } from './clipboard-constants';
+import { DEFAULT_PASTE_DATA_SOURCES, type TextEditorClipboardOptions } from './clipboard-options';
 import {
   parseIdeaEditorClipboardPayload,
   serializeIdeaEditorClipboardPayload,
@@ -43,6 +44,7 @@ export class ClipboardHandler {
     private readonly ctx: EditorContext,
     private readonly blockRenderer: BlockRenderer,
     private readonly selectionSync: SelectionSync,
+    private readonly clipboardOptions?: TextEditorClipboardOptions,
   ) {
     this.attach();
   }
@@ -195,6 +197,28 @@ export class ClipboardHandler {
     return [];
   }
 
+  private resolvePasteBlocksFromDataTransfer(data: DataTransfer): BlockNode[] {
+    const order = this.clipboardOptions?.pasteDataSources ?? DEFAULT_PASTE_DATA_SOURCES;
+    for (const src of order) {
+      if (src === 'idea-editor') {
+        const idea = data.getData(IDEA_EDITOR_CLIPBOARD_MIME) ?? '';
+        if (idea) {
+          const parsed = parseIdeaEditorClipboardPayload(idea);
+          if (parsed && parsed.length > 0) return parsed;
+        }
+      } else if (src === 'text/html') {
+        const html = data.getData('text/html');
+        if (html) {
+          const fromHtml = this.parseHtml(html);
+          if (fromHtml.length > 0) return fromHtml;
+        }
+      } else if (src === 'text/plain') {
+        return this.parsePlainText(data.getData('text/plain') ?? '');
+      }
+    }
+    return [];
+  }
+
   private handlePaste(e: ClipboardEvent): void {
     e.preventDefault();
     const sel = this.ctx.selectionManager.get();
@@ -214,15 +238,15 @@ export class ClipboardHandler {
     const loc = findBlockLocation(this.ctx.document, currentSel.anchorBlockId);
     const inTableCell = loc?.parentKind === 'table-cell';
 
-    const idea = e.clipboardData?.getData(IDEA_EDITOR_CLIPBOARD_MIME) ?? '';
-    let blocks = idea
-      ? parseIdeaEditorClipboardPayload(idea)
-      : null;
+    const data = e.clipboardData;
+    if (!data) return;
 
-    if (!blocks || blocks.length === 0) {
-      const html = e.clipboardData?.getData('text/html');
-      const plainText = e.clipboardData?.getData('text/plain') ?? '';
-      blocks = html ? this.parseHtml(html) : this.parsePlainText(plainText);
+    const custom = this.clipboardOptions?.transformPaste?.(this.ctx, e);
+    let blocks: BlockNode[];
+    if (custom != null && custom.length > 0) {
+      blocks = custom;
+    } else {
+      blocks = this.resolvePasteBlocksFromDataTransfer(data);
     }
 
     if (inTableCell) {

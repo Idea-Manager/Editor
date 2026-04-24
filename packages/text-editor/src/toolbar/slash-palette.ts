@@ -3,12 +3,13 @@ import type { EditorContext } from '../engine/editor-context';
 import type { PaletteItem } from '../blocks/block-registry';
 import { ChangeBlockTypeCommand } from '../engine/commands/change-block-type-command';
 import { InsertBlockCommand } from '../engine/commands/insert-block-command';
-import { createIcon } from '../../../../src/util/icon';
+import { createIcon } from '../icons/create-icon';
 import { TableSizePicker, type TableSizePickerResult } from './table-size-picker';
 import { showEmbedUrlModal } from './embed-url-modal';
 import { embedDataFromUrl } from '../blocks/embed-url';
 import { findBlockLocation, getFirstTableCellFirstBlockId } from '../engine/block-locator';
 import { buildTableDataFromSizePicker } from '../blocks/table-data-factory';
+import type { SlashPaletteOptions } from './toolbar-options';
 
 export type SlashPaletteMode = 'change' | 'insert';
 
@@ -29,9 +30,14 @@ export class SlashPalette {
   constructor(
     private readonly ctx: EditorContext,
     private readonly host: HTMLElement,
+    private readonly paletteOptions?: SlashPaletteOptions,
   ) {
     this.tableSizePicker = new TableSizePicker(host, ctx.i18n);
     this.attach();
+  }
+
+  private applyPaletteFilter(items: PaletteItem[]): PaletteItem[] {
+    return this.paletteOptions?.filterItems ? this.paletteOptions.filterItems(items) : items;
   }
 
   destroy(): void {
@@ -68,12 +74,13 @@ export class SlashPalette {
     this.blockId = blockId;
     this.mode = mode;
     this.anchorRect = anchorRect ?? null;
-    this.paletteExcludeTypes = excludeTypes;
+    const effectiveExclude = excludeTypes ?? this.paletteOptions?.excludeTypes;
+    this.paletteExcludeTypes = effectiveExclude;
     this.filterText = '';
     this.activeIndex = 0;
     this.visible = true;
 
-    this.filteredItems = this.ctx.blockRegistry.getPaletteItems(excludeTypes);
+    this.filteredItems = this.applyPaletteFilter(this.ctx.blockRegistry.getPaletteItems(effectiveExclude));
     this.createOverlay();
     this.positionOverlay();
     this.renderItems();
@@ -102,9 +109,13 @@ export class SlashPalette {
     }
 
     const query = this.filterText.toLowerCase();
-    this.filteredItems = this.ctx.blockRegistry.getPaletteItems(this.paletteExcludeTypes).filter(item =>
-      this.ctx.i18n.t(item.labelKey).toLowerCase().includes(query) ||
-      item.id.toLowerCase().includes(query),
+    const base = this.applyPaletteFilter(
+      this.ctx.blockRegistry.getPaletteItems(this.paletteExcludeTypes),
+    );
+    this.filteredItems = base.filter(
+      item =>
+        this.ctx.i18n.t(item.labelKey).toLowerCase().includes(query) ||
+        item.id.toLowerCase().includes(query),
     );
 
     this.activeIndex = Math.min(this.activeIndex, Math.max(0, this.filteredItems.length - 1));
@@ -324,6 +335,11 @@ export class SlashPalette {
   private createOverlay(): void {
     this.overlay = document.createElement('div');
     this.overlay.classList.add('idea-slash-palette');
+    const mh = this.paletteOptions?.maxHeightPx;
+    if (mh != null && mh > 0) {
+      this.overlay.style.maxHeight = `${mh}px`;
+      this.overlay.style.overflowY = 'auto';
+    }
 
     this.overlay.addEventListener('mousedown', (e) => {
       e.preventDefault();

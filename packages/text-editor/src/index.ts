@@ -1,3 +1,5 @@
+export { createIcon } from './icons/create-icon';
+
 export { TextEditor } from './engine/text-editor';
 export type { TextEditorOptions } from './engine/text-editor';
 export type { EditorContext } from './engine/editor-context';
@@ -8,6 +10,8 @@ export { SelectionSync } from './engine/selection-sync';
 
 export type { BlockDefinition } from './blocks/block-definition';
 export { BlockRegistry } from './blocks/block-registry';
+export type { AnyBlockDefinition } from './blocks/block-registry';
+export { registerDefaultBlocks, createDefaultBlockRegistry } from './blocks/register-default-blocks';
 export { ParagraphBlock } from './blocks/paragraph-block';
 export { HeadingBlock } from './blocks/heading-block';
 export { ListItemBlock } from './blocks/list-item-block';
@@ -53,10 +57,40 @@ export { SetCellBackgroundCommand } from './engine/commands/set-cell-background-
 export { SetCellsBackgroundCommand } from './engine/commands/set-cells-background-command';
 
 export { ClipboardHandler } from './engine/clipboard-handler';
+export type { PasteDataSource, TextEditorClipboardOptions } from './engine/clipboard-options';
+export { DEFAULT_PASTE_DATA_SOURCES } from './engine/clipboard-options';
 
 export { SlashPalette } from './toolbar/slash-palette';
+export type { SlashPaletteMode } from './toolbar/slash-palette';
 export { FloatingToolbar } from './toolbar/floating-toolbar';
 export { TableContextMenu } from './toolbar/table-context-menu';
 export { BlockGutter } from './toolbar/block-gutter';
 export { BlockTypeMenu } from './toolbar/block-type-menu';
 export { TableSizePicker } from './toolbar/table-size-picker';
+export type {
+  SlashPaletteOptions,
+  SlashPaletteLike,
+  SlashPaletteFactory,
+  FloatingToolbarConfig,
+  FloatingToolbarSections,
+  FloatingToolbarExtraButton,
+  FloatingToolbarDeps,
+  FloatingToolbarLike,
+  FloatingToolbarFactory,
+  BlockGutterConfig,
+  ResolvedBlockGutterConfig,
+  BlockGutterFactory,
+  TableContextMenuConfig,
+  ResolvedTableContextMenuConfig,
+  TableContextMenuFactory,
+  LinkHoverOptions,
+  TextEditorToolbarsOptions,
+} from './toolbar/toolbar-options';
+export {
+  defaultFloatingToolbarConfig,
+  mergeFloatingToolbarConfig,
+  DEFAULT_FLOATING_TOOLBAR_SECTIONS,
+  DEFAULT_CONVERTIBLE_BLOCK_TYPES,
+  resolveBlockGutterConfig,
+  resolveTableContextMenuConfig,
+} from './toolbar/toolbar-options';

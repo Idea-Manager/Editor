@@ -83,5 +83,5 @@ export type { OS } from './platform/os-detection';
 export { formatHotkey, hotkeyLabel } from './platform/hotkey';
 
 // i18n
-export { I18nService } from './i18n/i18n';
+export { I18nService, mergeDictionaries } from './i18n/i18n';
 export type { Locale, TranslationDictionary } from './i18n/types';

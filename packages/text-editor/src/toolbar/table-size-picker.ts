@@ -1,6 +1,6 @@
 import type { I18nService } from '@core/i18n/i18n';
 import { Modal } from '@shared/components/modal';
-import { createIcon } from '../../../../src/util/icon';
+import { createIcon } from '../icons/create-icon';
 import { createDropdownCombobox } from '@shared/components/dropdown-combobox';
 import {
   DEFAULT_TABLE_BORDER_WIDTH,

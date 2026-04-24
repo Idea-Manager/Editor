@@ -7,7 +7,7 @@ import { SetEmbedUrlCommand } from '../engine/commands/set-embed-url-command';
 import { DeleteBlockCommand } from '../engine/commands/delete-block-command';
 import { findBlockLocation, findTableCell } from '../engine/block-locator';
 import type { BlockLocation } from '../engine/block-locator';
-import { createIcon } from '../../../../src/util/icon';
+import { createIcon } from '../icons/create-icon';
 import { detectProvider, getFaviconUrl } from './embed-url';
 import { showEmbedUrlModal } from '../toolbar/embed-url-modal';
 

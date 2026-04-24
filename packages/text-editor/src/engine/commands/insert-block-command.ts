@@ -1,4 +1,4 @@
-import type { BlockNode, DocumentNode, BlockType, TableData } from '@core/model/interfaces';
+import type { BlockNode, DocumentNode, TableData } from '@core/model/interfaces';
 import type { Command } from '@core/commands/command';
 import type { OperationRecord } from '@core/operation-log/interfaces';
 import type { BlockRegistry } from '../../blocks/block-registry';
@@ -15,7 +15,7 @@ export class InsertBlockCommand implements Command {
   constructor(
     private readonly doc: DocumentNode,
     private readonly afterBlockId: string,
-    private readonly newType: BlockType,
+    private readonly newType: string,
     private readonly registry: BlockRegistry,
     private readonly dataOverride?: Record<string, unknown>,
   ) {}
