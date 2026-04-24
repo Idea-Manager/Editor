@@ -2,12 +2,15 @@
   "name": "idea-editor",
   "version": "0.0.1",
   "private": true,
-  "description": "Block Text Editor + Graphic Editor",
+  "description": "Block text and graphic editor in one workspace—text and graphic modes with embeddable graphic frames in documents",
   "scripts": {
     "dev": "webpack serve --config webpack/webpack.dev.js",
     "build": "webpack --config webpack/webpack.prod.js",
     "build:analyze": "ANALYZE=true webpack --config webpack/webpack.prod.js",
-    "test": "jest"
+    "test": "jest",
+    "docs:dev": "npm --prefix website run start",
+    "docs:build": "npm --prefix website run build",
+    "docs:serve": "npm --prefix website run serve"
   },
   "dependencies": {
     "ajv": "^8.17.1",

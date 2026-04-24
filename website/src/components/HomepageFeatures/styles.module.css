@@ -1,0 +1,49 @@
+.features {
+  display: flex;
+  align-items: flex-start;
+  padding: 2.5rem 0 3rem;
+  width: 100%;
+}
+
+.featureIconWrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0.75rem;
+}
+
+.featureIcon {
+  width: 2.75rem;
+  height: 2.75rem;
+  color: var(--ifm-color-primary);
+}
+
+.featureCopy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.featureHeading {
+  font-size: 1.15rem !important;
+  margin-bottom: 0.65rem !important;
+}
+
+.featureDescription {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: var(--ifm-color-emphasis-700);
+  max-width: 20rem;
+  text-align: left;
+}
+
+.featureDescription p {
+  margin: 0 0 0.5rem;
+}
+
+.featureDescription p:last-child {
+  margin-bottom: 0;
+}
+
+[data-theme='dark'] .featureDescription {
+  color: var(--ifm-color-emphasis-600);
+}
