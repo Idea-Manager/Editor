@@ -7,3 +7,4 @@ coverage/
 *.tsbuildinfo
 .lumora/
 .vscode/
+GITHUB_PAGES_SETUP.md

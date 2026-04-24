@@ -12,8 +12,8 @@ const config: Config = {
     v4: true,
   },
 
-  url: 'https://idea-manager.github.io',
-  baseUrl: '/Editor/',
+  url: 'https://idea-editor.com',
+  baseUrl: '/',
   trailingSlash: true,
 
   organizationName: 'Idea-Manager',
