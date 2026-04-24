@@ -12,8 +12,11 @@ const config: Config = {
     v4: true,
   },
 
-  url: 'https://idea-editor.com',
-  baseUrl: '/',
+  // Project Pages: https://idea-manager.github.io/Editor/ — use baseUrl '/Editor/'.
+  // After GitHub Pages custom domain + DNS work for idea-editor.com, switch to:
+  //   url: 'https://idea-editor.com', baseUrl: '/'
+  url: 'https://idea-manager.github.io',
+  baseUrl: '/Editor/',
   trailingSlash: true,
 
   organizationName: 'Idea-Manager',
