@@ -15,6 +15,7 @@ import { DeleteBlockCommand } from '../engine/commands/delete-block-command';
 import { createIcon } from '../icons/create-icon';
 import { ColorPicker } from '@shared/components/color-picker';
 import { getResolvedBorderValue } from '../blocks/table-border-sync';
+import { clearTableCellRangeDomClasses } from '../blocks/table-block';
 import { bottomGridRowForCell } from '../blocks/table-row-mutations';
 import type { ResolvedTableContextMenuConfig, TableContextMenuConfig } from './toolbar-options';
 import { resolveTableContextMenuConfig } from './toolbar-options';
@@ -55,7 +56,7 @@ function isPresetCellBackground(bg: string | undefined): boolean {
 
 function clearTableCellDomSelection(tableWrapper: HTMLElement): void {
   tableWrapper.querySelectorAll('.idea-table-cell--selected').forEach(el => {
-    el.classList.remove('idea-table-cell--selected', 'idea-table-cell--range-anchor');
+    clearTableCellRangeDomClasses(el);
   });
 }
 

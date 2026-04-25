@@ -55,6 +55,23 @@ const TABLE_CELL_BORDER_RIGHT = 'idea-table-cell--border-right';
 const TABLE_CELL_BORDER_BOTTOM = 'idea-table-cell--border-bottom';
 const TABLE_CELL_BORDER_LEFT = 'idea-table-cell--border-left';
 
+const TABLE_CELL_RANGE_EDGE_TOP = 'idea-table-cell--range-edge-top';
+const TABLE_CELL_RANGE_EDGE_RIGHT = 'idea-table-cell--range-edge-right';
+const TABLE_CELL_RANGE_EDGE_BOTTOM = 'idea-table-cell--range-edge-bottom';
+const TABLE_CELL_RANGE_EDGE_LEFT = 'idea-table-cell--range-edge-left';
+
+/** Clears table cell range-selection UI classes (long-press / context menu). */
+export function clearTableCellRangeDomClasses(el: Element): void {
+  el.classList.remove(
+    'idea-table-cell--selected',
+    'idea-table-cell--range-anchor',
+    TABLE_CELL_RANGE_EDGE_TOP,
+    TABLE_CELL_RANGE_EDGE_RIGHT,
+    TABLE_CELL_RANGE_EDGE_BOTTOM,
+    TABLE_CELL_RANGE_EDGE_LEFT,
+  );
+}
+
 function applyTableCellBorderClasses(cellEl: HTMLElement, cell: TableCell): void {
   cellEl.classList.toggle(TABLE_CELL_BORDER_TOP, !!cell.style.borderTop);
   cellEl.classList.toggle(TABLE_CELL_BORDER_RIGHT, !!cell.style.borderRight);
@@ -117,7 +134,7 @@ export class TableBlock implements BlockDefinition<TableData> {
 
     grid.querySelectorAll('.idea-table-col-resizer').forEach(el => el.remove());
     grid.querySelectorAll('.idea-table-cell').forEach(el => {
-      el.classList.remove('idea-table-cell--selected', 'idea-table-cell--range-anchor');
+      clearTableCellRangeDomClasses(el);
     });
 
     const resizerTargets: { el: HTMLElement; boundaryCol: number }[] = [];
@@ -350,7 +367,7 @@ export class TableBlock implements BlockDefinition<TableData> {
 
     const clearSelection = () => {
       grid.querySelectorAll('.idea-table-cell--selected').forEach(el => {
-        el.classList.remove('idea-table-cell--selected', 'idea-table-cell--range-anchor');
+        clearTableCellRangeDomClasses(el);
       });
     };
 
@@ -369,11 +386,13 @@ export class TableBlock implements BlockDefinition<TableData> {
         for (let c = minC; c <= maxC; c++) {
           const cell = node.data.rows[r].cells[c];
           if (cell.absorbed) continue;
-          const cellEl = grid.querySelector(`[data-cell-id="${CSS.escape(cell.id)}"]`);
-          cellEl?.classList.add('idea-table-cell--selected');
-          if (cell.id === anchorId) {
-            cellEl?.classList.add('idea-table-cell--range-anchor');
-          }
+          const cellEl = grid.querySelector<HTMLElement>(`[data-cell-id="${CSS.escape(cell.id)}"]`);
+          if (!cellEl) continue;
+          cellEl.classList.add('idea-table-cell--selected');
+          if (r === minR) cellEl.classList.add(TABLE_CELL_RANGE_EDGE_TOP);
+          if (r === maxR) cellEl.classList.add(TABLE_CELL_RANGE_EDGE_BOTTOM);
+          if (c === minC) cellEl.classList.add(TABLE_CELL_RANGE_EDGE_LEFT);
+          if (c === maxC) cellEl.classList.add(TABLE_CELL_RANGE_EDGE_RIGHT);
         }
       }
     };
