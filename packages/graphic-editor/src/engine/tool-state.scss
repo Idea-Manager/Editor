@@ -1,0 +1,29 @@
+@use '../../../../src/styles/variables' as *;
+
+.idea-graphic-ghost {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0.6;
+  z-index: 10;
+  transform: translate(-50%, -50%);
+
+  svg {
+    display: block;
+  }
+}
+
+.idea-graphic-canvas--placement {
+  cursor: crosshair;
+}
+
+.idea-graphic-canvas--sticker {
+  cursor: copy;
+}
+
+.idea-graphic-canvas--hand {
+  cursor: grab;
+}
+
+.idea-graphic-canvas--hand-active {
+  cursor: grabbing;
+}

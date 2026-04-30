@@ -86,4 +86,12 @@ describe('EventBus', () => {
     expect(h1).not.toHaveBeenCalled();
     expect(h2).not.toHaveBeenCalled();
   });
+
+  it('should emit graphic:start-arrow event with payload', () => {
+    const handler = jest.fn();
+    bus.on('graphic:start-arrow', handler);
+    const payload = { sourceElementId: 'el1', edge: 'right', anchorWorld: { x: 100, y: 50 } };
+    bus.emit('graphic:start-arrow', payload);
+    expect(handler).toHaveBeenCalledWith(payload);
+  });
 });

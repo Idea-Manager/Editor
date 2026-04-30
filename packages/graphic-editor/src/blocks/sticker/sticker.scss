@@ -1,0 +1,19 @@
+@use '../../../../../src/styles/variables' as *;
+
+.idea-graphic-sticker__text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $spacing-sm;
+  text-align: center;
+  word-break: break-word;
+  white-space: pre-wrap;
+  font-family: $font-family-base;
+  // Sticker text min font-size is enforced at render time (14pt).
+  // Height overflow is visible so text can spill below the sticker.
+  overflow: visible;
+  box-sizing: border-box;
+  outline: none;
+  cursor: text;
+  pointer-events: all;
+}

@@ -1,25 +1,34 @@
 ---
-sidebar_position: 1
+sidebar_position: 10
 ---
 
-# Graphic editor (roadmap)
+# Roadmap
 
-The **graphic editor** is not implemented in the repository yet. It is planned as the **graphic mode** alongside **text mode**: one workspace, two ways to work, with a path to **import or embed graphic compositions into text documents as frames** so blocks and graphics share the same structured document and **core** abstractions.
+The graphic editor is **shipped**. The pages in this section document the implemented state.
 
-## What exists today
+## What is implemented
 
-- **Document schema** includes examples that separate text-heavy and graphic-heavy documents — see `packages/core/src/schema/examples/` (for example `graphic-only.json`).
-- **Operation log** types already include **node-level** operations (`node:insert`, `node:delete`, `node:update`, `node:move`) suitable for structured graphics trees, not only text. See [Operation log](../concepts/operation-log.md).
-- **TypeScript path** `@graphic-editor/*` → `packages/graphic-editor/src/*` is **reserved** in `tsconfig.json`; the directory will appear when development starts.
+- **Canvas** — hybrid SVG + DOM surface with pan and zoom.
+- **Built-in blocks** — rectangle, triangle, circle, ellipse, sticker (rich text), arrow, freehand path.
+- **Tools** — selection, frame, arrow, pen, sticker; ghost placement from left panel.
+- **Interaction** — drag to move, drag handles to resize, lasso multi-select, Space-pan, scroll-zoom.
+- **Arrows** — anchored or free-floating; configurable heading, direction, type, color, thickness; inline label.
+- **Frames** — named sections; elements attach and detach when dragged in/out.
+- **Properties** — floating properties window per element; group properties window for multi-select.
+- **Custom blocks** — save a group as a reusable template; place copies from the left panel.
+- **Style memory** — last-used style values are remembered per block kind.
+- **Undo / redo** — all mutations go through the shared `UndoRedoManager`.
+- **i18n** — English and Ukrainian; see [i18n](./i18n.md).
+- **CRDT readiness** — every mutation produces `OperationRecord`s; see [Architecture](./architecture.md#crdt-readiness).
 
-## Planned relationship to core
+## Original specification
 
-When the package lands, it should reuse:
+The original design document is preserved at [`Graphic_Editor_Roadmap.md`](https://github.com/Idea-Manager/Editor/blob/master/Graphic_Editor_Roadmap.md) in the repository root.
 
-- **`Command` / `UndoRedoManager`** — the same undo model as the text editor.
-- **`EventBus`** — consistent `doc:*`, `history:*`, and element/frame events where applicable.
-- **Serialization and schema version** — load/save through the same JSON document pipeline as in [Document model](../concepts/document-model.md).
+## Planned / future work
 
-## Documentation
-
-This section will gain API and user-facing pages once `packages/graphic-editor` exists. Until then, use [Architecture](../getting-started/architecture.md) and the **Concepts** guides for shared behavior.
+- Real-time collaboration via a CRDT backend (out of scope for this repo).
+- Nested custom blocks and parameterised templates.
+- Sharing / exporting custom-block libraries.
+- Additional block kinds (tables, images, embed blocks on canvas).
+- Accessibility audit and full keyboard navigation for handles.

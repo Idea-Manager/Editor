@@ -93,6 +93,41 @@
     }
   }
 
+  &__mode {
+    display: inline-flex;
+    border: 1px solid $color-border;
+    border-radius: 6px;
+    overflow: hidden;
+
+    > button {
+      padding: 4px 12px;
+      background: transparent;
+      border: none;
+      color: $color-text-secondary;
+      font-weight: 500;
+      font-size: $font-size-sm;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background-color 0.1s, color 0.1s;
+      line-height: 1.5;
+
+      &:hover:not(.is-active) {
+        background: $gray-100;
+        color: $color-text;
+      }
+
+      &.is-active {
+        background: $gray-200;
+        color: $color-text;
+        font-weight: 600;
+      }
+
+      & + button {
+        border-left: 1px solid $color-border;
+      }
+    }
+  }
+
   &__save-dot {
     width: 6px;
     height: 6px;

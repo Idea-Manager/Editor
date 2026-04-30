@@ -33,5 +33,25 @@ module.exports = {
       testEnvironment: 'jsdom',
       roots: ['<rootDir>/packages/text-editor'],
     },
+    {
+      ...sharedConfig,
+      displayName: 'shared',
+      testEnvironment: 'jsdom',
+      roots: ['<rootDir>/shared'],
+    },
+    {
+      ...sharedConfig,
+      displayName: 'graphic-editor',
+      testEnvironment: 'jsdom',
+      setupFiles: ['<rootDir>/jest/setup.js'],
+      roots: ['<rootDir>/packages/graphic-editor'],
+    },
+    {
+      ...sharedConfig,
+      displayName: 'app',
+      testEnvironment: 'jsdom',
+      setupFiles: ['<rootDir>/jest/setup.js'],
+      roots: ['<rootDir>/src'],
+    },
   ],
 };

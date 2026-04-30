@@ -1,3 +1,6 @@
+> Status: ✅ Shipped. See `website/docs/graphic-editor/` for the live docs.
+> This document is preserved as the original specification.
+
 # Graphic editor roadmap #
 
 I want a graphical editor which combines features from AFFiNE and draw.io.

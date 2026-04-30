@@ -1,0 +1,46 @@
+@use '../../../../src/styles/variables' as *;
+
+.idea-graphic-block-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  gap: 4px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+  color: $color-text-secondary;
+  padding: $spacing-xs;
+  transition: background-color 0.1s ease, color 0.1s ease;
+  flex-shrink: 0;
+
+  &:hover {
+    background: $gray-100;
+    color: $color-text;
+  }
+
+  &:active {
+    box-shadow: inset 0 1px 3px rgba($black, 0.12);
+  }
+
+  &__icon {
+    font-size: 22px;
+    line-height: 1;
+    user-select: none;
+  }
+
+  &__label {
+    font-family: $font-family-base;
+    font-size: $font-size-xs;
+    line-height: 1.2;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 56px;
+    user-select: none;
+  }
+}

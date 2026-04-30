@@ -22,7 +22,18 @@ const sidebars: SidebarsConfig = {
     {
       type: 'category',
       label: 'Graphic editor',
-      items: ['graphic-editor/roadmap'],
+      items: [
+        'graphic-editor/overview',
+        'graphic-editor/architecture',
+        'graphic-editor/blocks',
+        'graphic-editor/tools',
+        'graphic-editor/custom-blocks',
+        'graphic-editor/properties',
+        'graphic-editor/keyboard-and-mouse',
+        'graphic-editor/extensibility',
+        'graphic-editor/i18n',
+        'graphic-editor/roadmap',
+      ],
     },
     {
       type: 'category',

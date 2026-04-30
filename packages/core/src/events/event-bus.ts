@@ -18,7 +18,13 @@ export type EditorEvent =
   | 'operation:local'
   | 'operation:remote'
   | 'table:range-select-end'
-  | 'table:range-ui';
+  | 'table:range-ui'
+  | 'viewport:change'
+  | 'graphic:start-arrow'
+  | 'tool:change'
+  | 'graphic:open-arrow-defaults'
+  | 'graphic:request-properties-window'
+  | 'graphic:toast';
 
 type Handler<T = unknown> = (payload: T) => void;
 

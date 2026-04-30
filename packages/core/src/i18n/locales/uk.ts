@@ -121,7 +121,97 @@ export const uk: TranslationDictionary = {
   'io.copyButton': 'Копіювати',
   'io.jsonCopied': 'JSON скопійовано',
 
+  // Mode toggle
+  'mode.text': 'Текст',
+  'mode.graphic': 'Графіка',
+  'mode.toggle.aria': 'Режим редактора',
+
   // Shortcut labels
   'shortcut.commandPalette': 'Палітра команд',
   'shortcut.exportJson': 'Експорт JSON',
+
+  // Graphic editor — page & viewport
+  'graphic.page.untitled': 'Без назви',
+  'graphic.zoom.label': 'Масштаб:',
+  'graphic.zoom.in': 'Збільшити',
+  'graphic.zoom.out': 'Зменшити',
+  'graphic.viewport.percent': '{percent}%',
+
+  // Graphic editor — block labels
+  'graphic.block.path': 'Малюнок',
+  'graphic.block.rectangle': 'Прямокутник',
+  'graphic.block.triangle': 'Трикутник',
+  'graphic.block.circle': 'Коло',
+  'graphic.block.ellipse': 'Еліпс',
+  'graphic.block.sticker': 'Стікер',
+  'graphic.group.shapes': 'Фігури',
+
+  // Graphic editor — frame
+  'graphic.frame.defaultName': 'Рамка {n}',
+  'graphic.frame.label': '{name}',
+
+  // Graphic editor — tools
+  'graphic.tool.selection': 'Виділення',
+  'graphic.tool.frame': 'Рамка',
+  'graphic.tool.arrow': 'Стрілка',
+  'graphic.tool.pen': 'Олівець',
+  'graphic.tool.sticker': 'Стікер',
+  'graphic.tool.hand': 'Рука',
+  'graphic.placement.cancel': 'Натисніть ESC для скасування розміщення',
+
+  // Graphic editor — selection handles
+  'graphic.handle.move': 'Перемістити',
+  'graphic.handle.resize-nw': 'Змінити розмір з верхнього лівого кута',
+  'graphic.handle.resize-ne': 'Змінити розмір з верхнього правого кута',
+  'graphic.handle.resize-se': 'Змінити розмір з нижнього правого кута',
+  'graphic.handle.resize-sw': 'Змінити розмір з нижнього лівого кута',
+  'graphic.handle.start-arrow': 'Почати стрілку',
+
+  // Graphic editor — tools (hints)
+  'graphic.tool.pen.hint': 'Перетягніть для вільного малювання',
+
+  // Graphic editor — block properties
+  'graphic.props.window.title': '{label}',
+  'graphic.props.window.close': 'Закрити',
+  'graphic.props.text': 'Текст',
+  'graphic.props.htmlTemplate': 'Шаблон',
+  'graphic.props.pivots': 'Точки повороту',
+  'graphic.props.text.placeholder': 'Введіть текст…',
+  'graphic.props.border': 'Межа',
+  'graphic.props.background': 'Фон',
+  'graphic.props.fill': 'Заливка',
+  'graphic.props.textColor': 'Колір тексту',
+  'graphic.props.fontSize': 'Розмір шрифту',
+  'graphic.props.color': 'Колір',
+  'graphic.props.thickness': 'Товщина',
+
+  // Graphic editor — arrow block
+  'graphic.block.arrow': 'Стрілка',
+  'graphic.arrow.heading': 'Наконечник',
+  'graphic.arrow.heading.none': 'Немає',
+  'graphic.arrow.heading.stroke': 'Контур',
+  'graphic.arrow.heading.fill': 'Заливка',
+  'graphic.arrow.direction': 'Напрямок',
+  'graphic.arrow.direction.none': 'Немає',
+  'graphic.arrow.direction.to': 'До',
+  'graphic.arrow.direction.from': 'Від',
+  'graphic.arrow.direction.both': 'Обидва',
+  'graphic.arrow.type': 'Тип',
+  'graphic.arrow.type.line': 'Лінія',
+  'graphic.arrow.type.curve': 'Крива',
+  'graphic.arrow.color': 'Колір',
+  'graphic.arrow.thickness': 'Товщина',
+  'graphic.arrow.label.placeholder': 'Додайте підпис…',
+  'graphic.arrow.defaults.title': 'Параметри стрілки',
+
+  // Graphic editor — group properties window
+  'graphic.group.title': 'Виділення ({count})',
+  'graphic.group.lock': 'Заблокувати',
+  'graphic.group.group': 'Згрупувати',
+  'graphic.group.createBlock': 'Створити новий блок',
+  'graphic.group.createBlock.input': 'Назва',
+  'graphic.group.createBlock.success': '"{name}" збережено у Custom',
+  'graphic.group.empty': 'Власні блоки з\'являться тут після створення',
+  'graphic.group.custom': 'Власні',
+  'graphic.block.tile.add': 'Натисніть для розміщення. ESC — скасувати.',
 };

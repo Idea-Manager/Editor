@@ -1,0 +1,20 @@
+@use '../../../../../src/styles/variables' as *;
+
+.idea-graphic-arrow {
+  cursor: default;
+}
+
+.idea-graphic-arrow__label {
+  position: absolute;
+  background: $white;
+  border: 1px solid $color-border;
+  border-radius: 4px;
+  padding: $spacing-xs;
+  font-family: $font-family-base;
+  font-size: $font-size-sm;
+  color: $color-text;
+  white-space: nowrap;
+  pointer-events: auto;
+  user-select: none;
+  line-height: 1.2;
+}

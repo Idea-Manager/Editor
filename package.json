@@ -7,8 +7,11 @@
     "dev": "webpack serve --config webpack/webpack.dev.js",
     "build": "webpack --config webpack/webpack.prod.js",
     "build:analyze": "ANALYZE=true webpack --config webpack/webpack.prod.js",
+    "pretest": "npm run check:text-editor-imports && npm run check:graphic-editor-imports && npm run check:graphic-i18n",
     "test": "jest",
     "check:text-editor-imports": "node scripts/check-text-editor-imports.mjs",
+    "check:graphic-editor-imports": "node scripts/check-graphic-editor-imports.mjs",
+    "check:graphic-i18n": "node scripts/check-graphic-i18n.mjs",
     "docs:dev": "npm --prefix website run start",
     "docs:build": "npm --prefix website run build",
     "docs:serve": "npm --prefix website run serve"

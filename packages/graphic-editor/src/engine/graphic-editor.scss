@@ -1,0 +1,76 @@
+@use '../../../../src/styles/variables' as *;
+
+// Note: no Shadow DOM — `:host` is intentionally omitted. Layout is driven by
+// the `.idea-graphic-editor` class added in connectedCallback().
+.idea-graphic-editor {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  grid-template-rows: 1fr;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.idea-graphic-canvas {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  outline: none;
+  cursor: default;
+  background-color: $color-bg;
+  // Dotted-grid background: fixed 20px screen-space spacing.
+  // background-position is updated by CanvasRenderer.applyViewport() so the
+  // grid drifts with pan while remaining crisp at all zoom levels.
+  background-image: radial-gradient(circle, $gray-200 1px, transparent 1.5px);
+  background-size: 20px 20px;
+
+  &--panning {
+    cursor: grab;
+  }
+
+  &--panning-active {
+    cursor: grabbing;
+  }
+}
+
+.idea-graphic-canvas__svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+
+  .idea-graphic-canvas__world {
+    pointer-events: all;
+  }
+}
+
+.idea-graphic-canvas__overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  overflow: visible;
+  pointer-events: none;
+
+  > * {
+    pointer-events: all;
+  }
+}
+
+// Screen-space selection layer: absolutely covers the canvas without world transform.
+// Handles, lasso rect, and bounding rect live here so they stay pixel-sized at any zoom.
+.idea-graphic-canvas__selection-layer {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  pointer-events: none;
+
+  > * {
+    pointer-events: none;
+  }
+}

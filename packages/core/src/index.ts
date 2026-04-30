@@ -31,6 +31,10 @@ export type {
   Rect,
 } from './model/interfaces';
 
+// Graphic preferences & custom blocks
+export type { GraphicPreferences, CustomBlockDefinition } from './model/graphic-preferences';
+export { getGraphicPreferences, getCustomBlocks, DOCUMENT_DATA_KEYS } from './model/document-data';
+
 // Factory functions
 export {
   createDocument,

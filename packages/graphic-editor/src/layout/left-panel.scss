@@ -1,0 +1,45 @@
+@use '../../../../src/styles/variables' as *;
+
+.idea-graphic-left-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 240px;
+  width: 240px;
+  height: 100%;
+  overflow: hidden;
+  background: $color-graphic-left-panel-bg;
+  border-right: 1px solid $color-border;
+
+  &__scroll {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  &__group {
+    // Overrides Accordion's default element class - no extra styling needed,
+    // groupKey is stored via data-group-key attribute added in left-panel.ts.
+  }
+
+  &__sticky {
+    flex-shrink: 0;
+    background: $color-graphic-left-panel-sticky-bg;
+    border-top: 1px solid $color-border;
+    box-shadow: 0 -4px 8px rgba($black, 0.04);
+  }
+
+  &__tiles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $spacing-xs;
+    padding: $spacing-sm;
+  }
+
+  &__empty {
+    padding: $spacing-sm $spacing-md;
+    font-family: $font-family-base;
+    font-size: $font-size-sm;
+    color: $color-text-secondary;
+    margin: 0;
+  }
+}

@@ -1,0 +1,159 @@
+@use '../../../src/styles/variables' as *;
+
+.idea-graphic-floating-window {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  min-width: 300px;
+  border: 1px solid $color-border;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba($black, 0.12);
+  background: $color-bg;
+  user-select: none;
+  box-sizing: border-box;
+
+  &:focus {
+    outline: none;
+  }
+
+  // ── Titlebar ──────────────────────────────────────────────────────────────
+
+  &__titlebar {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    flex-shrink: 0;
+    padding: $spacing-xs $spacing-xs $spacing-xs $spacing-sm;
+    background: $color-bg-subtle;
+    border-bottom: 1px solid $color-border;
+    border-radius: 8px 8px 0 0;
+    cursor: grab;
+
+    &:active {
+      cursor: grabbing;
+    }
+  }
+
+  &__title {
+    flex: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-family: $font-family-base;
+    font-size: $font-size-sm;
+    color: $color-text;
+  }
+
+  &__close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: $color-text-secondary;
+    cursor: pointer;
+
+    .material-symbols-outlined {
+      font-size: 18px;
+    }
+
+    &:hover {
+      background: $color-bg;
+      color: $color-text;
+    }
+
+    &:focus-visible {
+      outline: 2px solid $color-focus-ring;
+      outline-offset: 1px;
+    }
+  }
+
+  // ── Body ─────────────────────────────────────────────────────────────────
+
+  &__body {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+  }
+
+  // ── Resize handles ────────────────────────────────────────────────────────
+
+  &__resize {
+    position: absolute;
+    z-index: 1;
+
+    // North
+    &--n {
+      top: -4px;
+      left: 8px;
+      right: 8px;
+      height: 8px;
+      cursor: n-resize;
+    }
+
+    // South
+    &--s {
+      bottom: -4px;
+      left: 8px;
+      right: 8px;
+      height: 8px;
+      cursor: s-resize;
+    }
+
+    // East
+    &--e {
+      right: -4px;
+      top: 8px;
+      bottom: 8px;
+      width: 8px;
+      cursor: e-resize;
+    }
+
+    // West
+    &--w {
+      left: -4px;
+      top: 8px;
+      bottom: 8px;
+      width: 8px;
+      cursor: w-resize;
+    }
+
+    // Corners
+    &--ne {
+      top: -4px;
+      right: -4px;
+      width: 16px;
+      height: 16px;
+      cursor: ne-resize;
+    }
+
+    &--nw {
+      top: -4px;
+      left: -4px;
+      width: 16px;
+      height: 16px;
+      cursor: nw-resize;
+    }
+
+    &--se {
+      bottom: -4px;
+      right: -4px;
+      width: 24px;
+      height: 24px;
+      cursor: se-resize;
+    }
+
+    &--sw {
+      bottom: -4px;
+      left: -4px;
+      width: 16px;
+      height: 16px;
+      cursor: sw-resize;
+    }
+  }
+}

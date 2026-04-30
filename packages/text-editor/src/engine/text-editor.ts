@@ -120,6 +120,8 @@ export class TextEditor extends HTMLElement {
   private readonly eventDisposers: (() => void)[] = [];
 
   connectedCallback(): void {
+    // Idempotent: safe to call more than once (e.g. HMR remount, or called defensively from init()).
+    if (this.container) return;
     this.classList.add('idea-editor');
 
     this.container = document.createElement('div');
@@ -131,7 +133,17 @@ export class TextEditor extends HTMLElement {
     this.appendChild(this.container);
   }
 
+  /**
+   * Called by the host after this element transitions from display:none to visible.
+   * No-op for TextEditor — layout is handled by the browser without re-measuring.
+   * Exists for API symmetry with GraphicEditor so AppShell can call it uniformly.
+   */
+  onHostResize(): void {}
+
   init(doc: DocumentNode, eventBus: EventBus, undoRedoManager: UndoRedoManager, options?: TextEditorOptions): void {
+    // init() may be called before connectedCallback if the host inserts us off-tree.
+    // Calling connectedCallback() directly is safe because it is idempotent.
+    if (!this.container) this.connectedCallback();
     ensureGlobalEditorStyles(options);
     setExtraStyleOnHost(this, options?.extraStyleText);
 

@@ -1,0 +1,51 @@
+@use '../../../../src/styles/variables' as *;
+
+.idea-graphic-toolbar--bottom {
+  position: absolute;
+  bottom: $spacing-md;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs;
+  background-color: $white;
+  border: 1px solid $color-border;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba($black, 0.08);
+  user-select: none;
+  z-index: 10;
+}
+
+.idea-graphic-toolbar__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: $color-text;
+  padding: 0;
+  transition: background-color 0.1s ease;
+
+  &:hover {
+    background-color: $gray-100;
+  }
+
+  &:active {
+    background-color: $gray-200;
+  }
+
+  &.is-active {
+    background-color: $gray-200;
+    color: $color-text;
+  }
+
+  .material-symbols-outlined {
+    font-size: 18px;
+    line-height: 1;
+  }
+}

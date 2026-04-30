@@ -1,0 +1,22 @@
+@use '../../../../src/styles/variables' as *;
+
+.idea-graphic-frame__rect {
+  fill: none;
+  stroke: $gray-400;
+  stroke-width: 1;
+  stroke-dasharray: 6 4;
+  pointer-events: none;
+}
+
+.idea-graphic-frame__label {
+  position: absolute;
+  font-family: $font-family-base;
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  transform: translateY(-100%);
+  padding-bottom: 2px;
+}

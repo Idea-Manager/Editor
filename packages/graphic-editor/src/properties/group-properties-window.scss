@@ -1,0 +1,114 @@
+@use '../../../../src/styles/variables' as *;
+
+.idea-group-props {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.idea-group-props__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: $spacing-sm $spacing-md;
+  border-bottom: 1px solid $color-border;
+}
+
+.idea-group-props__label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  font-family: $font-family-base;
+  font-size: $font-size-sm;
+  color: $color-text;
+  cursor: pointer;
+  user-select: none;
+}
+
+.idea-group-props__checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: $color-primary;
+  flex-shrink: 0;
+}
+
+.idea-group-props__create-panel {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  padding: $spacing-sm $spacing-md;
+}
+
+.idea-group-props__preview {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
+  border: 1px dashed $color-border;
+  border-radius: 4px;
+  color: $color-text-secondary;
+}
+
+.idea-group-props__preview-icon {
+  font-size: $font-size-xl;
+  color: $color-text-secondary;
+  font-variation-settings: 'FILL' 0, 'wght' 300;
+}
+
+.idea-group-props__preview-count {
+  font-family: $font-family-base;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.idea-group-props__input-label {
+  font-family: $font-family-base;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+}
+
+.idea-group-props__name-input {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: $font-family-base;
+  font-size: $font-size-sm;
+  color: $color-text;
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: 4px;
+  padding: $spacing-xs $spacing-sm;
+  outline: none;
+
+  &::placeholder {
+    color: $color-placeholder;
+  }
+
+  &:focus {
+    border-color: $color-focus-ring;
+  }
+}
+
+.idea-group-props__create-btn {
+  width: 100%;
+  font-family: $font-family-base;
+  font-size: $font-size-sm;
+  color: $color-bg;
+  background: $color-text;
+  border: none;
+  border-radius: 4px;
+  padding: $spacing-xs $spacing-md;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover:not(:disabled) {
+    background: $color-text-secondary;
+  }
+
+  &:disabled {
+    background: $gray-300;
+    cursor: not-allowed;
+    color: $gray-500;
+  }
+}

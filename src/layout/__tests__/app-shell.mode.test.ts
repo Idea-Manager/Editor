@@ -1,0 +1,179 @@
+import { createDocument } from '@core/model/factory';
+import { EventBus } from '@core/events/event-bus';
+import { UndoRedoManager } from '@core/history/undo-redo-manager';
+import { I18nService } from '@core/i18n/i18n';
+import { ShortcutManager } from '@core/shortcuts/shortcut-manager';
+import { setActiveMode } from '../../util/active-mode';
+
+// ── Minimal custom element mocks ──────────────────────────────────────────────
+// We register lightweight stubs so AppShell can call `new TextEditor()` /
+// `new GraphicEditor()` and their init / replaceDocument methods without
+// pulling in the full editor implementation trees.
+
+class MockTextEditor extends HTMLElement {
+  init = jest.fn();
+  replaceDocument = jest.fn();
+  onHostResize = jest.fn();
+}
+
+class MockGraphicEditor extends HTMLElement {
+  init = jest.fn();
+  replaceDocument = jest.fn();
+  onHostResize = jest.fn();
+}
+
+if (!customElements.get('idea-text-editor')) {
+  customElements.define('idea-text-editor', MockTextEditor);
+}
+if (!customElements.get('idea-graphic-editor')) {
+  customElements.define('idea-graphic-editor', MockGraphicEditor);
+}
+
+// Mock the package imports so AppShell receives our stub classes.
+jest.mock('@text-editor/index', () => ({ TextEditor: MockTextEditor }));
+jest.mock('@graphic-editor/index', () => ({ GraphicEditor: MockGraphicEditor }));
+
+// Import AppShell AFTER mocks are registered.
+import { AppShell } from '../app-shell';
+
+function makeEnv(initialMode?: 'text' | 'graphic') {
+  const doc = createDocument();
+  if (initialMode) setActiveMode(doc, initialMode);
+
+  const eventBus = new EventBus();
+  const undoRedoManager = new UndoRedoManager(eventBus);
+  const i18n = new I18nService('en');
+  const shortcuts = new ShortcutManager();
+  jest.spyOn(shortcuts, 'setScope');
+
+  const shell = new AppShell({ doc, eventBus, undoRedoManager, i18n, shortcuts });
+  document.body.appendChild(shell.element);
+  // mount() must be called after appendChild so connectedCallback fires for editors
+  // before init() runs, and so topBar / graphicEditor / textEditor are available.
+  shell.mount();
+
+  return { shell, doc, eventBus, shortcuts };
+}
+
+afterEach(() => {
+  document.body.innerHTML = '';
+  jest.restoreAllMocks();
+});
+
+describe('AppShell.setMode', () => {
+  it('defaults to text mode', () => {
+    const { shell } = makeEnv();
+    expect(shell.getCurrentMode()).toBe('text');
+  });
+
+  it('returns graphic when doc.meta.activeMode is "graphic"', () => {
+    const { shell } = makeEnv('graphic');
+    expect(shell.getCurrentMode()).toBe('graphic');
+  });
+
+  it('setMode("graphic") switches currentMode', () => {
+    const { shell } = makeEnv();
+    shell.setMode('graphic');
+    expect(shell.getCurrentMode()).toBe('graphic');
+  });
+
+  it('setMode("graphic") adds app-shell--graphic-mode class', () => {
+    const { shell } = makeEnv();
+    shell.setMode('graphic');
+    expect(shell.element.classList.contains('app-shell--graphic-mode')).toBe(true);
+  });
+
+  it('setMode("text") removes app-shell--graphic-mode class', () => {
+    const { shell } = makeEnv('graphic');
+    shell.setMode('text');
+    expect(shell.element.classList.contains('app-shell--graphic-mode')).toBe(false);
+  });
+
+  it('setMode calls shortcuts.setScope with the new mode', () => {
+    const { shell, shortcuts } = makeEnv();
+    shell.setMode('graphic');
+    expect(shortcuts.setScope).toHaveBeenCalledWith('graphic');
+  });
+
+  it('setMode writes mode to doc.meta.activeMode', () => {
+    const { shell, doc } = makeEnv();
+    shell.setMode('graphic');
+    expect((doc.meta as Record<string, unknown>).activeMode).toBe('graphic');
+  });
+
+  it('setMode emits mode:change on eventBus', () => {
+    const { shell, eventBus } = makeEnv();
+    const listener = jest.fn();
+    eventBus.on('mode:change', listener);
+    shell.setMode('graphic');
+    expect(listener).toHaveBeenCalledWith({ mode: 'graphic' });
+  });
+
+  it('editors are not destroyed on toggle — same instances survive two toggles', () => {
+    const { shell } = makeEnv();
+    const textEl = shell.element.querySelector('idea-text-editor');
+    const graphicEl = shell.element.querySelector('idea-graphic-editor');
+    shell.setMode('graphic');
+    shell.setMode('text');
+    expect(shell.element.querySelector('idea-text-editor')).toBe(textEl);
+    expect(shell.element.querySelector('idea-graphic-editor')).toBe(graphicEl);
+  });
+
+  it('setMode("graphic") calls graphicEditor.onHostResize() after a requestAnimationFrame', () => {
+    jest.useFakeTimers();
+    const { shell } = makeEnv();
+    const graphicEl = shell.element.querySelector('idea-graphic-editor') as MockGraphicEditor;
+
+    shell.setMode('graphic');
+    expect(graphicEl.onHostResize).not.toHaveBeenCalled(); // not yet — rAF pending
+
+    jest.runAllTimers();
+    expect(graphicEl.onHostResize).toHaveBeenCalledTimes(1);
+
+    jest.useRealTimers();
+  });
+
+  it('setMode("text") calls textEditor.onHostResize() after a requestAnimationFrame', () => {
+    jest.useFakeTimers();
+    const { shell } = makeEnv('graphic');
+    const textEl = shell.element.querySelector('idea-text-editor') as MockTextEditor;
+
+    shell.setMode('text');
+    jest.runAllTimers();
+    expect(textEl.onHostResize).toHaveBeenCalledTimes(1);
+
+    jest.useRealTimers();
+  });
+
+  it('does not log an input-interceptor error on mount (console.error spy)', () => {
+    const consoleSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    makeEnv();
+    // No synchronous console.error should be produced during construction and mount
+    expect(consoleSpy).not.toHaveBeenCalled();
+  });
+});
+
+describe('AppShell.replaceDocument', () => {
+  it('switches mode to "graphic" when imported doc has activeMode="graphic"', () => {
+    const { shell } = makeEnv();
+    const newDoc = createDocument();
+    setActiveMode(newDoc, 'graphic');
+    shell.replaceDocument(newDoc);
+    expect(shell.getCurrentMode()).toBe('graphic');
+    expect(shell.element.classList.contains('app-shell--graphic-mode')).toBe(true);
+  });
+
+  it('switches mode to "text" when imported doc has no activeMode', () => {
+    const { shell } = makeEnv('graphic');
+    const newDoc = createDocument();
+    shell.replaceDocument(newDoc);
+    expect(shell.getCurrentMode()).toBe('text');
+  });
+
+  it('returns the new document from getDocument()', () => {
+    const { shell } = makeEnv();
+    const newDoc = createDocument();
+    shell.replaceDocument(newDoc);
+    expect(shell.getDocument()).toBe(newDoc);
+  });
+});

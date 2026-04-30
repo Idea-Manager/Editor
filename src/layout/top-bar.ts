@@ -5,6 +5,7 @@ import type { I18nService } from '@core/i18n/i18n';
 import { hotkeyLabel } from '@core/platform/hotkey';
 import { exportJSON, importJSON, showJSONPreview, copyJSON } from './import-export';
 import { createIcon } from '../util/icon';
+import type { ActiveMode } from '../util/active-mode';
 import './top-bar.scss';
 
 export interface TopBarConfig {
@@ -13,6 +14,8 @@ export interface TopBarConfig {
   undoRedoManager: UndoRedoManager;
   i18n: I18nService;
   onDocReplace: (doc: DocumentNode) => void;
+  onModeChange: (mode: ActiveMode) => void;
+  initialMode: ActiveMode;
 }
 
 export class TopBar {
@@ -20,6 +23,7 @@ export class TopBar {
   private undoBtn!: HTMLButtonElement;
   private redoBtn!: HTMLButtonElement;
   private saveDot!: HTMLElement;
+  private modeButtons: HTMLButtonElement[] = [];
   private unsaved = false;
   private readonly disposers: (() => void)[] = [];
 
@@ -39,6 +43,14 @@ export class TopBar {
     this.config.doc = doc;
   }
 
+  setMode(mode: ActiveMode): void {
+    for (const btn of this.modeButtons) {
+      const isActive = btn.dataset['mode'] === mode;
+      btn.classList.toggle('is-active', isActive);
+      btn.setAttribute('aria-selected', String(isActive));
+    }
+  }
+
   private build(): void {
     const { doc, undoRedoManager, i18n } = this.config;
     const t = i18n.t.bind(i18n);
@@ -56,6 +68,12 @@ export class TopBar {
     const spacer = document.createElement('div');
     spacer.classList.add('top-bar__spacer');
     this.element.appendChild(spacer);
+
+    // Mode segmented control — LEFT of history group
+    const modeGroup = this.buildModeControl(t);
+    this.element.appendChild(modeGroup);
+
+    this.element.appendChild(this.createSeparator());
 
     const historyGroup = document.createElement('div');
     historyGroup.classList.add('top-bar__group');
@@ -82,6 +100,53 @@ export class TopBar {
     ioGroup.appendChild(this.createButton(t('topbar.preview'), t('topbar.previewJson'), () => showJSONPreview(this.config.doc, i18n)));
 
     this.element.appendChild(ioGroup);
+  }
+
+  private buildModeControl(t: (key: string) => string): HTMLElement {
+    const { initialMode, onModeChange } = this.config;
+    const modes: ActiveMode[] = ['text', 'graphic'];
+
+    const group = document.createElement('div');
+    group.classList.add('top-bar__group', 'top-bar__mode');
+    group.setAttribute('role', 'tablist');
+    group.setAttribute('aria-label', t('mode.toggle.aria'));
+
+    for (const mode of modes) {
+      const btn = document.createElement('button');
+      btn.dataset['mode'] = mode;
+      btn.setAttribute('role', 'tab');
+      btn.setAttribute('aria-selected', String(mode === initialMode));
+      btn.textContent = t(`mode.${mode}`);
+      if (mode === initialMode) btn.classList.add('is-active');
+
+      btn.addEventListener('click', () => {
+        this.setMode(mode);
+        onModeChange(mode);
+      });
+
+      this.modeButtons.push(btn);
+      group.appendChild(btn);
+    }
+
+    group.addEventListener('keydown', (e: KeyboardEvent) => {
+      const idx = this.modeButtons.findIndex(b => b === document.activeElement);
+      if (idx === -1) return;
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        const next = (idx + 1) % modes.length;
+        this.modeButtons[next].focus();
+        this.setMode(modes[next]);
+        onModeChange(modes[next]);
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        const prev = (idx - 1 + modes.length) % modes.length;
+        this.modeButtons[prev].focus();
+        this.setMode(modes[prev]);
+        onModeChange(modes[prev]);
+      }
+    });
+
+    return group;
   }
 
   private createButton(text: string, title: string, onClick: () => void, isIcon = false): HTMLButtonElement {

@@ -1,0 +1,77 @@
+@use '../../../src/styles/variables' as *;
+
+.idea-accordion {
+  width: 100%;
+
+  &__item {
+    border-bottom: 1px solid $color-border;
+
+    &:first-child {
+      border-top: 1px solid $color-border;
+    }
+
+    &--disabled {
+      .idea-accordion__header {
+        cursor: default;
+        color: $color-text-secondary;
+      }
+    }
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    width: 100%;
+    padding: $spacing-sm $spacing-md;
+    background: $color-bg;
+    border: none;
+    cursor: pointer;
+    color: $color-text;
+    font-size: $font-size-base;
+    text-align: left;
+
+    &:hover:not(:disabled) {
+      background: $color-bg-subtle;
+    }
+
+    &:focus-visible {
+      outline: 2px solid $color-focus-ring;
+      outline-offset: -2px;
+    }
+
+    &--open .idea-accordion__chevron {
+      transform: rotate(90deg);
+    }
+  }
+
+  &__chevron {
+    display: flex;
+    align-items: center;
+    font-size: $font-size-lg;
+    color: $color-text-secondary;
+    transition: transform 200ms ease-out;
+    flex-shrink: 0;
+    user-select: none;
+  }
+
+  &__title {
+    flex: 1;
+    font-size: $font-size-sm;
+    line-height: 1.4;
+    color: inherit;
+  }
+
+  &__body {
+    overflow: hidden;
+    transition: max-height 200ms ease-out;
+
+    @media (prefers-reduced-motion: reduce) {
+      transition: none;
+    }
+  }
+
+  &__body-inner {
+    padding: $spacing-xs $spacing-md $spacing-sm;
+  }
+}
