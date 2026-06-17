@@ -1,7 +1,7 @@
 import { createDropdownCombobox } from '@shared/components/dropdown-combobox';
 import type { GraphicElement } from '@core/model/interfaces';
 import type { GraphicBlockProperty } from '../../blocks/properties';
-import { pushUpdate, readValue, makePanel } from './renderer-utils';
+import { pushUpdate, readValue, makePanel, isFocusWithinHost } from './renderer-utils';
 import type { RendererContext, RendererResult } from './types';
 
 type FontSizeProp = Extract<GraphicBlockProperty, { kind: 'fontSize' }>;
@@ -66,8 +66,18 @@ export function createFontSizeRenderer(
 
   return {
     element: panel,
+    isActive() {
+      return isFocusWithinHost(wrapper);
+    },
     setValue(updatedNode: GraphicElement) {
       rendCtx = { ...rendCtx, node: updatedNode };
+      if (isFocusWithinHost(wrapper)) return;
+      const next = (readValue(updatedNode, property.path) as number | undefined) ?? 14;
+      const input = wrapper.querySelector<HTMLInputElement>('.idea-dropdown-combobox__input');
+      if (input !== null) {
+        const cur = parseInt(input.value.trim(), 10);
+        if (Number.isFinite(cur) && cur === next) return;
+      }
       buildCombobox(property, rendCtx, wrapper);
     },
   };

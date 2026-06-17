@@ -1,7 +1,7 @@
 export type GraphicBlockProperty =
   | { kind: 'border'; thicknessPath: string; colorPath: string }
   | { kind: 'background'; colorPath: string }
-  | { kind: 'fill'; colorPath: string }
+  | { kind: 'strokeColor'; colorPath: string }
   | { kind: 'textColor'; colorPath: string }
   | { kind: 'fontSize'; path: string; min?: number; max?: number; unit?: 'px' | 'pt' }
   | { kind: 'text'; path: string; placeholderKey?: string }

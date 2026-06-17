@@ -2,7 +2,7 @@ import type { GraphicPageNode } from '@core/model/interfaces';
 import type { GraphicContext } from './graphic-context';
 import type { GraphicRenderContext } from './render-context';
 import type { HitTarget } from './hit-tester';
-import { combinedAABB } from './hit-tester';
+import { combinedAABB, GRAPHIC_GRIP_SCREEN_PX } from './hit-tester';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -67,6 +67,11 @@ export class GraphicSelectionManager {
     const changed = !_selectionsEqual(this.entries, expanded);
     this.entries = [...expanded];
     if (changed) {
+      if (expanded.length === 1 && expanded[0].type === 'element') {
+        this.focusedTargetId = expanded[0].id;
+      } else {
+        this.focusedTargetId = null;
+      }
       this.ctx.eventBus.emit('selection:change', this.entries);
     }
   }
@@ -90,6 +95,7 @@ export class GraphicSelectionManager {
   }
 
   clear(): void {
+    this.focusedTargetId = null;
     if (this.entries.length > 0) {
       this.entries = [];
       this.ctx.eventBus.emit('selection:change', this.entries);
@@ -188,124 +194,47 @@ export class GraphicSelectionManager {
 
     container.appendChild(rect);
 
-    // Single-element selection: corner handles + grip + arrow-edge handles
+    // Single-element selection: corner handles + grip
     const isSingle = this.entries.length === 1 && this.entries[0].type === 'element';
 
     if (isSingle) {
       const singleEl = page.elements.find(e => e.id === this.entries[0].id);
 
-      // Arrows get special endpoint-circle handles instead of the standard bounding-rect UI.
-      if (singleEl?.type === 'arrow') {
-        const arrowData = singleEl.data as { from: { point: { x: number; y: number } }; to: { point: { x: number; y: number } } };
-        const canvasRect = this.ctx.rootElement.querySelector<HTMLElement>('.idea-graphic-canvas')?.getBoundingClientRect();
-        const vp = this.ctx.viewportController;
-        const canvasEl = this.ctx.rootElement.querySelector<HTMLElement>('.idea-graphic-canvas');
-        if (canvasEl && canvasRect) {
-          for (const which of ['from', 'to'] as const) {
-            const worldPt = arrowData[which].point;
-            const screenPt = vp.worldToClient(worldPt.x, worldPt.y, canvasEl);
-            const cx = screenPt.x - canvasRect.left;
-            const cy = screenPt.y - canvasRect.top;
-
-            const handle = document.createElement('div');
-            handle.className = 'idea-graphic-selection__handle idea-graphic-selection__handle--arrow-endpoint';
-            handle.setAttribute('data-arrow-endpoint', which);
-            handle.title = renderCtx.i18n.t('graphic.handle.move');
-            handle.style.left = `${cx}px`;
-            handle.style.top = `${cy}px`;
-            container.appendChild(handle);
-          }
-        }
-        // No bounding rect, no corner handles, no edge arrow handles for arrows.
-        rect.style.display = 'none';
-      } else {
-        // Corner resize handles are NOT shown for path elements — scaling a point list
-        // is non-trivial and out of scope for this iteration.
-        if (singleEl?.type !== 'path') {
-          const corners: Array<{ id: string; label: string; cx: number; cy: number }> = [
-            { id: 'corner-nw', label: renderCtx.i18n.t('graphic.handle.resize-nw'), cx: screenX, cy: screenY },
-            { id: 'corner-ne', label: renderCtx.i18n.t('graphic.handle.resize-ne'), cx: screenX + screenW, cy: screenY },
-            { id: 'corner-se', label: renderCtx.i18n.t('graphic.handle.resize-se'), cx: screenX + screenW, cy: screenY + screenH },
-            { id: 'corner-sw', label: renderCtx.i18n.t('graphic.handle.resize-sw'), cx: screenX, cy: screenY + screenH },
-          ];
-
-          for (const { id, label, cx, cy } of corners) {
-            const handle = document.createElement('div');
-            handle.className = `idea-graphic-selection__handle idea-graphic-selection__handle--${id}`;
-            handle.setAttribute('data-handle', id);
-            handle.title = label;
-            handle.style.left = `${cx}px`;
-            handle.style.top = `${cy}px`;
-            container.appendChild(handle);
-          }
-        }
-
-        // Arrow-edge handles (hidden by default; shown via CSS :hover on parent or JS hover tracking)
-        const edgeDefs: Array<{ id: string; label: string; ex: number; ey: number }> = [
-          { id: 'top',    label: renderCtx.i18n.t('graphic.handle.start-arrow'), ex: screenX + screenW / 2, ey: screenY - 16 },
-          { id: 'right',  label: renderCtx.i18n.t('graphic.handle.start-arrow'), ex: screenX + screenW + 16, ey: screenY + screenH / 2 },
-          { id: 'bottom', label: renderCtx.i18n.t('graphic.handle.start-arrow'), ex: screenX + screenW / 2, ey: screenY + screenH + 16 },
-          { id: 'left',   label: renderCtx.i18n.t('graphic.handle.start-arrow'), ex: screenX - 16, ey: screenY + screenH / 2 },
+      // Corner resize handles are NOT shown for path elements — scaling a point list
+      // is non-trivial and out of scope for this iteration.
+      if (singleEl?.type !== 'path') {
+        const corners: Array<{ id: string; label: string; cx: number; cy: number }> = [
+          { id: 'corner-nw', label: renderCtx.i18n.t('graphic.handle.resize-nw'), cx: screenX, cy: screenY },
+          { id: 'corner-ne', label: renderCtx.i18n.t('graphic.handle.resize-ne'), cx: screenX + screenW, cy: screenY },
+          { id: 'corner-se', label: renderCtx.i18n.t('graphic.handle.resize-se'), cx: screenX + screenW, cy: screenY + screenH },
+          { id: 'corner-sw', label: renderCtx.i18n.t('graphic.handle.resize-sw'), cx: screenX, cy: screenY + screenH },
         ];
 
-        for (const { id, label, ex, ey } of edgeDefs) {
-          const arrowHandle = document.createElement('button');
-          arrowHandle.className = `idea-graphic-selection__arrow idea-graphic-selection__arrow--${id}`;
-          arrowHandle.setAttribute('data-arrow-edge', id);
-          arrowHandle.setAttribute('aria-label', label);
-          arrowHandle.title = label;
-          arrowHandle.style.left = `${ex}px`;
-          arrowHandle.style.top = `${ey}px`;
-          arrowHandle.style.display = 'none';
-          container.appendChild(arrowHandle);
+        for (const { id, label, cx, cy } of corners) {
+          const handle = document.createElement('div');
+          handle.className = `idea-graphic-selection__handle idea-graphic-selection__handle--${id}`;
+          handle.setAttribute('data-handle', id);
+          handle.title = label;
+          handle.style.left = `${cx}px`;
+          handle.style.top = `${cy}px`;
+          container.appendChild(handle);
         }
       }
     }
 
     // Grip icon (outside left edge, at the top of the bounding rect)
     const grip = document.createElement('button');
+    grip.type = 'button';
     grip.className = 'idea-graphic-selection__grip';
     grip.setAttribute('data-grip', 'true');
     grip.title = renderCtx.i18n.t('graphic.handle.move');
     grip.setAttribute('aria-label', renderCtx.i18n.t('graphic.handle.move'));
     grip.textContent = 'drag_indicator';
-    grip.style.left = `${screenX - 24}px`;
+    grip.style.left = `${screenX - GRAPHIC_GRIP_SCREEN_PX}px`;
     grip.style.top = `${screenY}px`;
     container.appendChild(grip);
 
     host.appendChild(container);
-
-    // Show/hide arrow-edge handles on pointer hover over the selection rect
-    // (only for non-arrow elements — arrows use endpoint circles instead)
-    if (isSingle) {
-      const singleElType = page.elements.find(e => e.id === this.entries[0]?.id)?.type;
-      if (singleElType !== 'arrow') {
-        this._bindArrowEdgeHover(rect, container, page, renderCtx);
-      }
-    }
-  }
-
-  /**
-   * Show arrow-edge handles when the pointer is within ~8px of the element boundary.
-   */
-  private _bindArrowEdgeHover(
-    rect: HTMLElement,
-    container: HTMLElement,
-    _page: GraphicPageNode,
-    _renderCtx: GraphicRenderContext,
-  ): void {
-    const arrowHandles = container.querySelectorAll<HTMLElement>('.idea-graphic-selection__arrow');
-
-    const show = () => {
-      arrowHandles.forEach(h => (h.style.display = ''));
-    };
-    const hide = () => {
-      // Only hide when leaving the entire container (not just the rect)
-      arrowHandles.forEach(h => (h.style.display = 'none'));
-    };
-
-    rect.addEventListener('pointerenter', show);
-    container.addEventListener('pointerleave', hide);
   }
 
   // ─── Pointer handling ───────────────────────────────────────────────────────
@@ -356,7 +285,7 @@ export class GraphicSelectionManager {
         }
       }
     }
-    // handle / grip / arrow-edge targets don't change selection
+    // handle / grip targets don't change selection
 
     // Notify controllers (drag, resize, lasso)
     for (const handler of this.pointerDownHandlers) {

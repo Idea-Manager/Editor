@@ -10,11 +10,14 @@ const STICKER_DEFAULT_SIZE = 120;
  * Handles ghost-placement mode ('placement' tool) and sticker single-click mode.
  *
  * Placement mode: shows a translucent ghost preview that follows the cursor.
- * On pointerdown, places the block at the cursor world position, selects it,
- * and emits 'graphic:request-properties-window'.
+ * On pointerdown, places the block at the cursor world position and selects it.
+ * Selection change opens the floating properties window via GroupController.
  *
  * Sticker mode: a single click places a sticker immediately without a ghost.
  * The active tool stays 'sticker' so the user can drop multiple stickers.
+ *
+ * Canvas pointerdown is routed through GraphicEditor.bindPointerEvents — do not
+ * register a separate listener here.
  */
 export class PlacementController {
   private readonly ctx: GraphicContext;
@@ -25,7 +28,6 @@ export class PlacementController {
 
   private readonly onToolChange: (snap: ToolStateSnapshot) => void;
   private readonly onPointerMove: (e: PointerEvent) => void;
-  private readonly onPointerDown: (e: PointerEvent) => void;
 
   constructor(
     ctx: GraphicContext,
@@ -38,11 +40,108 @@ export class PlacementController {
 
     this.onToolChange = this._handleToolChange.bind(this);
     this.onPointerMove = this._handlePointerMove.bind(this);
-    this.onPointerDown = this._handlePointerDown.bind(this);
 
     ctx.eventBus.on('tool:change', this.onToolChange);
     canvas.addEventListener('pointermove', this.onPointerMove);
-    canvas.addEventListener('pointerdown', this.onPointerDown);
+  }
+
+  /**
+   * Handles placement and sticker clicks. Returns true when the event was consumed.
+   */
+  handlePointerDown(e: PointerEvent): boolean {
+    if (e.button !== 0) return false;
+
+    const toolState = this.ctx.toolState;
+    if (!toolState) return false;
+
+    const tool = toolState.getTool();
+
+    if (tool === 'placement') {
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      const worldPos = this.ctx.viewportController.clientToWorld(e.clientX, e.clientY, this.canvas);
+      const blockType = toolState.consumePlacement();
+      if (!blockType) return true;
+
+      this._removeGhost();
+
+      if (blockType.startsWith('custom:')) {
+        const customBlockId = blockType.slice('custom:'.length);
+        const idxBefore = this.ctx.page.elements.length;
+        const instantiateCmd = new InstantiateCustomBlockCommand({
+          doc: this.ctx.document,
+          pageId: this.ctx.page.id,
+          customBlockId,
+          anchor: { x: worldPos.x, y: worldPos.y },
+        });
+        this.ctx.undoRedoManager.push(instantiateCmd);
+        this.ctx.eventBus.emit('element:add');
+
+        const newElements = this.ctx.page.elements.slice(idxBefore);
+        if (newElements.length > 0) {
+          const newId = newElements[0].id;
+          this.selectionManager.setSelection(
+            [{ type: 'element', id: newId }],
+            { bypassGrouping: true },
+          );
+          this.selectionManager.setFocusedHighlight(newId);
+        }
+
+        this.ctx.eventBus.emit('doc:change');
+      } else {
+        const idxBefore = this.ctx.page.elements.length;
+        const cmd = new AddElementCommand({
+          doc: this.ctx.document,
+          pageId: this.ctx.page.id,
+          type: blockType,
+          registry: this.ctx.registry,
+          dataOverride: { x: worldPos.x, y: worldPos.y },
+        });
+        this.ctx.undoRedoManager.push(cmd);
+        this.ctx.eventBus.emit('element:add');
+
+        const newEl = this.ctx.page.elements[idxBefore];
+        if (newEl) {
+          this.selectionManager.setSelection([{ type: 'element', id: newEl.id }], { bypassGrouping: true });
+          this.selectionManager.setFocusedHighlight(newEl.id);
+        }
+
+        this.ctx.eventBus.emit('doc:change');
+      }
+
+      return true;
+    }
+
+    if (tool === 'sticker') {
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      const worldPos = this.ctx.viewportController.clientToWorld(e.clientX, e.clientY, this.canvas);
+
+      const idxBefore = this.ctx.page.elements.length;
+      const cmd = new AddElementCommand({
+        doc: this.ctx.document,
+        pageId: this.ctx.page.id,
+        type: 'sticker',
+        registry: this.ctx.registry,
+        dataOverride: {
+          x: worldPos.x - STICKER_DEFAULT_SIZE / 2,
+          y: worldPos.y - STICKER_DEFAULT_SIZE / 2,
+        },
+      });
+      this.ctx.undoRedoManager.push(cmd);
+      this.ctx.eventBus.emit('element:add');
+
+      const newEl = this.ctx.page.elements[idxBefore];
+      if (newEl) {
+        this.selectionManager.setSelection([{ type: 'element', id: newEl.id }], { bypassGrouping: true });
+        this.selectionManager.setFocusedHighlight(newEl.id);
+      }
+
+      this.ctx.eventBus.emit('doc:change');
+      return true;
+    }
+
+    return false;
   }
 
   private _handleToolChange(snap: ToolStateSnapshot): void {
@@ -68,73 +167,6 @@ export class PlacementController {
     const screenY = e.clientY - canvasRect.top;
     this.ghostEl.style.left = `${screenX}px`;
     this.ghostEl.style.top = `${screenY}px`;
-  }
-
-  private _handlePointerDown(e: PointerEvent): void {
-    if (e.button !== 0) return;
-
-    const toolState = this.ctx.toolState;
-    if (!toolState) return;
-
-    const tool = toolState.getTool();
-
-    if (tool === 'placement') {
-      e.stopPropagation();
-      const worldPos = this.ctx.viewportController.clientToWorld(e.clientX, e.clientY, this.canvas);
-      const blockType = toolState.consumePlacement();
-      if (!blockType) return;
-
-      this._removeGhost();
-
-      if (blockType.startsWith('custom:')) {
-        const customBlockId = blockType.slice('custom:'.length);
-        const instantiateCmd = new InstantiateCustomBlockCommand({
-          doc: this.ctx.document,
-          pageId: this.ctx.page.id,
-          customBlockId,
-          anchor: { x: worldPos.x, y: worldPos.y },
-        });
-        this.ctx.undoRedoManager.push(instantiateCmd);
-        this.ctx.eventBus.emit('element:add');
-        this.ctx.eventBus.emit('doc:change');
-      } else {
-        const idxBefore = this.ctx.page.elements.length;
-        const cmd = new AddElementCommand({
-          doc: this.ctx.document,
-          pageId: this.ctx.page.id,
-          type: blockType,
-          registry: this.ctx.registry,
-          dataOverride: { x: worldPos.x, y: worldPos.y },
-        });
-        this.ctx.undoRedoManager.push(cmd);
-        this.ctx.eventBus.emit('element:add');
-
-        const newEl = this.ctx.page.elements[idxBefore];
-        if (newEl) {
-          this.selectionManager.setSelection([{ type: 'element', id: newEl.id }], { bypassGrouping: true });
-          this.ctx.eventBus.emit('graphic:request-properties-window', { elementId: newEl.id });
-        }
-
-        this.ctx.eventBus.emit('doc:change');
-      }
-    } else if (tool === 'sticker') {
-      e.stopPropagation();
-      const worldPos = this.ctx.viewportController.clientToWorld(e.clientX, e.clientY, this.canvas);
-
-      const cmd = new AddElementCommand({
-        doc: this.ctx.document,
-        pageId: this.ctx.page.id,
-        type: 'sticker',
-        registry: this.ctx.registry,
-        dataOverride: {
-          x: worldPos.x - STICKER_DEFAULT_SIZE / 2,
-          y: worldPos.y - STICKER_DEFAULT_SIZE / 2,
-        },
-      });
-      this.ctx.undoRedoManager.push(cmd);
-      this.ctx.eventBus.emit('element:add');
-      this.ctx.eventBus.emit('doc:change');
-    }
   }
 
   private _createGhost(blockType: string): void {
@@ -179,6 +211,5 @@ export class PlacementController {
     this.canvas.classList.remove('idea-graphic-canvas--sticker');
     this.ctx.eventBus.off('tool:change', this.onToolChange as never);
     this.canvas.removeEventListener('pointermove', this.onPointerMove);
-    this.canvas.removeEventListener('pointerdown', this.onPointerDown);
   }
 }

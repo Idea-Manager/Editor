@@ -41,3 +41,9 @@ export function makePanel(): HTMLElement {
   panel.className = 'idea-prop-panel';
   return panel;
 }
+
+/** True when the active element is this host or a descendant (e.g. combobox input). */
+export function isFocusWithinHost(host: HTMLElement): boolean {
+  const ae = document.activeElement;
+  return !!ae && host.contains(ae);
+}

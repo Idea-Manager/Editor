@@ -2,7 +2,7 @@ import { ColorPicker } from '@shared/components/color-picker';
 import { createDropdownCombobox } from '@shared/components/dropdown-combobox';
 import type { GraphicElement } from '@core/model/interfaces';
 import type { GraphicBlockProperty } from '../../blocks/properties';
-import { pushUpdate, readValue, makePanel } from './renderer-utils';
+import { pushUpdate, readValue, makePanel, isFocusWithinHost } from './renderer-utils';
 import type { RendererContext, RendererResult } from './types';
 
 const colorPickerInstance = new ColorPicker();
@@ -99,9 +99,18 @@ export function createBorderRenderer(
 
   return {
     element: panel,
+    isActive() {
+      return isFocusWithinHost(comboWrapper);
+    },
     setValue(updatedNode: GraphicElement) {
       rendCtx = { ...rendCtx, node: updatedNode };
-      buildCombobox(property, rendCtx, comboWrapper);
+      if (!isFocusWithinHost(comboWrapper)) {
+        const next = (readValue(updatedNode, property.thicknessPath) as number | undefined) ?? 1;
+        const input = comboWrapper.querySelector<HTMLInputElement>('.idea-dropdown-combobox__input');
+        if (input === null || !Number.isFinite(parseInt(input.value.trim(), 10)) || parseInt(input.value.trim(), 10) !== next) {
+          buildCombobox(property, rendCtx, comboWrapper);
+        }
+      }
       const newColor = (readValue(updatedNode, property.colorPath) as string | undefined) ?? '#000000';
       colorSwatch.style.backgroundColor = newColor;
     },

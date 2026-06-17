@@ -17,7 +17,7 @@ function makeRegistry(): GraphicBlockRegistry {
   const def: GraphicBlockDefinition = {
     type: 'rectangle',
     labelKey: 'graphic.block.rectangle',
-    icon: 'rectangle',
+    icon: '<rect x="4" y="4" width="16" height="16"/>',
     defaultData: () => ({ x: 0, y: 0, width: 100, height: 100 }),
     renderSvg: (_node, _ctx) => {
       const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
@@ -35,7 +35,7 @@ function makeRegistry(): GraphicBlockRegistry {
   const stickerDef: GraphicBlockDefinition = {
     type: 'sticker',
     labelKey: 'graphic.block.sticker',
-    icon: 'sticky_note_2',
+    icon: '<rect x="6" y="5" width="12" height="14" rx="1"/>',
     defaultData: () => ({ x: 0, y: 0, width: 120, height: 120, text: '' }),
     renderSvg: (_node, _ctx) => document.createElementNS('http://www.w3.org/2000/svg', 'rect') as unknown as SVGElement,
     getBounds: (node) => {
@@ -135,23 +135,27 @@ describe('PlacementController', () => {
   });
 
   describe('placement commit', () => {
-    it('pushes an AddElementCommand on pointerdown in placement mode', () => {
-      const { canvas, toolState, page } = makeSetup();
-      toolState.beginPlacement('rectangle');
-
-      canvas.dispatchEvent(new PointerEvent('pointerdown', {
+    function placementDown(controller: PlacementController) {
+      controller.handlePointerDown(new PointerEvent('pointerdown', {
         bubbles: true, button: 0, clientX: 100, clientY: 100,
       }));
+    }
+
+    it('pushes an AddElementCommand on pointerdown in placement mode', () => {
+      const { toolState, page, controller } = makeSetup();
+      toolState.beginPlacement('rectangle');
+
+      placementDown(controller);
 
       expect(page.elements).toHaveLength(1);
       expect(page.elements[0].type).toBe('rectangle');
     });
 
     it('positions the new element at the clicked world coords', () => {
-      const { canvas, toolState, page } = makeSetup();
+      const { toolState, page, controller } = makeSetup();
       toolState.beginPlacement('rectangle');
 
-      canvas.dispatchEvent(new PointerEvent('pointerdown', {
+      controller.handlePointerDown(new PointerEvent('pointerdown', {
         bubbles: true, button: 0, clientX: 50, clientY: 80,
       }));
 
@@ -162,73 +166,80 @@ describe('PlacementController', () => {
     });
 
     it('selects the newly placed element', () => {
-      const { canvas, toolState, selectionManager } = makeSetup();
+      const { toolState, selectionManager, controller, page } = makeSetup();
       toolState.beginPlacement('rectangle');
 
-      canvas.dispatchEvent(new PointerEvent('pointerdown', {
-        bubbles: true, button: 0, clientX: 100, clientY: 100,
-      }));
+      placementDown(controller);
 
       expect(selectionManager.getSelection()).toHaveLength(1);
+      expect(selectionManager.getFocusedHighlightId()).toBe(page.elements[0].id);
     });
 
-    it('emits graphic:request-properties-window after placement', () => {
-      const { canvas, toolState, eventBus } = makeSetup();
+    it('does not emit graphic:request-properties-window (selection:change drives the window)', () => {
+      const { toolState, eventBus, controller } = makeSetup();
       const events: unknown[] = [];
       eventBus.on('graphic:request-properties-window', (p) => events.push(p));
       toolState.beginPlacement('rectangle');
 
-      canvas.dispatchEvent(new PointerEvent('pointerdown', {
-        bubbles: true, button: 0, clientX: 100, clientY: 100,
-      }));
+      placementDown(controller);
 
-      expect(events).toHaveLength(1);
+      expect(events).toHaveLength(0);
     });
 
     it('removes the ghost after commit', () => {
-      const { canvas, toolState } = makeSetup();
+      const { canvas, toolState, controller } = makeSetup();
       toolState.beginPlacement('rectangle');
 
-      canvas.dispatchEvent(new PointerEvent('pointerdown', {
-        bubbles: true, button: 0, clientX: 100, clientY: 100,
-      }));
+      placementDown(controller);
 
       expect(canvas.querySelector('.idea-graphic-ghost')).toBeNull();
     });
 
     it('reverts tool to previous tool after placement', () => {
-      const { canvas, toolState } = makeSetup();
+      const { toolState, controller } = makeSetup();
       toolState.setTool('pen');
       toolState.beginPlacement('rectangle');
 
-      canvas.dispatchEvent(new PointerEvent('pointerdown', {
-        bubbles: true, button: 0, clientX: 100, clientY: 100,
-      }));
+      placementDown(controller);
 
       expect(toolState.getTool()).toBe('pen');
+    });
+
+    it('returns true and stops immediate propagation when handled', () => {
+      const { toolState, controller } = makeSetup();
+      toolState.beginPlacement('rectangle');
+      const event = new PointerEvent('pointerdown', {
+        bubbles: true, button: 0, clientX: 100, clientY: 100,
+      });
+      const stopImmediateSpy = jest.spyOn(event, 'stopImmediatePropagation');
+
+      expect(controller.handlePointerDown(event)).toBe(true);
+      expect(stopImmediateSpy).toHaveBeenCalled();
     });
   });
 
   describe('sticker mode', () => {
-    it('places a sticker on pointerdown in sticker mode', () => {
-      const { canvas, toolState, page } = makeSetup();
-      toolState.setTool('sticker');
-
-      canvas.dispatchEvent(new PointerEvent('pointerdown', {
+    function stickerDown(controller: PlacementController) {
+      controller.handlePointerDown(new PointerEvent('pointerdown', {
         bubbles: true, button: 0, clientX: 200, clientY: 200,
       }));
+    }
+
+    it('places a sticker on pointerdown in sticker mode', () => {
+      const { toolState, page, controller } = makeSetup();
+      toolState.setTool('sticker');
+
+      stickerDown(controller);
 
       expect(page.elements).toHaveLength(1);
       expect(page.elements[0].type).toBe('sticker');
     });
 
     it('centres the sticker on the cursor', () => {
-      const { canvas, toolState, page } = makeSetup();
+      const { toolState, page, controller } = makeSetup();
       toolState.setTool('sticker');
 
-      canvas.dispatchEvent(new PointerEvent('pointerdown', {
-        bubbles: true, button: 0, clientX: 200, clientY: 200,
-      }));
+      stickerDown(controller);
 
       const data = page.elements[0].data as { x: number; y: number };
       expect(data.x).toBe(140);
@@ -236,14 +247,23 @@ describe('PlacementController', () => {
     });
 
     it('keeps the sticker tool active after placement', () => {
-      const { canvas, toolState } = makeSetup();
+      const { toolState, controller } = makeSetup();
       toolState.setTool('sticker');
 
-      canvas.dispatchEvent(new PointerEvent('pointerdown', {
-        bubbles: true, button: 0, clientX: 200, clientY: 200,
-      }));
+      stickerDown(controller);
 
       expect(toolState.getTool()).toBe('sticker');
+    });
+
+    it('selects and focuses the newly placed sticker', () => {
+      const { toolState, selectionManager, page, controller } = makeSetup();
+      toolState.setTool('sticker');
+
+      stickerDown(controller);
+
+      const sticker = page.elements[0];
+      expect(selectionManager.getSelection()).toEqual([{ type: 'element', id: sticker.id }]);
+      expect(selectionManager.getFocusedHighlightId()).toBe(sticker.id);
     });
 
     it('does not create a ghost in sticker mode', () => {

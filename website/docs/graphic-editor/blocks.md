@@ -4,7 +4,7 @@ sidebar_position: 3
 
 # Blocks
 
-A **graphic block** is a self-contained unit on the canvas — a shape, an arrow, a path, or a sticker. Every block kind is described by a `GraphicBlockDefinition` and registered in the `GraphicBlockRegistry`.
+A **graphic block** is a self-contained unit on the canvas — a shape, a path, or a sticker. Every block kind is described by a `GraphicBlockDefinition` and registered in the `GraphicBlockRegistry`.
 
 ## `GraphicBlockDefinition`
 
@@ -18,8 +18,8 @@ interface GraphicBlockDefinition<TData = Record<string, unknown>> {
   /** i18n key for the display name shown in the left panel and property window. */
   labelKey: string;
 
-  /** SVG icon markup rendered in the left-panel tile. */
-  icon: string;
+  /** SVG icon markup or element rendered in the left-panel tile. */
+  icon: string | SVGElement;
 
   /** Group label key for the left-panel section (e.g. 'graphic.group.shapes'). */
   groupKey: string;
@@ -44,36 +44,13 @@ Blocks declare what properties they expose; the property window renders them aut
 | `rectangle` | `graphic.block.rectangle` | `blocks/shapes/rectangle.ts` |
 | `triangle` | `graphic.block.triangle` | `blocks/shapes/triangle.ts` |
 | `circle` | `graphic.block.circle` | `blocks/shapes/circle.ts` |
-| `ellipse` | `graphic.block.ellipse` | `blocks/shapes/ellipse.ts` |
 | `sticker` | `graphic.block.sticker` | `blocks/sticker/sticker.ts` |
-| `arrow` | `graphic.block.arrow` | `blocks/arrow/arrow-block.ts` |
 | `path` | `graphic.block.path` | `blocks/path/path-block.ts` |
 | `custom:*` | user-defined | stored in `document.data.customBlocks` |
 
-All shapes (rectangle, triangle, circle, ellipse) extend `BaseShape` from `blocks/shapes/base-shape.ts`, which provides shared border / fill / text rendering.
+All shapes (rectangle, triangle, circle) extend `BaseShape` from `blocks/shapes/base-shape.ts`, which provides shared border / fill / text rendering.
 
-### Arrow
-
-The arrow block has a richer data model:
-
-```ts
-interface ArrowData {
-  heading: 'none' | 'stroke' | 'fill';
-  direction: 'none' | 'to' | 'from' | 'both';
-  type: 'line' | 'curve';
-  color: string;
-  thickness: number;
-  label?: string;
-  // Start and end points in world space
-  startX: number; startY: number;
-  endX: number;   endY: number;
-  // Optional anchor element IDs
-  startElementId?: string;
-  endElementId?: string;
-}
-```
-
-Arrow geometry (midpoint, control points for curves, arrowhead polygons) lives in `blocks/arrow/arrow-geometry.ts`.
+Newly placed shape and sticker blocks default to a **square** bounding box (120×120 px). Corner resize applies the same delta to width and height unless the element has `ShapeData.freeResize: true` (rectangle sets this by default so it can become a non-square rectangle).
 
 ### Path
 

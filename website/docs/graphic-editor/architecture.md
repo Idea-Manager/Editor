@@ -17,13 +17,12 @@ engine/               Core rendering and interaction controllers
   selection-manager.ts    Selection handles, hit zones
   tool-state.ts           Active tool and ghost-placement state
   commands/           Undoable command implementations
-  …other controllers  drag, resize, lasso, pen, arrow, frame, placement
+  …other controllers  drag, resize, lasso, pen, frame, placement
 
 blocks/               Block registry and built-in block definitions
   block-definition.ts GraphicBlockDefinition interface
   block-registry.ts   GraphicBlockRegistry
-  shapes/             Rectangle, triangle, circle, ellipse
-  arrow/              Arrow block + geometry
+  shapes/             Rectangle, triangle, circle
   path/               Freehand path block
   sticker/            Sticker (rich-text sticky note)
 
@@ -32,7 +31,6 @@ properties/           Floating properties window, group properties window,
                       per-property renderers
 groups/               Custom-block creation, store, group/lock commands
 preferences/          Style memory service, update-preferences command
-toolbar/              Flyout arrow toolbar
 i18n/                 Typed i18n key constants (keys.ts)
 ```
 
@@ -70,7 +68,7 @@ Passing `GraphicContext` around (not the full `GraphicEditor`) keeps controllers
 
 The canvas is split into two layers that share the same viewport transform:
 
-- **SVG world** — shapes, paths, and arrows are `<svg>` elements. They scale and transform cleanly with the viewport.
+- **SVG world** — shapes and paths are `<svg>` elements. They scale and transform cleanly with the viewport.
 - **DOM overlay** — selection handles, frame labels, sticker text inputs, property windows, and toolbars are positioned `div`/`button` elements on top of the SVG. DOM is used here because it supports focus, pointer events, scrolling, and accessibility semantics that are cumbersome in SVG.
 
 The `CanvasRenderer` owns the SVG root and calls each block's `render()` method. The `SelectionManager` renders DOM handle overlays. Individual controllers (`DragController`, `ResizeController`, etc.) attach pointer-event listeners to the DOM overlay.
@@ -86,7 +84,7 @@ The graphic editor persists two things on the shared `DocumentNode`:
 Each child `GraphicPageNode` holds the array of graphic elements (`page.elements`). Every element has:
 
 - `id` — stable nanoid
-- `type` — block kind string (e.g. `'rectangle'`, `'arrow'`)
+- `type` — block kind string (e.g. `'rectangle'`, `'path'`)
 - `x`, `y`, `width`, `height` — world-space geometry
 - `data` — block-specific payload (fill, border, text, etc.)
 

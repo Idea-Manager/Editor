@@ -52,7 +52,6 @@ describe('getCustomBlocks', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
         source: { width: 100, height: 50 },
         elements: [],
-        arrows: [],
       },
     ];
     doc.data[DOCUMENT_DATA_KEYS.customBlocks] = blocks;
@@ -102,7 +101,6 @@ describe('round-trip through DocumentSerializer / DocumentDeserializer', () => {
             placeholderId: 'cb-0',
           },
         ],
-        arrows: [],
       },
     ];
 
@@ -144,7 +142,6 @@ describe('validateDocument with graphicPreferences and customBlocks', () => {
             createdAt: '2024-01-01T00:00:00.000Z',
             source: { width: 100, height: 50 },
             elements: [],
-            arrows: [],
           },
         ],
       },

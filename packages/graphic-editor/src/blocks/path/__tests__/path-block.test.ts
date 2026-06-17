@@ -22,8 +22,8 @@ describe('PathBlock', () => {
       expect(PathBlock.type).toBe('path');
     });
 
-    it('has icon "edit"', () => {
-      expect(PathBlock.icon).toBe('edit');
+    it('has an svg path tile icon', () => {
+      expect(PathBlock.icon).toContain('<path');
     });
 
     it('has no groupKey (created via pen tool, not left panel)', () => {
@@ -130,10 +130,10 @@ describe('PathBlock', () => {
       expect(props).toHaveLength(2);
     });
 
-    it('first property is fill for stroke color', () => {
+    it('first property is strokeColor for stroke color', () => {
       const el = makeElement();
       const props = PathBlock.properties!(el, {} as never);
-      expect(props[0]).toMatchObject({ kind: 'fill', colorPath: 'data.stroke' });
+      expect(props[0]).toMatchObject({ kind: 'strokeColor', colorPath: 'data.stroke' });
     });
 
     it('second property is fontSize for strokeWidth', () => {

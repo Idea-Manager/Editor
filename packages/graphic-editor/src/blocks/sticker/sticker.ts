@@ -11,8 +11,6 @@ export interface StickerData extends ShapeData {
 
 export const STICKER_DEFAULTS: StickerData = {
   ...SHAPE_DEFAULTS,
-  width: 180,
-  height: 140,
   background: '#fff8b3',
   border: { thickness: 0, color: '#000000' },
   textColor: '#111111',
@@ -31,7 +29,7 @@ const SHAPE_PIVOTS = [
 export const StickerBlock: GraphicBlockDefinition<StickerData> = {
   type: 'sticker',
   labelKey: GRAPHIC_BLOCK_STICKER,
-  icon: 'sticky_note_2',
+  icon: '<rect x="6" y="5" width="12" height="14" rx="1"/>',
   // groupKey intentionally omitted — sticker appears in the bottom-toolbar
   // Stickers tool (prompt 08), not in the left-panel Shapes accordion.
   pivots: SHAPE_PIVOTS,

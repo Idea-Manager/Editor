@@ -157,13 +157,13 @@ describe('FloatingWindow', () => {
     fw.unmount();
   });
 
-  test('SE handle has a grip icon', () => {
+  test('SE resize handle is present and styled', () => {
     const host = makeHost();
     document.body.appendChild(host);
     const fw = new FloatingWindow({ title: 'T', body: makeBody('b') });
     fw.mount(host);
     const se = getHandle(fw, 'se');
-    expect(se.querySelector('.material-symbols-outlined')).not.toBeNull();
+    expect(se.classList.contains('idea-graphic-floating-window__resize--se')).toBe(true);
     fw.unmount();
   });
 
@@ -557,9 +557,14 @@ describe('FloatingWindow', () => {
     // Focus first
     ptrDown(fw.element);
     expect(onChange).toHaveBeenCalledWith('el-42');
+    onChange.mockClear();
 
-    // Click outside
-    ptrDown(document.body);
+    // Click outside floating window but still inside host bounds (below the default top-right panel)
+    ptrDown(host, { clientX: 50, clientY: 500 });
+    expect(onChange).not.toHaveBeenCalled();
+
+    // Click outside host bounds → clear
+    ptrDown(document.body, { clientX: 900, clientY: 0 });
     expect(onChange).toHaveBeenCalledWith(null);
     fw.unmount();
   });
@@ -594,8 +599,8 @@ describe('FloatingWindow', () => {
     });
     fw.mount(host);
 
-    // Click outside without focusing first
-    ptrDown(document.body);
+    // Click outside host without focusing first (coords outside default 800×600 host rect)
+    ptrDown(document.body, { clientX: 900, clientY: 0 });
     expect(onChange).not.toHaveBeenCalled();
     fw.unmount();
   });
@@ -655,7 +660,7 @@ describe('FloatingWindow', () => {
     onChange.mockClear();
 
     // Events after unmount should not trigger callback
-    ptrDown(document.body);
+    ptrDown(document.body, { clientX: 900, clientY: 0 });
     expect(onChange).not.toHaveBeenCalled();
   });
 

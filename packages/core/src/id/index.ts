@@ -9,8 +9,7 @@ export type IdPrefix =
   | 'page'
   | 'op'
   | 'row'
-  | 'cell'
-  | 'conn';
+  | 'cell';
 
 export function generateId(prefix: IdPrefix): string {
   return `${prefix}_${nanoid(12)}`;

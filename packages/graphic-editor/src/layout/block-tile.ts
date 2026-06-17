@@ -3,6 +3,9 @@ import type { I18nService } from '@core/i18n/i18n';
 import type { EventBus } from '@core/events/event-bus';
 import type { AnyGraphicBlockDefinition } from '../blocks/block-registry';
 import { GRAPHIC_BLOCK_TILE_ADD } from '../i18n/keys';
+import { mountBlockIcon } from '../util/mount-block-icon';
+
+export type BlockTileViewMode = 'tile' | 'list';
 
 /**
  * Session-scoped gate: the one-time placement hint toast is shown only once
@@ -10,26 +13,35 @@ import { GRAPHIC_BLOCK_TILE_ADD } from '../i18n/keys';
  */
 const _shownHintTypes = new Set<string>();
 
+export interface BlockTileOptions {
+  viewMode?: BlockTileViewMode;
+}
+
 export class BlockTile {
   private readonly btn: HTMLButtonElement;
   private readonly activateListeners: Array<() => void> = [];
   private readonly pointerHandler: (e: PointerEvent) => void;
+  private viewMode: BlockTileViewMode;
 
   constructor(
     host: HTMLElement,
     private readonly def: AnyGraphicBlockDefinition,
     private readonly i18n: I18nService,
+    options: BlockTileOptions = {},
   ) {
+    this.viewMode = options.viewMode ?? 'tile';
+
     const label = def.staticLabel ?? (def.labelKey ? i18n.t(def.labelKey) : def.type);
 
     this.btn = document.createElement('button');
     this.btn.type = 'button';
     this.btn.className = 'idea-graphic-block-tile';
     this.btn.title = label;
+    this._applyViewModeClass();
 
     const icon = document.createElement('span');
-    icon.className = 'idea-graphic-block-tile__icon material-symbols-outlined';
-    icon.textContent = def.icon;
+    icon.className = 'idea-graphic-block-tile__icon idea-graphic-block-tile__icon--svg';
+    mountBlockIcon(def.icon, icon);
 
     const labelEl = document.createElement('span');
     labelEl.className = 'idea-graphic-block-tile__label';
@@ -47,6 +59,24 @@ export class BlockTile {
 
     this.btn.addEventListener('pointerdown', this.pointerHandler);
     host.appendChild(this.btn);
+  }
+
+  get element(): HTMLButtonElement {
+    return this.btn;
+  }
+
+  getViewMode(): BlockTileViewMode {
+    return this.viewMode;
+  }
+
+  setViewMode(mode: BlockTileViewMode): void {
+    if (this.viewMode === mode) return;
+    this.viewMode = mode;
+    this._applyViewModeClass();
+  }
+
+  private _applyViewModeClass(): void {
+    this.btn.classList.toggle('idea-graphic-block-tile--list', this.viewMode === 'list');
   }
 
   /**

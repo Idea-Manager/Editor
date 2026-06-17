@@ -5,14 +5,10 @@ import type { GroupPropertiesWindow } from '../properties/group-properties-windo
 
 export interface GroupControllerConfig {
   ctx: GraphicContext;
-  /** Called when a single non-arrow element is selected. */
+  /** Called when a single element is selected. */
   showPropertiesWindow: (el: GraphicElement) => void;
   /** Called when the selection no longer warrants a single-element window. */
   hidePropertiesWindow: () => void;
-  /** Called when a single arrow element is selected. */
-  showArrowToolbar: (el: GraphicElement) => void;
-  /** Called when the arrow toolbar should be hidden. */
-  hideArrowToolbar: () => void;
   /** Factory for the group properties window (created lazily on first multi-select). */
   createGroupPropertiesWindow: (host: HTMLElement) => GroupPropertiesWindow;
 }
@@ -21,8 +17,7 @@ export interface GroupControllerConfig {
  * Centralises `selection:change` routing:
  *
  *  0 items       → close everything
- *  1 non-arrow   → FloatingPropertiesWindow
- *  1 arrow       → FlyoutArrowToolbar
+ *  1 element     → FloatingPropertiesWindow
  *  >1 items      → GroupPropertiesWindow
  */
 export class GroupController {
@@ -43,11 +38,9 @@ export class GroupController {
   }
 
   private _onSelectionChange(entries: SelectionEntry[]): void {
-    const { showPropertiesWindow, hidePropertiesWindow, showArrowToolbar, hideArrowToolbar } =
-      this.config;
+    const { showPropertiesWindow, hidePropertiesWindow } = this.config;
 
     if (entries.length === 0) {
-      hideArrowToolbar();
       hidePropertiesWindow();
       this._closeGroupWindow();
       return;
@@ -55,28 +48,18 @@ export class GroupController {
 
     if (entries.length === 1 && entries[0].type === 'element') {
       const el = this.ctx.page.elements.find(e => e.id === entries[0].id);
-      if (el?.type === 'arrow') {
-        this._closeGroupWindow();
-        hidePropertiesWindow();
-        showArrowToolbar(el);
-        return;
-      }
       if (el) {
         this._closeGroupWindow();
-        hideArrowToolbar();
         showPropertiesWindow(el);
         return;
       }
     }
 
-    // Single frame OR multi-select
-    hideArrowToolbar();
     hidePropertiesWindow();
 
     if (entries.length > 1) {
       this._openOrUpdateGroupWindow(entries);
     } else {
-      // Single frame — just close group window
       this._closeGroupWindow();
     }
   }

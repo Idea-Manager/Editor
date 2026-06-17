@@ -3,6 +3,7 @@ import type { GraphicRenderContext } from '../../engine/render-context';
 import type { GraphicBlockDefinition } from '../block-definition';
 import { SHAPE_DEFAULTS, type ShapeData, appendShapeText, readShapeBounds, getShapeProperties } from './base-shape';
 import { GRAPHIC_BLOCK_TRIANGLE } from '../../i18n/keys';
+import { TRIANGLE_TILE_ICON } from './shape-icons';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -16,7 +17,7 @@ const SHAPE_PIVOTS = [
 export const TriangleBlock: GraphicBlockDefinition<ShapeData> = {
   type: 'triangle',
   labelKey: GRAPHIC_BLOCK_TRIANGLE,
-  icon: 'change_history',
+  icon: TRIANGLE_TILE_ICON,
   pivots: SHAPE_PIVOTS,
 
   defaultData(): ShapeData {

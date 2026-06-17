@@ -5,7 +5,6 @@ import { generateId } from '@core/id';
 import { GraphicBlockRegistry } from '../../blocks/block-registry';
 import type { GraphicBlockDefinition } from '../../blocks/block-definition';
 import type { SelectionEntry } from '../selection-manager';
-
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 type SimpleData = { x: number; y: number; width: number; height: number };
@@ -23,7 +22,7 @@ function makeRegistry(): GraphicBlockRegistry {
   const def: GraphicBlockDefinition<SimpleData> = {
     type: 'rectangle',
     labelKey: 'graphic.block.rectangle',
-    icon: 'rectangle',
+    icon: '<rect x="4" y="4" width="16" height="16"/>',
     defaultData: () => ({ x: 0, y: 0, width: 100, height: 100 }),
     renderSvg: () => document.createElementNS('http://www.w3.org/2000/svg', 'rect') as SVGElement,
     getBounds: (node) => ({ x: node.data.x, y: node.data.y, width: node.data.width, height: node.data.height }),
@@ -148,9 +147,17 @@ describe('hitTest', () => {
   it('returns grip when clicking in the grip area of a selected element', () => {
     const el = makeElement(50, 50, 100, 100);
     const page = makePage([el]);
-    // Grip is at x: bounds.x - gripSize..bounds.x, y: bounds.y..bounds.y+gripSize (world)
-    // gripSize = 24/zoom (at zoom=1, 24px). Click at (40, 60) should be in grip zone.
-    const result = hitTest(page, registry, { x: 40, y: 60 }, [sel(el)], 1);
+    // Center of painted grip (translate -100% on 20px, left at 50−16 in screen/world at zoom 1)
+    const result = hitTest(page, registry, { x: 24, y: 60 }, [sel(el)], 1);
+    expect(result!.kind).toBe('grip');
+  });
+
+  it('returns grip at combined bounds when multiple elements are selected', () => {
+    const el1 = makeElement(0, 0, 100, 100);
+    const el2 = makeElement(200, 0, 100, 100);
+    const page = makePage([el1, el2]);
+    // Union rect (0,0)-(300,100); painted grip spans x≈[−36,−16] at zoom 1
+    const result = hitTest(page, registry, { x: -26, y: 10 }, [sel(el1), sel(el2)], 1);
     expect(result!.kind).toBe('grip');
   });
 
@@ -196,4 +203,5 @@ describe('hitTest', () => {
     // Should return element body, not handle
     expect(result!.kind).toBe('element');
   });
+
 });

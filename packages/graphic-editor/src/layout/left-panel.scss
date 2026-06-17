@@ -1,14 +1,88 @@
 @use '../../../../src/styles/variables' as *;
 
 .idea-graphic-left-panel {
+  position: relative;
   display: flex;
   flex-direction: column;
-  min-width: 240px;
-  width: 240px;
+  min-width: 250px;
+  max-width: 400px;
+  width: var(--idea-graphic-left-panel-width, 280px);
   height: 100%;
   overflow: hidden;
   background: $color-graphic-left-panel-bg;
   border-right: 1px solid $color-border;
+
+  &__toolbar {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: $spacing-xs;
+    padding: $spacing-sm;
+    border-bottom: 1px solid $color-border;
+    background: $color-bg;
+  }
+
+  &__sort-input {
+    flex: 1;
+    min-width: 0;
+    height: 32px;
+    padding: 0 $spacing-sm;
+    border: 1px solid $color-border;
+    border-radius: 6px;
+    font-family: $font-family-base;
+    font-size: $font-size-sm;
+    color: $color-text;
+    background: $color-bg;
+
+    &::placeholder {
+      color: $color-placeholder;
+    }
+
+    &:focus-visible {
+      outline: 2px solid $color-focus-ring;
+      outline-offset: -1px;
+    }
+  }
+
+  &__toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+
+  &__toolbar-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: none;
+    border-radius: 6px;
+    cursor: pointer;
+    color: $color-text;
+    padding: 0;
+    transition: background-color 0.1s ease;
+
+    &:hover {
+      background-color: $gray-100;
+    }
+
+    &:active {
+      background-color: $gray-200;
+    }
+
+    &.is-active {
+      background-color: $gray-200;
+      color: $color-text;
+    }
+
+    .material-symbols-outlined {
+      font-size: 24px;
+      line-height: 1;
+    }
+  }
 
   &__scroll {
     flex: 1;
@@ -17,7 +91,6 @@
   }
 
   &__group {
-    // Overrides Accordion's default element class - no extra styling needed,
     // groupKey is stored via data-group-key attribute added in left-panel.ts.
   }
 
@@ -28,18 +101,37 @@
     box-shadow: 0 -4px 8px rgba($black, 0.04);
   }
 
-  &__tiles {
+  &__blocks--tiles {
+    display: grid;
+    grid-template-columns: repeat(var(--tile-cols, 2), 75px);
+    row-gap: $spacing-sm;
+    column-gap: $spacing-sm;
+    justify-content: space-evenly;
+  }
+
+  &__blocks--list {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
     gap: $spacing-xs;
-    padding: $spacing-sm;
   }
 
   &__empty {
-    padding: $spacing-sm $spacing-md;
+    padding: $spacing-sm 0;
     font-family: $font-family-base;
     font-size: $font-size-sm;
     color: $color-text-secondary;
     margin: 0;
+    grid-column: 1 / -1;
+  }
+
+  &__resize-handle {
+    position: absolute;
+    top: 0;
+    right: -3px;
+    width: 6px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 2;
+    touch-action: none;
   }
 }

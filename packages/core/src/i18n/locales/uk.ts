@@ -142,7 +142,6 @@ export const uk: TranslationDictionary = {
   'graphic.block.rectangle': 'Прямокутник',
   'graphic.block.triangle': 'Трикутник',
   'graphic.block.circle': 'Коло',
-  'graphic.block.ellipse': 'Еліпс',
   'graphic.block.sticker': 'Стікер',
   'graphic.group.shapes': 'Фігури',
 
@@ -153,7 +152,6 @@ export const uk: TranslationDictionary = {
   // Graphic editor — tools
   'graphic.tool.selection': 'Виділення',
   'graphic.tool.frame': 'Рамка',
-  'graphic.tool.arrow': 'Стрілка',
   'graphic.tool.pen': 'Олівець',
   'graphic.tool.sticker': 'Стікер',
   'graphic.tool.hand': 'Рука',
@@ -165,7 +163,6 @@ export const uk: TranslationDictionary = {
   'graphic.handle.resize-ne': 'Змінити розмір з верхнього правого кута',
   'graphic.handle.resize-se': 'Змінити розмір з нижнього правого кута',
   'graphic.handle.resize-sw': 'Змінити розмір з нижнього лівого кута',
-  'graphic.handle.start-arrow': 'Почати стрілку',
 
   // Graphic editor — tools (hints)
   'graphic.tool.pen.hint': 'Перетягніть для вільного малювання',
@@ -179,30 +176,11 @@ export const uk: TranslationDictionary = {
   'graphic.props.text.placeholder': 'Введіть текст…',
   'graphic.props.border': 'Межа',
   'graphic.props.background': 'Фон',
-  'graphic.props.fill': 'Заливка',
+  'graphic.props.strokeColor': 'Колір обводки',
   'graphic.props.textColor': 'Колір тексту',
   'graphic.props.fontSize': 'Розмір шрифту',
   'graphic.props.color': 'Колір',
   'graphic.props.thickness': 'Товщина',
-
-  // Graphic editor — arrow block
-  'graphic.block.arrow': 'Стрілка',
-  'graphic.arrow.heading': 'Наконечник',
-  'graphic.arrow.heading.none': 'Немає',
-  'graphic.arrow.heading.stroke': 'Контур',
-  'graphic.arrow.heading.fill': 'Заливка',
-  'graphic.arrow.direction': 'Напрямок',
-  'graphic.arrow.direction.none': 'Немає',
-  'graphic.arrow.direction.to': 'До',
-  'graphic.arrow.direction.from': 'Від',
-  'graphic.arrow.direction.both': 'Обидва',
-  'graphic.arrow.type': 'Тип',
-  'graphic.arrow.type.line': 'Лінія',
-  'graphic.arrow.type.curve': 'Крива',
-  'graphic.arrow.color': 'Колір',
-  'graphic.arrow.thickness': 'Товщина',
-  'graphic.arrow.label.placeholder': 'Додайте підпис…',
-  'graphic.arrow.defaults.title': 'Параметри стрілки',
 
   // Graphic editor — group properties window
   'graphic.group.title': 'Виділення ({count})',
@@ -214,4 +192,11 @@ export const uk: TranslationDictionary = {
   'graphic.group.empty': 'Власні блоки з\'являться тут після створення',
   'graphic.group.custom': 'Власні',
   'graphic.block.tile.add': 'Натисніть для розміщення. ESC — скасувати.',
+
+  // Graphic editor — left panel toolbar
+  'graphic.leftPanel.sortChapters': 'Сортувати розділи',
+  'graphic.leftPanel.expandAll': 'Розгорнути всі розділи',
+  'graphic.leftPanel.collapseAll': 'Згорнути всі розділи',
+  'graphic.leftPanel.viewTiles': 'Плитковий вигляд',
+  'graphic.leftPanel.viewList': 'Список',
 };

@@ -7,7 +7,7 @@ function makeElement(): GraphicElement {
   return {
     id: generateId('el'),
     type: 'rectangle',
-    data: { x: 10, y: 20, fill: 'red', nested: { value: 1 } },
+    data: { x: 10, y: 20, background: 'red', nested: { value: 1 } },
   };
 }
 
@@ -24,21 +24,21 @@ describe('UpdateElementCommand', () => {
   describe('execute / undo', () => {
     it('updates a top-level data field', () => {
       const { doc, pageId, el } = makeDoc();
-      const cmd = new UpdateElementCommand({ doc, pageId, elementId: el.id, path: 'data.fill', value: 'blue' });
+      const cmd = new UpdateElementCommand({ doc, pageId, elementId: el.id, path: 'data.background', value: 'blue' });
 
       cmd.execute();
 
-      expect((doc.graphicPages[0].elements[0].data as Record<string, unknown>).fill).toBe('blue');
+      expect((doc.graphicPages[0].elements[0].data as Record<string, unknown>).background).toBe('blue');
     });
 
     it('restores the old value on undo', () => {
       const { doc, pageId, el } = makeDoc();
-      const cmd = new UpdateElementCommand({ doc, pageId, elementId: el.id, path: 'data.fill', value: 'blue' });
+      const cmd = new UpdateElementCommand({ doc, pageId, elementId: el.id, path: 'data.background', value: 'blue' });
 
       cmd.execute();
       cmd.undo();
 
-      expect((doc.graphicPages[0].elements[0].data as Record<string, unknown>).fill).toBe('red');
+      expect((doc.graphicPages[0].elements[0].data as Record<string, unknown>).background).toBe('red');
     });
 
     it('updates a deep nested path', () => {
@@ -54,7 +54,7 @@ describe('UpdateElementCommand', () => {
     it('uses immutable updates (does not mutate original element reference)', () => {
       const { doc, pageId, el } = makeDoc();
       const originalEl = doc.graphicPages[0].elements[0];
-      const cmd = new UpdateElementCommand({ doc, pageId, elementId: el.id, path: 'data.fill', value: 'blue' });
+      const cmd = new UpdateElementCommand({ doc, pageId, elementId: el.id, path: 'data.background', value: 'blue' });
 
       cmd.execute();
 
@@ -137,28 +137,28 @@ describe('UpdateElementCommand', () => {
 
     it('undo after merge restores the original value', () => {
       const { doc, pageId, el } = makeDoc();
-      const originalFill = (el.data as Record<string, unknown>).fill;
+      const originalBg = (el.data as Record<string, unknown>).background;
 
-      const cmd1 = new UpdateElementCommand({ doc, pageId, elementId: el.id, path: 'data.fill', value: 'blue', mergeWindowMs: 500 });
+      const cmd1 = new UpdateElementCommand({ doc, pageId, elementId: el.id, path: 'data.background', value: 'blue', mergeWindowMs: 500 });
       cmd1.execute();
-      const cmd2 = new UpdateElementCommand({ doc, pageId, elementId: el.id, path: 'data.fill', value: 'green', mergeWindowMs: 500 });
+      const cmd2 = new UpdateElementCommand({ doc, pageId, elementId: el.id, path: 'data.background', value: 'green', mergeWindowMs: 500 });
       cmd1.merge(cmd2);
       cmd1.undo();
 
-      expect((doc.graphicPages[0].elements[0].data as Record<string, unknown>).fill).toBe(originalFill);
+      expect((doc.graphicPages[0].elements[0].data as Record<string, unknown>).background).toBe(originalBg);
     });
   });
 
   describe('operation records', () => {
     it('emits a node:update operation record', () => {
       const { doc, pageId, el } = makeDoc();
-      const cmd = new UpdateElementCommand({ doc, pageId, elementId: el.id, path: 'data.fill', value: 'blue' });
+      const cmd = new UpdateElementCommand({ doc, pageId, elementId: el.id, path: 'data.background', value: 'blue' });
 
       expect(cmd.operationRecords).toHaveLength(1);
       expect(cmd.operationRecords[0].type).toBe('node:update');
       const payload = cmd.operationRecords[0].payload as { nodeId: string; path: string; oldValue: unknown; newValue: unknown };
       expect(payload.nodeId).toBe(el.id);
-      expect(payload.path).toBe('data.fill');
+      expect(payload.path).toBe('data.background');
       expect(payload.newValue).toBe('blue');
     });
   });

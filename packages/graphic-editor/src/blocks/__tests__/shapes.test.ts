@@ -1,7 +1,6 @@
 import { RectangleBlock } from '../shapes/rectangle';
 import { TriangleBlock } from '../shapes/triangle';
 import { CircleBlock } from '../shapes/circle';
-import { EllipseBlock } from '../shapes/ellipse';
 import type { GraphicBlockDefinition } from '../block-definition';
 import type { ShapeData } from '../shapes/base-shape';
 import { SHAPE_DEFAULTS } from '../shapes/base-shape';
@@ -10,7 +9,6 @@ const ALL_SHAPES: GraphicBlockDefinition<ShapeData>[] = [
   RectangleBlock,
   TriangleBlock,
   CircleBlock,
-  EllipseBlock,
 ];
 
 const EXPECTED_PIVOTS = [
@@ -22,11 +20,18 @@ const EXPECTED_PIVOTS = [
 
 describe.each(ALL_SHAPES.map(b => [b.type, b] as [string, GraphicBlockDefinition<ShapeData>]))(
   '%s block',
-  (_type, block) => {
+  (type, block) => {
     describe('defaultData', () => {
-      it('returns a clone of SHAPE_DEFAULTS', () => {
+      it('returns square defaults with expected fields', () => {
         const data = block.defaultData();
-        expect(data).toEqual(SHAPE_DEFAULTS);
+        expect(data.width).toBe(SHAPE_DEFAULTS.width);
+        expect(data.height).toBe(SHAPE_DEFAULTS.height);
+        expect(data.width).toBe(data.height);
+        if (type === 'rectangle') {
+          expect(data.freeResize).toBe(true);
+        } else {
+          expect(data.freeResize).not.toBe(true);
+        }
       });
 
       it('mutating border on one instance does not affect another', () => {

@@ -17,9 +17,9 @@ const TEXT_FIELDS = ['text', 'htmlContent', 'templateHtml', 'labelText'];
 
 /**
  * Places a custom block at a given world-space anchor by expanding its
- * `CustomBlockDefinition` into individual elements and arrows with fresh ids.
- * Text/template content is reset to `''`; visual preferences (border, fill,
- * font size, colors) are preserved from the snapshot.
+ * `CustomBlockDefinition` into individual elements with fresh ids.
+ * Text/template content is reset to `''`; visual preferences (border,
+ * background, font size, colors) are preserved from the snapshot.
  *
  * Undo removes all inserted elements.
  */
@@ -46,9 +46,6 @@ export class InstantiateCustomBlockCommand implements Command {
     const idMap = new Map<string, string>();
     definition.elements.forEach(el => {
       idMap.set(el.placeholderId, generateId('el'));
-    });
-    definition.arrows.forEach(arrow => {
-      idMap.set(arrow.placeholderId, generateId('conn'));
     });
 
     const now = Date.now();
@@ -93,41 +90,6 @@ export class InstantiateCustomBlockCommand implements Command {
           parentId: pageId,
           index: baseIndex + i,
           node: { id: newId, type: src.type, data: rawData },
-        },
-      });
-    }
-
-    // Build arrow records
-    const arrowBaseIndex = baseIndex + definition.elements.length;
-    for (let i = 0; i < definition.arrows.length; i++) {
-      const src = definition.arrows[i];
-      const newId = idMap.get(src.placeholderId)!;
-      const rawData: Record<string, unknown> = { ...src.data };
-
-      // Rewrite placeholder ids in endpoints back to real ids
-      for (const ep of ['from', 'to'] as const) {
-        if (rawData[ep] && typeof rawData[ep] === 'object') {
-          const endpoint = { ...(rawData[ep] as Record<string, unknown>) };
-          if (endpoint['target'] && typeof endpoint['target'] === 'object') {
-            const t = endpoint['target'] as Record<string, unknown>;
-            const resolvedId = idMap.get(String(t['elementId'])) ?? String(t['elementId']);
-            endpoint['target'] = { ...t, elementId: resolvedId };
-          }
-          rawData[ep] = endpoint;
-        }
-      }
-
-      this.insertedElementIds.push(newId);
-      this.operationRecords.push({
-        id: generateId('op'),
-        actorId: 'local',
-        timestamp: now,
-        wallClock: now,
-        type: 'node:insert' as const,
-        payload: {
-          parentId: pageId,
-          index: arrowBaseIndex + i,
-          node: { id: newId, type: 'arrow', data: rawData },
         },
       });
     }

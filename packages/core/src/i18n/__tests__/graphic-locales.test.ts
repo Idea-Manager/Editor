@@ -27,7 +27,7 @@ describe('graphic.* locale parity', () => {
     'graphic.props.border',
     'graphic.group.title',
     'graphic.zoom.label',
-    'graphic.arrow.heading',
+    'graphic.tool.pen',
     'graphic.frame.defaultName',
   ];
 

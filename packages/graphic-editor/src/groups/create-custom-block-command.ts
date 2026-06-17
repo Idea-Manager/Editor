@@ -6,7 +6,6 @@ import { getCustomBlocks } from '@core/model/document-data';
 import type {
   CustomBlockDefinition,
   CustomBlockElement,
-  CustomBlockArrow,
 } from '@core/model/graphic-preferences';
 import type { SelectionEntry } from '../engine/selection-manager';
 
@@ -17,21 +16,10 @@ export interface CreateCustomBlockCommandOptions {
   entries: SelectionEntry[];
 }
 
-type ArrowData = {
-  from: { target?: { elementId: string; pivotId?: string }; point: { x: number; y: number } };
-  to:   { target?: { elementId: string; pivotId?: string }; point: { x: number; y: number } };
-};
-
-function isArrow(el: GraphicElement): boolean {
-  return el.type === 'arrow';
-}
-
 /**
  * Snapshots the current selection into a `CustomBlockDefinition` stored in
- * `doc.data.customBlocks`. Arrow elements are excluded from `elements` and
- * placed in `arrows` only when both endpoints are anchored within the
- * selected set. Nested custom blocks (`custom:*` types) are NOT supported and
- * are silently excluded.
+ * `doc.data.customBlocks`. Nested custom blocks (`custom:*` types) are NOT
+ * supported and are silently excluded.
  */
 export class CreateCustomBlockCommand implements Command {
   readonly operationRecords: OperationRecord[];
@@ -47,19 +35,11 @@ export class CreateCustomBlockCommand implements Command {
 
     const selectedElements: GraphicElement[] = [];
     for (const el of (page?.elements ?? [])) {
-      if (selectedIds.has(el.id) && !isArrow(el)) {
+      if (selectedIds.has(el.id)) {
         selectedElements.push(el);
       }
     }
 
-    const arrowElements: GraphicElement[] = [];
-    for (const el of (page?.elements ?? [])) {
-      if (selectedIds.has(el.id) && isArrow(el)) {
-        arrowElements.push(el);
-      }
-    }
-
-    // Compute AABB of non-arrow elements
     const xs = selectedElements.flatMap(el => {
       const d = el.data as Record<string, unknown>;
       const x = typeof d['x'] === 'number' ? d['x'] : 0;
@@ -78,7 +58,6 @@ export class CreateCustomBlockCommand implements Command {
     const maxX = xs.length > 0 ? Math.max(...xs) : 0;
     const maxY = ys.length > 0 ? Math.max(...ys) : 0;
 
-    // Build an id → placeholderId map for element members
     const placeholderMap = new Map<string, string>();
     selectedElements.forEach((el, i) => {
       placeholderMap.set(el.id, `cb-${i}`);
@@ -91,7 +70,6 @@ export class CreateCustomBlockCommand implements Command {
       if (typeof zeroed['x'] === 'number') zeroed['x'] = (zeroed['x'] as number) - originX;
       if (typeof zeroed['y'] === 'number') zeroed['y'] = (zeroed['y'] as number) - originY;
 
-      // Translate path points / bounds
       if (Array.isArray(zeroed['points'])) {
         zeroed['points'] = (zeroed['points'] as Array<{ x: number; y: number }>).map(p => ({
           ...p,
@@ -108,7 +86,6 @@ export class CreateCustomBlockCommand implements Command {
         };
       }
 
-      // Strip text content per spec; preserve visual prefs
       delete zeroed['text'];
 
       const meta = el.meta
@@ -123,51 +100,12 @@ export class CreateCustomBlockCommand implements Command {
       };
     });
 
-    // Include arrows whose both endpoints are within the selected set
-    const snapshotArrows: CustomBlockArrow[] = [];
-    for (const arrowEl of arrowElements) {
-      const ad = arrowEl.data as ArrowData;
-      const fromId = ad.from?.target?.elementId;
-      const toId   = ad.to?.target?.elementId;
-
-      const fromInside = fromId ? selectedIds.has(fromId) : false;
-      const toInside   = toId   ? selectedIds.has(toId)   : false;
-
-      if (!fromInside || !toInside) continue;
-
-      const rawArrow: Record<string, unknown> = { ...(arrowEl.data as Record<string, unknown>) };
-
-      // Rewrite endpoint element ids to placeholder ids
-      if (rawArrow['from'] && typeof rawArrow['from'] === 'object') {
-        const fromEp = { ...(rawArrow['from'] as Record<string, unknown>) };
-        if (fromEp['target'] && typeof fromEp['target'] === 'object') {
-          const t = fromEp['target'] as Record<string, unknown>;
-          fromEp['target'] = { ...t, elementId: placeholderMap.get(fromId!) ?? fromId! };
-        }
-        rawArrow['from'] = fromEp;
-      }
-      if (rawArrow['to'] && typeof rawArrow['to'] === 'object') {
-        const toEp = { ...(rawArrow['to'] as Record<string, unknown>) };
-        if (toEp['target'] && typeof toEp['target'] === 'object') {
-          const t = toEp['target'] as Record<string, unknown>;
-          toEp['target'] = { ...t, elementId: placeholderMap.get(toId!) ?? toId! };
-        }
-        rawArrow['to'] = toEp;
-      }
-
-      snapshotArrows.push({
-        data: rawArrow,
-        placeholderId: `cb-arrow-${snapshotArrows.length}`,
-      });
-    }
-
     this.definition = {
       id: generateId('blk'),
       name,
       createdAt: new Date().toISOString(),
       source: { width: maxX - originX, height: maxY - originY },
       elements: snapshotElements,
-      arrows: snapshotArrows,
     };
 
     const now = Date.now();
@@ -189,12 +127,10 @@ export class CreateCustomBlockCommand implements Command {
     ];
   }
 
-  /** The id of the newly created custom block definition. */
   get definitionId(): string {
     return this.definition.id;
   }
 
-  /** The name of the newly created custom block definition. */
   get definitionName(): string {
     return this.definition.name;
   }

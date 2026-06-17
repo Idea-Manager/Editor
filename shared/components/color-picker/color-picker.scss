@@ -7,6 +7,9 @@
   top: 0;
 
   &__panel {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
     width: 220px;
     padding: $spacing-sm;
     background: $color-bg;

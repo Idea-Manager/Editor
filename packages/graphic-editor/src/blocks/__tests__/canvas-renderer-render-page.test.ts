@@ -4,7 +4,6 @@ import { registerDefaultBlocks } from '../index';
 import type { GraphicContext } from '../../engine/graphic-context';
 import type { GraphicPageNode } from '@core/model/interfaces';
 import { EventBus } from '@core/events/event-bus';
-
 function makeRegistry(): GraphicBlockRegistry {
   const registry = new GraphicBlockRegistry();
   registerDefaultBlocks(registry);
@@ -49,9 +48,9 @@ describe('CanvasRenderer.renderPage', () => {
     const { worldGroup } = renderer.build(container, 'test-inst');
 
     const page = makePage([
-      { id: 'e1', type: 'rectangle', data: { x: 10, y: 10, width: 160, height: 100, border: { thickness: 1, color: '#000' }, background: '#fff', fill: '#fff', text: '', textColor: '#111', fontSize: 14 } },
-      { id: 'e2', type: 'rectangle', data: { x: 200, y: 10, width: 160, height: 100, border: { thickness: 1, color: '#000' }, background: '#fff', fill: '#fff', text: '', textColor: '#111', fontSize: 14 } },
-      { id: 'e3', type: 'sticker', data: { x: 50, y: 200, width: 180, height: 140, border: { thickness: 0, color: '#000' }, background: '#fff8b3', fill: '#fff8b3', text: '', textColor: '#111', fontSize: 14 } },
+      { id: 'e1', type: 'rectangle', data: { x: 10, y: 10, width: 160, height: 100, border: { thickness: 1, color: '#000' }, background: '#fff', text: '', textColor: '#111', fontSize: 14 } },
+      { id: 'e2', type: 'rectangle', data: { x: 200, y: 10, width: 160, height: 100, border: { thickness: 1, color: '#000' }, background: '#fff', text: '', textColor: '#111', fontSize: 14 } },
+      { id: 'e3', type: 'sticker', data: { x: 50, y: 200, width: 180, height: 140, border: { thickness: 0, color: '#000' }, background: '#fff8b3', text: '', textColor: '#111', fontSize: 14 } },
     ]);
 
     const registry = makeRegistry();
@@ -70,7 +69,7 @@ describe('CanvasRenderer.renderPage', () => {
     const { worldGroup } = renderer.build(container, 'test-inst');
 
     const page = makePage([
-      { id: 'my-rect', type: 'rectangle', data: { x: 0, y: 0, width: 160, height: 100, border: { thickness: 1, color: '#000' }, background: '#fff', fill: '#fff', text: '', textColor: '#111', fontSize: 14 } },
+      { id: 'my-rect', type: 'rectangle', data: { x: 0, y: 0, width: 160, height: 100, border: { thickness: 1, color: '#000' }, background: '#fff', text: '', textColor: '#111', fontSize: 14 } },
     ]);
 
     const registry = makeRegistry();
@@ -88,9 +87,9 @@ describe('CanvasRenderer.renderPage', () => {
     const { overlay } = renderer.build(container, 'test-inst');
 
     const page = makePage([
-      { id: 'e1', type: 'rectangle', data: { x: 10, y: 10, width: 160, height: 100, border: { thickness: 1, color: '#000' }, background: '#fff', fill: '#fff', text: '', textColor: '#111', fontSize: 14 } },
-      { id: 'e2', type: 'rectangle', data: { x: 200, y: 10, width: 160, height: 100, border: { thickness: 1, color: '#000' }, background: '#fff', fill: '#fff', text: '', textColor: '#111', fontSize: 14 } },
-      { id: 'e3', type: 'sticker', data: { x: 50, y: 200, width: 180, height: 140, border: { thickness: 0, color: '#000' }, background: '#fff8b3', fill: '#fff8b3', text: '', textColor: '#111', fontSize: 14 } },
+      { id: 'e1', type: 'rectangle', data: { x: 10, y: 10, width: 160, height: 100, border: { thickness: 1, color: '#000' }, background: '#fff', text: '', textColor: '#111', fontSize: 14 } },
+      { id: 'e2', type: 'rectangle', data: { x: 200, y: 10, width: 160, height: 100, border: { thickness: 1, color: '#000' }, background: '#fff', text: '', textColor: '#111', fontSize: 14 } },
+      { id: 'e3', type: 'sticker', data: { x: 50, y: 200, width: 180, height: 140, border: { thickness: 0, color: '#000' }, background: '#fff8b3', text: '', textColor: '#111', fontSize: 14 } },
     ]);
 
     const registry = makeRegistry();
@@ -108,7 +107,7 @@ describe('CanvasRenderer.renderPage', () => {
     const { overlay } = renderer.build(container, 'test-inst');
 
     const page = makePage([
-      { id: 'e1', type: 'rectangle', data: { x: 42, y: 77, width: 160, height: 100, border: { thickness: 1, color: '#000' }, background: '#fff', fill: '#fff', text: '', textColor: '#111', fontSize: 14 } },
+      { id: 'e1', type: 'rectangle', data: { x: 42, y: 77, width: 160, height: 100, border: { thickness: 1, color: '#000' }, background: '#fff', text: '', textColor: '#111', fontSize: 14 } },
     ]);
 
     const registry = makeRegistry();
@@ -130,7 +129,7 @@ describe('CanvasRenderer.renderPage', () => {
     const { worldGroup, overlay } = renderer.build(container, 'test-inst');
 
     const page = makePage([
-      { id: 'e1', type: 'rectangle', data: { x: 0, y: 0, width: 160, height: 100, border: { thickness: 1, color: '#000' }, background: '#fff', fill: '#fff', text: '', textColor: '#111', fontSize: 14 } },
+      { id: 'e1', type: 'rectangle', data: { x: 0, y: 0, width: 160, height: 100, border: { thickness: 1, color: '#000' }, background: '#fff', text: '', textColor: '#111', fontSize: 14 } },
     ]);
 
     const registry = makeRegistry();
@@ -140,5 +139,36 @@ describe('CanvasRenderer.renderPage', () => {
 
     expect(worldGroup.children).toHaveLength(1);
     expect(overlay.children).toHaveLength(1);
+  });
+
+  it('restores shape text overlay after rebuild when it had DOM focus', () => {
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+
+    const renderer = new CanvasRenderer();
+    const { overlay } = renderer.build(container, 'test-inst');
+
+    const page = makePage([
+      { id: 'e1', type: 'rectangle', data: { x: 0, y: 0, width: 160, height: 100, border: { thickness: 1, color: '#000' }, background: '#fff', text: 'hi', textColor: '#111', fontSize: 14 } },
+    ]);
+
+    const registry = makeRegistry();
+    const ctx = makeCtx(registry, page);
+    renderer.renderPage(page, ctx);
+
+    const textEl = overlay.querySelector('.idea-graphic-shape__text') as HTMLElement;
+    expect(textEl).not.toBeNull();
+
+    const spy = jest.spyOn(document, 'activeElement', 'get').mockReturnValue(textEl);
+    try {
+      renderer.renderPage(page, ctx);
+    } finally {
+      spy.mockRestore();
+    }
+
+    const textEl2 = overlay.querySelector('.idea-graphic-shape__text') as HTMLElement;
+    expect(textEl2).not.toBeNull();
+    expect(textEl2).not.toBe(textEl);
+    expect(textEl2.textContent).toBe('hi');
   });
 });

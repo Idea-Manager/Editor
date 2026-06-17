@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Graphic editor overview
 
-The graphic editor is a **canvas-based drawing surface** built in TypeScript as a Web Component. It lets you create diagrams and illustrations using a familiar drag-and-drop interface — shapes, arrows, freehand paths, sticky notes, and reusable custom blocks — all stored in the shared document model alongside text content.
+The graphic editor is a **canvas-based drawing surface** built in TypeScript as a Web Component. It lets you create diagrams and illustrations using a familiar drag-and-drop interface — shapes, freehand paths, sticky notes, and reusable custom blocks — all stored in the shared document model alongside text content.
 
 ## What it is
 
@@ -24,7 +24,6 @@ The graphic editor is a **canvas-based drawing surface** built in TypeScript as 
 | Workflow | How |
 | -------- | --- |
 | Draw shapes | Select a shape from the left panel, click to place; or use keyboard shortcut `V` then pick a block tile |
-| Connect elements with arrows | Press `A` or pick the arrow tool; drag from an edge handle of an existing element to another |
 | Freehand drawing | Press `P` or pick the pen tool; drag to draw a stroke |
 | Sticky notes | Press `S` or pick the sticker tool; click to place |
 | Frames / sections | Press `F` or pick the frame tool; drag to define a named region |

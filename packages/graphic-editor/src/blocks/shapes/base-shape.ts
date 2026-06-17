@@ -6,10 +6,12 @@ import {
   GRAPHIC_PROPS_TEXT_PLACEHOLDER,
   GRAPHIC_PROPS_BORDER,
   GRAPHIC_PROPS_BACKGROUND,
-  GRAPHIC_PROPS_FILL,
   GRAPHIC_PROPS_TEXT_COLOR,
   GRAPHIC_PROPS_FONT_SIZE,
 } from '../../i18n/keys';
+
+/** Default side length for newly placed square shape bounds. */
+export const SHAPE_DEFAULT_SIZE = 120;
 
 export interface ShapeData {
   x: number;
@@ -18,21 +20,20 @@ export interface ShapeData {
   height: number;
   border: { thickness: number; color: string };
   background: string;
-  /** Optional accent fill (used by future styles; default = background). */
-  fill: string;
   text: string;
   textColor: string;
   fontSize: number;
+  /** When true, corner resize may change width and height independently. Defaults to false. */
+  freeResize?: boolean;
 }
 
 export const SHAPE_DEFAULTS: ShapeData = {
   x: 0,
   y: 0,
-  width: 160,
-  height: 100,
+  width: SHAPE_DEFAULT_SIZE,
+  height: SHAPE_DEFAULT_SIZE,
   border: { thickness: 1, color: '#000000' },
   background: '#ffffff',
-  fill: '#ffffff',
   text: '',
   textColor: '#111111',
   fontSize: 14,
@@ -43,6 +44,10 @@ export function readShapeBounds(
 ): { x: number; y: number; width: number; height: number } {
   const { x, y, width, height } = node.data;
   return { x, y, width, height };
+}
+
+export function readFreeResize(data: Record<string, unknown>): boolean {
+  return data.freeResize === true;
 }
 
 /**
@@ -116,7 +121,6 @@ export function getShapeProperties(
   return [
     { kind: 'border', thicknessPath: 'data.border.thickness', colorPath: 'data.border.color' },
     { kind: 'background', colorPath: 'data.background' },
-    { kind: 'fill', colorPath: 'data.fill' },
     { kind: 'textColor', colorPath: 'data.textColor' },
     { kind: 'fontSize', path: 'data.fontSize', min: 5, max: 80, unit: 'pt' },
     { kind: 'text', path: 'data.text', placeholderKey: GRAPHIC_PROPS_TEXT_PLACEHOLDER },
@@ -125,4 +129,4 @@ export function getShapeProperties(
 
 // Re-export key constants used by property descriptors so importers don't
 // need to import keys.ts separately.
-export { GRAPHIC_PROPS_BORDER, GRAPHIC_PROPS_BACKGROUND, GRAPHIC_PROPS_FILL, GRAPHIC_PROPS_TEXT_COLOR, GRAPHIC_PROPS_FONT_SIZE };
+export { GRAPHIC_PROPS_BORDER, GRAPHIC_PROPS_BACKGROUND, GRAPHIC_PROPS_TEXT_COLOR, GRAPHIC_PROPS_FONT_SIZE };

@@ -5,8 +5,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  width: 64px;
-  height: 64px;
+  width: 75px;
+  height: 75px;
   gap: 4px;
   border: none;
   border-radius: 6px;
@@ -27,20 +27,60 @@
   }
 
   &__icon {
-    font-size: 22px;
     line-height: 1;
     user-select: none;
+
+    &--svg {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      svg {
+        width: 38px;
+        height: 38px;
+        flex-shrink: 0;
+      }
+    }
   }
 
   &__label {
     font-family: $font-family-base;
-    font-size: $font-size-xs;
+    font-size: $font-size-base;
     line-height: 1.2;
     text-align: center;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 56px;
+    max-width: 71px;
     user-select: none;
+  }
+
+  &--list {
+    flex-direction: row;
+    width: 100%;
+    height: 40px;
+    justify-content: flex-start;
+    gap: $spacing-sm;
+    padding: $spacing-xs $spacing-sm;
+
+    .idea-graphic-block-tile__icon {
+      width: 40px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      &--svg svg {
+        width: 24px;
+        height: 24px;
+      }
+    }
+
+    .idea-graphic-block-tile__label {
+      flex: 1;
+      text-align: left;
+      max-width: none;
+      font-size: $font-size-sm;
+    }
   }
 }

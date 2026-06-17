@@ -78,7 +78,7 @@ export type { ValidationResult } from './serialization/validator';
 export { migrateDocument, LATEST_SCHEMA_VERSION } from './serialization/migrations';
 
 // Shortcuts
-export { ShortcutManager } from './shortcuts/shortcut-manager';
+export { ShortcutManager, isKeyboardEventFromEditableTarget } from './shortcuts/shortcut-manager';
 export type { ShortcutEntry, ShortcutScope } from './shortcuts/shortcut-manager';
 
 // Platform

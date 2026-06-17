@@ -5,6 +5,11 @@ export interface ShortcutEntry {
   scope: ShortcutScope;
   label: string;
   command: () => void;
+  /**
+   * If provided, the shortcut runs (and may call preventDefault) only when this returns true.
+   * Use to skip single-key tools while typing in inputs / contenteditable.
+   */
+  when?: (e: KeyboardEvent) => boolean;
 }
 
 interface ParsedShortcut {
@@ -30,6 +35,31 @@ function matchesEvent(parsed: ParsedShortcut, e: KeyboardEvent): boolean {
   const altMatch = e.altKey === parsed.alt;
   const keyMatch = e.key.toLowerCase() === parsed.key;
   return modMatch && shiftMatch && altMatch && keyMatch;
+}
+
+/** True when the key event should be treated as typing (do not steal single-key shortcuts). */
+export function isKeyboardEventFromEditableTarget(e: KeyboardEvent): boolean {
+  const t = e.target;
+  if (!t || !(t instanceof Node)) return false;
+  let el: Element | null = t instanceof Element ? t : t.parentElement;
+  if (!el) return false;
+
+  if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+    return !el.disabled && !el.readOnly;
+  }
+  if (el instanceof HTMLSelectElement) return !el.disabled;
+
+  let n: Element | null = el;
+  while (n) {
+    if (n instanceof HTMLElement) {
+      if (n.isContentEditable) return true;
+      // JSDOM often omits isContentEditable; mirror attribute semantics
+      const ce = n.getAttribute('contenteditable');
+      if (ce === '' || ce === 'true' || ce === 'plaintext-only') return true;
+    }
+    n = n.parentElement;
+  }
+  return false;
 }
 
 export class ShortcutManager {
@@ -66,12 +96,12 @@ export class ShortcutManager {
     this.handler = (e: KeyboardEvent) => {
       for (const shortcut of this.shortcuts) {
         if (shortcut.scope !== 'global' && shortcut.scope !== this.activeScope) continue;
-        if (matchesEvent(shortcut.parsed, e)) {
-          e.preventDefault();
-          e.stopPropagation();
-          shortcut.command();
-          return;
-        }
+        if (!matchesEvent(shortcut.parsed, e)) continue;
+        if (shortcut.when != null && !shortcut.when(e)) continue;
+        e.preventDefault();
+        e.stopPropagation();
+        shortcut.command();
+        return;
       }
     };
 

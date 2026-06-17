@@ -9,10 +9,9 @@ The graphic editor is **shipped**. The pages in this section document the implem
 ## What is implemented
 
 - **Canvas** — hybrid SVG + DOM surface with pan and zoom.
-- **Built-in blocks** — rectangle, triangle, circle, ellipse, sticker (rich text), arrow, freehand path.
-- **Tools** — selection, frame, arrow, pen, sticker; ghost placement from left panel.
+- **Built-in blocks** — rectangle, triangle, circle, sticker (rich text), freehand path.
+- **Tools** — selection, frame, pen, sticker, hand; ghost placement from left panel.
 - **Interaction** — drag to move, drag handles to resize, lasso multi-select, Space-pan, scroll-zoom.
-- **Arrows** — anchored or free-floating; configurable heading, direction, type, color, thickness; inline label.
 - **Frames** — named sections; elements attach and detach when dragged in/out.
 - **Properties** — floating properties window per element; group properties window for multi-select.
 - **Custom blocks** — save a group as a reusable template; place copies from the left panel.

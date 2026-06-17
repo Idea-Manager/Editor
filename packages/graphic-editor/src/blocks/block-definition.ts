@@ -2,6 +2,9 @@ import type { GraphicElement } from '@core/model/interfaces';
 import type { GraphicRenderContext } from '../engine/render-context';
 import type { GraphicBlockProperty } from './properties';
 
+/** Inline SVG for the left-panel tile — markup string or a live SVG node. */
+export type GraphicBlockIcon = string | SVGElement;
+
 /**
  * Plugin describing a kind of `GraphicElement` that the user can place from
  * the left panel. Built-in kinds live in this package; future user-supplied
@@ -15,8 +18,12 @@ export interface GraphicBlockDefinition<TData = Record<string, unknown>> {
   readonly labelKey?: string;
   /** Verbatim display label used when `labelKey` is absent (e.g. user-named custom blocks). */
   readonly staticLabel?: string;
-  /** Material Symbols icon name for the left panel and toolbars. */
-  readonly icon: string;
+  /**
+   * Icon rendered in the left-panel tile.
+   * Strings may be a full `<svg>…</svg>` or inner markup (`<rect/>`, `<path/>`, etc.).
+   * `SVGElement` may be the root `<svg>` or an inner SVG node (wrapped automatically).
+   */
+  readonly icon: GraphicBlockIcon;
   /** Optional group key used to assemble left-panel accordions. */
   readonly groupKey?: string;
   /** Optional pivot points (relative to the element's local 0..1 box). */
@@ -41,7 +48,7 @@ export interface GraphicBlockDefinition<TData = Record<string, unknown>> {
   /**
    * OPTIONAL: declares property panels shown in the floating window. The
    * graphic editor uses this to build edit controls automatically; built-in
-   * blocks declare border / background / fill / text-color / font-size here.
+   * blocks declare border / background / text-color / font-size here.
    */
   properties?(node: GraphicElement<TData>, ctx: GraphicRenderContext): GraphicBlockProperty[];
 

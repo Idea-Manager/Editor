@@ -8,7 +8,7 @@ import type { GraphicBlockProperty } from '../blocks/properties';
 import type { RendererResult, RendererContext } from './property-renderers/types';
 import { createBorderRenderer } from './property-renderers/border-property';
 import { createBackgroundRenderer } from './property-renderers/background-property';
-import { createFillRenderer } from './property-renderers/fill-property';
+import { createStrokeColorRenderer } from './property-renderers/stroke-color-property';
 import { createTextColorRenderer } from './property-renderers/text-color-property';
 import { createFontSizeRenderer } from './property-renderers/font-size-property';
 import { createTextRenderer } from './property-renderers/text-property';
@@ -18,7 +18,7 @@ import { createCustomRenderer } from './property-renderers/custom-property';
 import {
   GRAPHIC_PROPS_BORDER,
   GRAPHIC_PROPS_BACKGROUND,
-  GRAPHIC_PROPS_FILL,
+  GRAPHIC_PROPS_STROKE_COLOR,
   GRAPHIC_PROPS_TEXT_COLOR,
   GRAPHIC_PROPS_FONT_SIZE,
   GRAPHIC_PROPS_WINDOW_TITLE,
@@ -100,8 +100,14 @@ export class FloatingPropertiesWindow {
     });
 
     this.floatingWindow.mount(this.host);
+    this.floatingWindow.focus();
 
     this._subscribeToUpdates();
+  }
+
+  /** Engage the floating window and notify the host of the focused target. */
+  focus(): void {
+    this.floatingWindow?.focus();
   }
 
   setNode(node: GraphicElement): void {
@@ -125,6 +131,11 @@ export class FloatingPropertiesWindow {
     this._destroyWindow();
   }
 
+  /** Id of the node this window is bound to, or null if closed. */
+  getCurrentNodeId(): string | null {
+    return this.currentNodeId;
+  }
+
   // ─── Private ─────────────────────────────────────────────────────────────
 
   private _calcInitialPosition(): { x: number; y: number } {
@@ -146,6 +157,7 @@ export class FloatingPropertiesWindow {
     const renderCtx = {
       document: ctx.document,
       page: ctx.page,
+      registry: ctx.registry,
       rootElement: ctx.rootElement,
       i18n,
       undoRedoManager: ctx.undoRedoManager,
@@ -209,8 +221,8 @@ export class FloatingPropertiesWindow {
         );
       case 'background':
         return createBackgroundRenderer(prop, rendCtx);
-      case 'fill':
-        return createFillRenderer(prop, rendCtx);
+      case 'strokeColor':
+        return createStrokeColorRenderer(prop, rendCtx);
       case 'textColor':
         return createTextColorRenderer(prop, rendCtx);
       case 'fontSize':
@@ -232,7 +244,7 @@ export class FloatingPropertiesWindow {
     switch (prop.kind) {
       case 'border':     return 'prop-border';
       case 'background': return 'prop-background';
-      case 'fill':       return 'prop-fill';
+      case 'strokeColor': return 'prop-strokeColor';
       case 'textColor':  return 'prop-textColor';
       case 'fontSize':   return 'prop-fontSize';
       case 'text':       return 'prop-text';
@@ -246,7 +258,7 @@ export class FloatingPropertiesWindow {
     switch (prop.kind) {
       case 'border':       return i18n.t(GRAPHIC_PROPS_BORDER);
       case 'background':   return i18n.t(GRAPHIC_PROPS_BACKGROUND);
-      case 'fill':         return i18n.t(GRAPHIC_PROPS_FILL);
+      case 'strokeColor':  return i18n.t(GRAPHIC_PROPS_STROKE_COLOR);
       case 'textColor':    return i18n.t(GRAPHIC_PROPS_TEXT_COLOR);
       case 'fontSize':     return i18n.t(GRAPHIC_PROPS_FONT_SIZE);
       case 'text':         return i18n.t(GRAPHIC_PROPS_TEXT);

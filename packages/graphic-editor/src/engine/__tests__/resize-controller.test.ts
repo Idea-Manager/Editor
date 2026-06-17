@@ -13,10 +13,20 @@ import type { GraphicElement } from '@core/model/interfaces';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-type SimpleData = { x: number; y: number; width: number; height: number };
+type SimpleData = { x: number; y: number; width: number; height: number; freeResize?: boolean };
 
-function makeElement(x = 0, y = 0, width = 100, height = 100): GraphicElement<SimpleData> {
-  return { id: generateId('el'), type: 'rectangle', data: { x, y, width, height } };
+function makeElement(
+  x = 0,
+  y = 0,
+  width = 100,
+  height = 100,
+  freeResize = false,
+): GraphicElement<SimpleData> {
+  return {
+    id: generateId('el'),
+    type: 'rectangle',
+    data: { x, y, width, height, ...(freeResize ? { freeResize: true } : {}) },
+  };
 }
 
 function makeRegistry(): GraphicBlockRegistry {
@@ -24,8 +34,8 @@ function makeRegistry(): GraphicBlockRegistry {
   const def: GraphicBlockDefinition<SimpleData> = {
     type: 'rectangle',
     labelKey: 'graphic.block.rectangle',
-    icon: 'rectangle',
-    defaultData: () => ({ x: 0, y: 0, width: 100, height: 100 }),
+    icon: '<rect x="4" y="4" width="16" height="16"/>',
+    defaultData: () => ({ x: 0, y: 0, width: 100, height: 100, freeResize: true }),
     renderSvg: () => document.createElementNS('http://www.w3.org/2000/svg', 'rect') as SVGElement,
     getBounds: (n) => ({ x: n.data.x, y: n.data.y, width: n.data.width, height: n.data.height }),
   };
@@ -73,9 +83,43 @@ describe('ResizeController', () => {
     window.dispatchEvent(new PointerEvent('pointercancel', {}));
   });
 
-  describe('SE corner drag', () => {
-    it('increases width and height from SE corner', () => {
-      const el = makeElement(0, 0, 100, 100);
+  describe('uniform resize (freeResize false)', () => {
+    it('applies the same delta to width and height on SE corner drag', () => {
+      const el = makeElement(0, 0, 100, 100, false);
+      const { sm, page } = makeSetup(el);
+      sm.setSelection([{ type: 'element', id: el.id }]);
+
+      const pdEv = new PointerEvent('pointerdown', { clientX: 100, clientY: 100, button: 0 });
+      sm.handlePointerDown(pdEv, { kind: 'handle', handle: 'corner-se', element: el });
+
+      window.dispatchEvent(new PointerEvent('pointerup', { clientX: 150, clientY: 120, shiftKey: false }));
+
+      const b = getBoundsFromPage(page, el.id);
+      expect(b.width).toBeCloseTo(150);
+      expect(b.height).toBeCloseTo(150);
+      expect(b.x).toBeCloseTo(0);
+      expect(b.y).toBeCloseTo(0);
+    });
+
+    it('ignores Shift when freeResize is false', () => {
+      const el = makeElement(0, 0, 100, 100, false);
+      const { sm, page } = makeSetup(el);
+      sm.setSelection([{ type: 'element', id: el.id }]);
+
+      const pdEv = new PointerEvent('pointerdown', { clientX: 100, clientY: 100, button: 0 });
+      sm.handlePointerDown(pdEv, { kind: 'handle', handle: 'corner-se', element: el });
+
+      window.dispatchEvent(new PointerEvent('pointerup', { clientX: 200, clientY: 110, shiftKey: true }));
+
+      const b = getBoundsFromPage(page, el.id);
+      expect(b.width).toBeCloseTo(200);
+      expect(b.height).toBeCloseTo(200);
+    });
+  });
+
+  describe('free resize (freeResize true)', () => {
+    it('increases width and height independently from SE corner', () => {
+      const el = makeElement(0, 0, 100, 100, true);
       const { sm, undoRedoManager, page } = makeSetup(el);
       sm.setSelection([{ type: 'element', id: el.id }]);
 
@@ -95,7 +139,7 @@ describe('ResizeController', () => {
 
   describe('NW corner drag', () => {
     it('moves top-left corner and adjusts x, y, width, height', () => {
-      const el = makeElement(0, 0, 100, 100);
+      const el = makeElement(0, 0, 100, 100, false);
       const { sm, page } = makeSetup(el);
       sm.setSelection([{ type: 'element', id: el.id }]);
 
@@ -114,7 +158,7 @@ describe('ResizeController', () => {
 
   describe('minimum size clamp', () => {
     it('clamps width and height to minimum 8px', () => {
-      const el = makeElement(0, 0, 100, 100);
+      const el = makeElement(0, 0, 100, 100, false);
       const { sm, page } = makeSetup(el);
       sm.setSelection([{ type: 'element', id: el.id }]);
 
@@ -131,8 +175,8 @@ describe('ResizeController', () => {
   });
 
   describe('Shift key preserves aspect ratio', () => {
-    it('keeps width/height ratio when Shift is held on SE drag', () => {
-      const el = makeElement(0, 0, 100, 50); // 2:1 ratio
+    it('keeps width/height ratio when Shift is held on SE drag with freeResize', () => {
+      const el = makeElement(0, 0, 100, 50, true);
       const { sm, page } = makeSetup(el);
       sm.setSelection([{ type: 'element', id: el.id }]);
 

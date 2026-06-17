@@ -50,9 +50,9 @@ describe('ToolState', () => {
       const { toolState } = makeToolState();
       const snaps: unknown[] = [];
       toolState.onChange((s) => snaps.push(s));
-      toolState.setTool('arrow');
+      toolState.setTool('frame');
       expect(snaps).toHaveLength(1);
-      expect(snaps[0]).toMatchObject({ tool: 'arrow' });
+      expect(snaps[0]).toMatchObject({ tool: 'frame' });
     });
 
     it('does not emit when silent option is set', () => {
@@ -96,10 +96,10 @@ describe('ToolState', () => {
 
     it('preserves previousTool when called again during active placement', () => {
       const { toolState } = makeToolState();
-      toolState.setTool('arrow');
+      toolState.setTool('pen');
       toolState.beginPlacement('rectangle');
       toolState.beginPlacement('circle');
-      expect(toolState.getSnapshot().previousTool).toBe('arrow');
+      expect(toolState.getSnapshot().previousTool).toBe('pen');
       expect(toolState.getSnapshot().pendingBlockType).toBe('circle');
     });
 
@@ -131,7 +131,7 @@ describe('ToolState', () => {
 
     it('clears pendingBlockType and previousTool', () => {
       const { toolState } = makeToolState();
-      toolState.beginPlacement('ellipse');
+      toolState.beginPlacement('triangle');
       toolState.cancelPlacement();
       const snap = toolState.getSnapshot();
       expect(snap.pendingBlockType).toBeUndefined();

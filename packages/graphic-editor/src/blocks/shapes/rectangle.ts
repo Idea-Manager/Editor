@@ -3,6 +3,7 @@ import type { GraphicRenderContext } from '../../engine/render-context';
 import type { GraphicBlockDefinition } from '../block-definition';
 import { SHAPE_DEFAULTS, type ShapeData, appendShapeText, readShapeBounds, getShapeProperties } from './base-shape';
 import { GRAPHIC_BLOCK_RECTANGLE } from '../../i18n/keys';
+import { RECTANGLE_TILE_ICON } from './shape-icons';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -16,11 +17,11 @@ const SHAPE_PIVOTS = [
 export const RectangleBlock: GraphicBlockDefinition<ShapeData> = {
   type: 'rectangle',
   labelKey: GRAPHIC_BLOCK_RECTANGLE,
-  icon: 'rectangle',
+  icon: RECTANGLE_TILE_ICON,
   pivots: SHAPE_PIVOTS,
 
   defaultData(): ShapeData {
-    return { ...SHAPE_DEFAULTS, border: { ...SHAPE_DEFAULTS.border } };
+    return { ...SHAPE_DEFAULTS, freeResize: true, border: { ...SHAPE_DEFAULTS.border } };
   },
 
   renderSvg(node: GraphicElement<ShapeData>): SVGElement {

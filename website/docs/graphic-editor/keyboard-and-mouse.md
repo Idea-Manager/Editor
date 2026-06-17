@@ -10,8 +10,8 @@ sidebar_position: 7
 | --- | ------ |
 | `V` | Switch to **Selection** tool |
 | `F` | Switch to **Frame** tool |
-| `A` | Switch to **Arrow** tool |
 | `P` | Switch to **Pen** tool |
+| `H` | Switch to **Hand** tool (pan) |
 | `S` | Switch to **Sticker** tool |
 | `Esc` | Cancel active placement / return to Selection tool |
 | `Delete` / `Backspace` | Delete selected elements |
@@ -26,14 +26,13 @@ sidebar_position: 7
 | **Click** an element | Select it |
 | **Click** empty canvas | Deselect all |
 | **Drag** an element | Move it (`DragController`) |
-| **Drag** a corner handle | Resize the element (`ResizeController`) |
+| **Drag** a corner handle | Resize the element (`ResizeController`); by default width and height change by the **same amount** (uniform resize) |
+| **Shift + drag** a corner handle | Preserve aspect ratio when resizing a block with `freeResize: true` (rectangle) |
 | **Drag** empty canvas | Lasso-select (draws a rubber-band rect) |
 | **Scroll wheel** | Zoom in / out centred on pointer position |
 | **Middle-button drag** | Pan the canvas |
 | **Space + drag** | Pan the canvas (laptop-friendly) |
 | **Double-click** a text block | Enter inline text-editing mode |
-| **Hover** an edge arrow handle | Highlight; click starts an arrow |
-| **Drag** an edge arrow handle | Start an arrow anchored to this element |
 | **Click** a block tile in left panel | Begin ghost placement |
 | **Click** canvas during placement | Commit element at that position |
 | `Esc` during placement | Cancel placement |
@@ -49,7 +48,6 @@ Each selection handle has an `aria-label` from the i18n system:
 | Top-right corner | `graphic.handle.resize-ne` |
 | Bottom-right corner | `graphic.handle.resize-se` |
 | Bottom-left corner | `graphic.handle.resize-sw` |
-| Edge arrow triggers | `graphic.handle.start-arrow` |
 
 ## Zoom panel
 

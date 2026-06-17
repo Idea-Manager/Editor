@@ -20,9 +20,7 @@ export type EditorEvent =
   | 'table:range-select-end'
   | 'table:range-ui'
   | 'viewport:change'
-  | 'graphic:start-arrow'
   | 'tool:change'
-  | 'graphic:open-arrow-defaults'
   | 'graphic:request-properties-window'
   | 'graphic:toast';
 

@@ -6,10 +6,10 @@ import type { RendererContext, RendererResult } from './types';
 
 const colorPickerInstance = new ColorPicker();
 
-type FillProp = Extract<GraphicBlockProperty, { kind: 'fill' }>;
+type StrokeColorProp = Extract<GraphicBlockProperty, { kind: 'strokeColor' }>;
 
-export function createFillRenderer(
-  property: FillProp,
+export function createStrokeColorRenderer(
+  property: StrokeColorProp,
   rendCtx: RendererContext,
 ): RendererResult {
   const panel = makePanel();

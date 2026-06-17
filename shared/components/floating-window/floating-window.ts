@@ -165,12 +165,21 @@ export class FloatingWindow {
       this.element.removeEventListener('pointerdown', onInternalDown),
     );
 
-    // Focus: pointerdown outside (document capture phase runs before bubble)
+    // Lose focus: pointerdown outside the layout bounds (document capture runs first).
+    // Clicks inside the same bounded surface (e.g. full graphic editor) keep the
+    // window "engaged" so canvas interaction does not clear the target highlight.
     const onDocDown = (e: PointerEvent) => {
-      if (this.isFocused && !this.element.contains(e.target as Node)) {
-        this.isFocused = false;
-        this.config.onFocusedTargetChange?.(null);
-      }
+      if (!this.isFocused || this.element.contains(e.target as Node)) return;
+      const bounds = this.getBoundsRect();
+      const { clientX, clientY } = e;
+      const insideBounds =
+        clientX >= bounds.left &&
+        clientX <= bounds.right &&
+        clientY >= bounds.top &&
+        clientY <= bounds.bottom;
+      if (insideBounds) return;
+      this.isFocused = false;
+      this.config.onFocusedTargetChange?.(null);
     };
     document.addEventListener('pointerdown', onDocDown, true);
     this.disposers.push(() =>

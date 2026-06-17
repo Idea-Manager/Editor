@@ -4,7 +4,7 @@
 // the `.idea-graphic-editor` class added in connectedCallback().
 .idea-graphic-editor {
   display: grid;
-  grid-template-columns: 240px 1fr;
+  grid-template-columns: var(--idea-graphic-left-panel-width, 280px) 1fr;
   grid-template-rows: 1fr;
   position: relative;
   width: 100%;

@@ -1,3 +1,4 @@
+import { readFreeResize } from '../blocks/shapes/base-shape';
 import type { GraphicContext } from './graphic-context';
 import type { GraphicSelectionManager } from './selection-manager';
 import type { HitTarget, HandleId } from './hit-tester';
@@ -5,14 +6,17 @@ import { ResizeElementCommand } from './commands/resize-element-command';
 
 const MIN_SIZE = 8;
 
+type Bounds = { x: number; y: number; width: number; height: number };
+
 /**
  * Handles corner-handle resize for single-element selections.
  *
  * Activation: pointerdown on a `kind: 'handle'` target.
  *
- * - Computes new x/y/width/height from drag delta
+ * - By default (`freeResize` false): width and height change by the same delta
+ * - Rectangle (`freeResize` true): independent width/height corner resize
+ * - Shift key: preserve aspect ratio when `freeResize` is true
  * - Clamps minimum size to 8px
- * - Shift key: preserve aspect ratio
  * - On pointerup: pushes a ResizeElementCommand
  */
 export class ResizeController {
@@ -22,6 +26,7 @@ export class ResizeController {
   private active = false;
   private handle: HandleId = 'corner-se';
   private elementId = '';
+  private freeResize = false;
   private startClientX = 0;
   private startClientY = 0;
   private startBounds = { x: 0, y: 0, width: 0, height: 0 };
@@ -55,6 +60,7 @@ export class ResizeController {
     this.active = true;
     this.handle = target.handle;
     this.elementId = el.id;
+    this.freeResize = readFreeResize(el.data as Record<string, unknown>);
     this.startClientX = event.clientX;
     this.startClientY = event.clientY;
     this.startBounds = { ...bounds };
@@ -139,62 +145,19 @@ export class ResizeController {
     worldDx: number,
     worldDy: number,
     shiftKey: boolean,
-  ): { x: number; y: number; width: number; height: number } {
-    const s = this.startBounds;
-    let x = s.x;
-    let y = s.y;
-    let width = s.width;
-    let height = s.height;
-
-    switch (this.handle) {
-      case 'corner-se':
-        width = Math.max(MIN_SIZE, s.width + worldDx);
-        height = Math.max(MIN_SIZE, s.height + worldDy);
-        break;
-      case 'corner-sw':
-        width = Math.max(MIN_SIZE, s.width - worldDx);
-        x = s.x + s.width - width;
-        height = Math.max(MIN_SIZE, s.height + worldDy);
-        break;
-      case 'corner-ne':
-        width = Math.max(MIN_SIZE, s.width + worldDx);
-        height = Math.max(MIN_SIZE, s.height - worldDy);
-        y = s.y + s.height - height;
-        break;
-      case 'corner-nw':
-        width = Math.max(MIN_SIZE, s.width - worldDx);
-        x = s.x + s.width - width;
-        height = Math.max(MIN_SIZE, s.height - worldDy);
-        y = s.y + s.height - height;
-        break;
+  ): Bounds {
+    if (!this.freeResize) {
+      const delta = _computeUniformDelta(this.handle, worldDx, worldDy);
+      return _applyUniformResize(this.startBounds, this.handle, delta);
     }
+
+    let bounds = _computeFreeBounds(this.startBounds, this.handle, worldDx, worldDy);
 
     if (shiftKey && this.aspectRatio !== 0) {
-      // Constrain so the dominant axis drives the other
-      const newAspect = width / height;
-      if (Math.abs(worldDx) >= Math.abs(worldDy)) {
-        height = Math.max(MIN_SIZE, width / this.aspectRatio);
-      } else {
-        width = Math.max(MIN_SIZE, height * this.aspectRatio);
-      }
-
-      // Re-anchor the fixed corner based on handle
-      switch (this.handle) {
-        case 'corner-nw':
-          x = s.x + s.width - width;
-          y = s.y + s.height - height;
-          break;
-        case 'corner-ne':
-          y = s.y + s.height - height;
-          break;
-        case 'corner-sw':
-          x = s.x + s.width - width;
-          break;
-        // corner-se: x/y stay anchored at top-left
-      }
+      bounds = _applyAspectRatioConstraint(bounds, this.startBounds, this.handle, worldDx, worldDy, this.aspectRatio);
     }
 
-    return { x, y, width, height };
+    return bounds;
   }
 
   private _cleanup(): void {
@@ -210,4 +173,117 @@ export class ResizeController {
     }
     this._cleanup();
   }
+}
+
+function _computeFreeBounds(
+  s: Bounds,
+  handle: HandleId,
+  worldDx: number,
+  worldDy: number,
+): Bounds {
+  let x = s.x;
+  let y = s.y;
+  let width = s.width;
+  let height = s.height;
+
+  switch (handle) {
+    case 'corner-se':
+      width = Math.max(MIN_SIZE, s.width + worldDx);
+      height = Math.max(MIN_SIZE, s.height + worldDy);
+      break;
+    case 'corner-sw':
+      width = Math.max(MIN_SIZE, s.width - worldDx);
+      x = s.x + s.width - width;
+      height = Math.max(MIN_SIZE, s.height + worldDy);
+      break;
+    case 'corner-ne':
+      width = Math.max(MIN_SIZE, s.width + worldDx);
+      height = Math.max(MIN_SIZE, s.height - worldDy);
+      y = s.y + s.height - height;
+      break;
+    case 'corner-nw':
+      width = Math.max(MIN_SIZE, s.width - worldDx);
+      x = s.x + s.width - width;
+      height = Math.max(MIN_SIZE, s.height - worldDy);
+      y = s.y + s.height - height;
+      break;
+  }
+
+  return { x, y, width, height };
+}
+
+function _computeUniformDelta(handle: HandleId, worldDx: number, worldDy: number): number {
+  const magnitude = Math.max(Math.abs(worldDx), Math.abs(worldDy));
+  if (magnitude === 0) return 0;
+
+  const dominantX = Math.abs(worldDx) >= Math.abs(worldDy);
+
+  switch (handle) {
+    case 'corner-se':
+      return (dominantX ? Math.sign(worldDx) : Math.sign(worldDy)) * magnitude;
+    case 'corner-nw':
+      return (dominantX ? -Math.sign(worldDx) : -Math.sign(worldDy)) * magnitude;
+    case 'corner-ne':
+      return (dominantX ? Math.sign(worldDx) : -Math.sign(worldDy)) * magnitude;
+    case 'corner-sw':
+      return (dominantX ? -Math.sign(worldDx) : Math.sign(worldDy)) * magnitude;
+  }
+}
+
+function _applyUniformResize(s: Bounds, handle: HandleId, delta: number): Bounds {
+  let x = s.x;
+  let y = s.y;
+  const width = Math.max(MIN_SIZE, s.width + delta);
+  const height = Math.max(MIN_SIZE, s.height + delta);
+
+  switch (handle) {
+    case 'corner-se':
+      break;
+    case 'corner-sw':
+      x = s.x + s.width - width;
+      break;
+    case 'corner-ne':
+      y = s.y + s.height - height;
+      break;
+    case 'corner-nw':
+      x = s.x + s.width - width;
+      y = s.y + s.height - height;
+      break;
+  }
+
+  return { x, y, width, height };
+}
+
+function _applyAspectRatioConstraint(
+  bounds: Bounds,
+  startBounds: Bounds,
+  handle: HandleId,
+  worldDx: number,
+  worldDy: number,
+  aspectRatio: number,
+): Bounds {
+  const s = startBounds;
+  let { x, y, width, height } = bounds;
+
+  if (Math.abs(worldDx) >= Math.abs(worldDy)) {
+    height = Math.max(MIN_SIZE, width / aspectRatio);
+  } else {
+    width = Math.max(MIN_SIZE, height * aspectRatio);
+  }
+
+  switch (handle) {
+    case 'corner-nw':
+      x = s.x + s.width - width;
+      y = s.y + s.height - height;
+      break;
+    case 'corner-ne':
+      y = s.y + s.height - height;
+      break;
+    case 'corner-sw':
+      x = s.x + s.width - width;
+      break;
+    // corner-se: x/y stay anchored at top-left
+  }
+
+  return { x, y, width, height };
 }

@@ -34,7 +34,7 @@
         },
         {
           "id": "el_002",
-          "type": "ellipse",
+          "type": "circle",
           "frameId": "frm_001",
           "data": {
             "x": 400, "y": 100, "width": 120, "height": 80,

@@ -20,22 +20,6 @@ function makeEl(
   };
 }
 
-function makeArrow(
-  fromId: string,
-  toId: string,
-  overrides: Partial<GraphicElement> = {},
-): GraphicElement {
-  return {
-    id: generateId('conn'),
-    type: 'arrow',
-    data: {
-      from: { target: { elementId: fromId }, point: { x: 0, y: 0 } },
-      to: { target: { elementId: toId }, point: { x: 100, y: 0 } },
-    },
-    ...overrides,
-  };
-}
-
 function makeDoc(elements: GraphicElement[]): { doc: DocumentNode; pageId: string } {
   const doc = createDocument();
   const page = createGraphicPage('Test');
@@ -134,65 +118,6 @@ describe('CreateCustomBlockCommand', () => {
       const block = getCustomBlocks(doc)[0];
       const ids = block.elements.map(e => e.placeholderId);
       expect(new Set(ids).size).toBe(2);
-    });
-  });
-
-  describe('arrow filtering', () => {
-    it('includes arrows whose both endpoints are within the selection', () => {
-      const el1 = makeEl(0, 0, 50, 50);
-      const el2 = makeEl(100, 0, 50, 50);
-      const arrow = makeArrow(el1.id, el2.id);
-      const { doc, pageId } = makeDoc([el1, el2, arrow]);
-
-      const cmd = new CreateCustomBlockCommand({
-        doc, pageId, name: 'Test',
-        entries: [selEntry(el1), selEntry(el2), selEntry(arrow)],
-      });
-      cmd.execute();
-
-      const block = getCustomBlocks(doc)[0];
-      expect(block.arrows).toHaveLength(1);
-    });
-
-    it('excludes arrows whose one endpoint is outside the selection', () => {
-      const el1 = makeEl(0, 0, 50, 50);
-      const el2 = makeEl(100, 0, 50, 50);
-      const outsideId = generateId('el');
-      const arrow = makeArrow(el1.id, outsideId); // toId not in selection
-
-      const { doc, pageId } = makeDoc([el1, el2, arrow]);
-
-      const cmd = new CreateCustomBlockCommand({
-        doc, pageId, name: 'Test',
-        entries: [selEntry(el1), selEntry(el2), selEntry(arrow)],
-      });
-      cmd.execute();
-
-      const block = getCustomBlocks(doc)[0];
-      expect(block.arrows).toHaveLength(0);
-    });
-
-    it('rewrites arrow endpoint ids to placeholder ids', () => {
-      const el1 = makeEl(0, 0, 50, 50);
-      const el2 = makeEl(100, 0, 50, 50);
-      const arrow = makeArrow(el1.id, el2.id);
-      const { doc, pageId } = makeDoc([el1, el2, arrow]);
-
-      const cmd = new CreateCustomBlockCommand({
-        doc, pageId, name: 'Test',
-        entries: [selEntry(el1), selEntry(el2), selEntry(arrow)],
-      });
-      cmd.execute();
-
-      const block = getCustomBlocks(doc)[0];
-      const arrowData = block.arrows[0].data as {
-        from: { target: { elementId: string } };
-        to: { target: { elementId: string } };
-      };
-
-      const validPlaceholders = block.elements.map(e => e.placeholderId);
-      expect(validPlaceholders).toContain(arrowData.from.target.elementId);
-      expect(validPlaceholders).toContain(arrowData.to.target.elementId);
     });
   });
 

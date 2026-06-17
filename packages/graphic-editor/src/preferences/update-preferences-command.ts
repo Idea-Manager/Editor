@@ -20,7 +20,6 @@ export interface UpdatePreferencesCommandInput {
  * Records a single visual preference for a block type into
  * `DocumentNode.data.graphicPreferences[blockType][path]`.
  *
- * Supersedes the provisional `SetArrowDefaultsCommand` (prompt 11).
  */
 export class UpdatePreferencesCommand implements Command {
   readonly operationRecords: OperationRecord[];

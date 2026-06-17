@@ -8,7 +8,7 @@ function makeDef(type: string, groupKey?: string): GraphicBlockDefinition {
   return {
     type,
     labelKey: `graphic.block.${type}`,
-    icon: 'square',
+    icon: '<rect x="4" y="4" width="16" height="16"/>',
     groupKey,
     defaultData: () => ({}),
     renderSvg: () => document.createElementNS('http://www.w3.org/2000/svg', 'rect'),
@@ -111,7 +111,6 @@ describe('GraphicBlockRegistry', () => {
         createdAt: '2024-01-01T00:00:00.000Z',
         source: { width: 200, height: 100 },
         elements: [],
-        arrows: [],
       };
     }
 
@@ -184,9 +183,10 @@ describe('GraphicBlockRegistry', () => {
       registry.syncCustomBlocks(doc);
 
       const def = registry.get('custom:blk_sz');
-      const defaults = def.defaultData() as { x: number; y: number; width: number; height: number };
+      const defaults = def.defaultData() as { x: number; y: number; width: number; height: number; freeResize: boolean };
       expect(defaults.width).toBe(300);
       expect(defaults.height).toBe(150);
+      expect(defaults.freeResize).toBe(false);
     });
   });
 });

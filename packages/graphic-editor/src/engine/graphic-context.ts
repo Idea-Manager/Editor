@@ -6,6 +6,7 @@ import type { ViewportController } from './viewport-controller';
 import type { GraphicBlockRegistry } from '../blocks/block-registry';
 import type { ToolState } from './tool-state';
 import type { StyleMemoryService } from '../preferences/style-memory-service';
+import type { GraphicFocusManager } from './graphic-focus-manager';
 
 export interface GraphicContext {
   document: DocumentNode;
@@ -18,4 +19,5 @@ export interface GraphicContext {
   registry: GraphicBlockRegistry;
   toolState?: ToolState;
   styleMemory?: StyleMemoryService;
+  focusManager?: GraphicFocusManager;
 }

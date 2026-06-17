@@ -36,7 +36,7 @@ export const PATH_DEFAULTS = {
 export const PathBlock: GraphicBlockDefinition<PathData> = {
   type: 'path',
   labelKey: GRAPHIC_BLOCK_PATH,
-  icon: 'edit',
+  icon: '<path d="M4 20 L8 6 L14 14 L20 4"/>',
   // No groupKey — paths are created exclusively via the Pen tool, not the left panel.
 
   defaultData(): PathData {
@@ -73,7 +73,7 @@ export const PathBlock: GraphicBlockDefinition<PathData> = {
 
   properties(_node: GraphicElement<PathData>, _ctx: GraphicRenderContext): GraphicBlockProperty[] {
     return [
-      { kind: 'fill', colorPath: 'data.stroke' },
+      { kind: 'strokeColor', colorPath: 'data.stroke' },
       { kind: 'fontSize', path: 'data.strokeWidth', min: 1, max: 20, unit: 'px' },
     ];
   },

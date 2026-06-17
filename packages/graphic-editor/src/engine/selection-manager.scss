@@ -44,13 +44,6 @@
   &--corner-se { cursor: se-resize; }
   &--corner-sw { cursor: sw-resize; }
 
-  &--arrow-endpoint {
-    width: 12px;
-    height: 12px;
-    background: $color-bg;
-    border: 2px solid $color-graphic-selection;
-    cursor: crosshair;
-  }
 }
 
 // ── Grip (drag-to-move) icon ────────────────────────────────────────────────
@@ -78,39 +71,6 @@
   &:active {
     cursor: grabbing;
   }
-}
-
-// ── Arrow-edge handles ───────────────────────────────────────────────────────
-
-.idea-graphic-selection__arrow {
-  position: absolute;
-  width: 16px;
-  height: 16px;
-  transform: translate(-50%, -50%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'Material Symbols Outlined', sans-serif;
-  font-size: $font-size-sm;
-  line-height: 1;
-  color: $color-bg;
-  background: $color-graphic-accent;
-  border: none;
-  border-radius: 50%;
-  cursor: crosshair;
-  pointer-events: auto;
-  padding: 0;
-
-  &::after {
-    content: '→';
-    font-family: $font-family-base;
-    font-size: $font-size-xs;
-  }
-
-  &--top    { transform: translate(-50%, -50%) rotate(-90deg); }
-  &--right  { transform: translate(-50%, -50%) rotate(0deg); }
-  &--bottom { transform: translate(-50%, -50%) rotate(90deg); }
-  &--left   { transform: translate(-50%, -50%) rotate(180deg); }
 }
 
 // ── Lasso selection rectangle ───────────────────────────────────────────────

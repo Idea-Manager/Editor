@@ -142,7 +142,6 @@ export const en: TranslationDictionary = {
   'graphic.block.rectangle': 'Rectangle',
   'graphic.block.triangle': 'Triangle',
   'graphic.block.circle': 'Circle',
-  'graphic.block.ellipse': 'Ellipse',
   'graphic.block.sticker': 'Sticker',
   'graphic.group.shapes': 'Shapes',
 
@@ -153,7 +152,6 @@ export const en: TranslationDictionary = {
   // Graphic editor — tools
   'graphic.tool.selection': 'Selection',
   'graphic.tool.frame': 'Frame',
-  'graphic.tool.arrow': 'Arrow',
   'graphic.tool.pen': 'Pen',
   'graphic.tool.sticker': 'Sticker',
   'graphic.tool.hand': 'Hand',
@@ -165,7 +163,6 @@ export const en: TranslationDictionary = {
   'graphic.handle.resize-ne': 'Resize from top-right',
   'graphic.handle.resize-se': 'Resize from bottom-right',
   'graphic.handle.resize-sw': 'Resize from bottom-left',
-  'graphic.handle.start-arrow': 'Start arrow',
 
   // Graphic editor — tools (hints)
   'graphic.tool.pen.hint': 'Drag to draw a freehand stroke',
@@ -179,30 +176,11 @@ export const en: TranslationDictionary = {
   'graphic.props.text.placeholder': 'Type something…',
   'graphic.props.border': 'Border',
   'graphic.props.background': 'Background',
-  'graphic.props.fill': 'Fill',
+  'graphic.props.strokeColor': 'Stroke color',
   'graphic.props.textColor': 'Text color',
   'graphic.props.fontSize': 'Font size',
   'graphic.props.color': 'Color',
   'graphic.props.thickness': 'Thickness',
-
-  // Graphic editor — arrow block
-  'graphic.block.arrow': 'Arrow',
-  'graphic.arrow.heading': 'Heading',
-  'graphic.arrow.heading.none': 'None',
-  'graphic.arrow.heading.stroke': 'Stroke',
-  'graphic.arrow.heading.fill': 'Fill',
-  'graphic.arrow.direction': 'Direction',
-  'graphic.arrow.direction.none': 'None',
-  'graphic.arrow.direction.to': 'To',
-  'graphic.arrow.direction.from': 'From',
-  'graphic.arrow.direction.both': 'Both',
-  'graphic.arrow.type': 'Type',
-  'graphic.arrow.type.line': 'Line',
-  'graphic.arrow.type.curve': 'Curve',
-  'graphic.arrow.color': 'Color',
-  'graphic.arrow.thickness': 'Thickness',
-  'graphic.arrow.label.placeholder': 'Add a label…',
-  'graphic.arrow.defaults.title': 'Arrow defaults',
 
   // Graphic editor — group properties window
   'graphic.group.title': 'Selection ({count})',
@@ -214,4 +192,11 @@ export const en: TranslationDictionary = {
   'graphic.group.empty': 'Custom blocks appear here once you create them',
   'graphic.group.custom': 'Custom',
   'graphic.block.tile.add': 'Click to place. ESC to cancel.',
+
+  // Graphic editor — left panel toolbar
+  'graphic.leftPanel.sortChapters': 'Sort chapters',
+  'graphic.leftPanel.expandAll': 'Expand all chapters',
+  'graphic.leftPanel.collapseAll': 'Collapse all chapters',
+  'graphic.leftPanel.viewTiles': 'Tile view',
+  'graphic.leftPanel.viewList': 'List view',
 };

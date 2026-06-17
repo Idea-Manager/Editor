@@ -1,6 +1,6 @@
 import type { EventBus } from '@core/events/event-bus';
 
-export type ToolId = 'selection' | 'frame' | 'arrow' | 'pen' | 'sticker' | 'placement' | 'hand';
+export type ToolId = 'selection' | 'frame' | 'pen' | 'sticker' | 'placement' | 'hand';
 
 export interface ToolStateSnapshot {
   tool: ToolId;

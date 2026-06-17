@@ -18,14 +18,7 @@ export interface CustomBlockElement {
   /** Zero-anchored data blob (x/y translated so the AABB origin is 0,0). */
   data: Record<string, unknown>;
   meta?: { groupId?: string; locked?: boolean };
-  /** Stable placeholder token used to wire arrows among snapshot members. */
-  placeholderId: string;
-}
-
-/** An arrow snapshot inside a `CustomBlockDefinition`. */
-export interface CustomBlockArrow {
-  data: Record<string, unknown>;
-  /** Stable placeholder token for this arrow. */
+  /** Stable placeholder token used to wire members among snapshot elements. */
   placeholderId: string;
 }
 
@@ -49,14 +42,6 @@ export interface CustomBlockDefinition {
   createdAt: string;
   /** Dimensions of the bounding box at capture time. Used to centre the placement ghost. */
   source: { width: number; height: number };
-  /**
-   * Deep-cloned element snapshots, zero-anchored to the AABB origin.
-   * Arrow elements are excluded — they live in `arrows`.
-   */
+  /** Deep-cloned element snapshots, zero-anchored to the AABB origin. */
   elements: CustomBlockElement[];
-  /**
-   * Arrows whose both endpoints fully refer to members of this snapshot.
-   * Arrows with at least one endpoint outside the selection are dropped.
-   */
-  arrows: CustomBlockArrow[];
 }

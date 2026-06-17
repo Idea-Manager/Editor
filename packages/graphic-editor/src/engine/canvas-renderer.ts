@@ -6,6 +6,108 @@ import { FrameRenderer } from './frame-renderer';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
+const SHAPE_TEXT_OVERLAY_CLASS = 'idea-graphic-shape__text';
+
+type ShapeTextFocusSnapshot = { elementId: string; start: number; end: number };
+
+function captureShapeTextOverlayFocus(overlay: HTMLElement): ShapeTextFocusSnapshot | null {
+  const ae = document.activeElement;
+  if (!ae || !(ae instanceof HTMLElement)) return null;
+  if (!ae.classList.contains(SHAPE_TEXT_OVERLAY_CLASS)) return null;
+  if (!overlay.contains(ae)) return null;
+  const elementId = ae.getAttribute('data-element-id');
+  if (!elementId) return null;
+  const offsets = getContentEditableOffsets(ae);
+  if (!offsets) return null;
+  return { elementId, ...offsets };
+}
+
+function getContentEditableOffsets(root: HTMLElement): { start: number; end: number } | null {
+  try {
+    const sel = typeof window.getSelection === 'function' ? window.getSelection() : null;
+    const textLen = root.textContent?.length ?? 0;
+    if (!sel || sel.rangeCount === 0) {
+      return { start: textLen, end: textLen };
+    }
+    const range = sel.getRangeAt(0);
+    if (!root.contains(range.commonAncestorContainer)) {
+      return { start: textLen, end: textLen };
+    }
+    const pre = range.cloneRange();
+    pre.selectNodeContents(root);
+    pre.setEnd(range.startContainer, range.startOffset);
+    const start = pre.toString().length;
+    pre.setEnd(range.endContainer, range.endOffset);
+    const end = pre.toString().length;
+    return { start, end };
+  } catch {
+    return null;
+  }
+}
+
+function setContentEditableSelection(root: HTMLElement, start: number, end: number): void {
+  const textNodes: Text[] = [];
+  const collect = (n: Node): void => {
+    if (n.nodeType === Node.TEXT_NODE) {
+      textNodes.push(n as Text);
+      return;
+    }
+    for (let i = 0; i < n.childNodes.length; i++) {
+      collect(n.childNodes[i]!);
+    }
+  };
+  collect(root);
+
+  if (textNodes.length === 0) {
+    root.focus();
+    return;
+  }
+
+  const totalLen = textNodes.reduce((a, t) => a + (t.textContent?.length ?? 0), 0);
+  const s = Math.max(0, Math.min(start, totalLen));
+  const e = Math.max(0, Math.min(end, totalLen));
+
+  const mapOffset = (offset: number): [Text, number] | null => {
+    let p = 0;
+    for (const t of textNodes) {
+      const tl = t.textContent?.length ?? 0;
+      if (p + tl >= offset) return [t, offset - p];
+      p += tl;
+    }
+    const last = textNodes[textNodes.length - 1]!;
+    return [last, last.textContent?.length ?? 0];
+  };
+
+  const startMap = mapOffset(s);
+  const endMap = mapOffset(e);
+  if (!startMap || !endMap) return;
+
+  const sel = window.getSelection();
+  if (!sel) {
+    root.focus();
+    return;
+  }
+  const range = document.createRange();
+  range.setStart(startMap[0], Math.min(startMap[1], startMap[0].textContent?.length ?? 0));
+  range.setEnd(endMap[0], Math.min(endMap[1], endMap[0].textContent?.length ?? 0));
+  sel.removeAllRanges();
+  sel.addRange(range);
+  root.focus();
+}
+
+function findShapeTextOverlay(overlay: HTMLElement, elementId: string): HTMLElement | null {
+  for (const node of overlay.querySelectorAll<HTMLElement>(`.${SHAPE_TEXT_OVERLAY_CLASS}`)) {
+    if (node.getAttribute('data-element-id') === elementId) return node;
+  }
+  return null;
+}
+
+function restoreShapeTextOverlayFocus(overlay: HTMLElement, snap: ShapeTextFocusSnapshot): void {
+  const el = findShapeTextOverlay(overlay, snap.elementId);
+  if (!el) return;
+  setContentEditableSelection(el, snap.start, snap.end);
+}
+
 /**
  * Builds and maintains the SVG + DOM overlay layers for the graphic canvas.
  *
@@ -119,7 +221,10 @@ export class CanvasRenderer {
     ctx: GraphicContext,
     renderSelectionOverlay?: (host: HTMLElement, page: GraphicPageNode, renderCtx: GraphicRenderContext) => void,
   ): void {
-    // Full rebuild — see TODO(perf) above.
+    // Full rebuild — see TODO(perf) above. Preserve in-overlay shape text caret when
+    // the same element is re-rendered (model updates coalesce while typing).
+    const shapeTextFocus = captureShapeTextOverlayFocus(this.overlayEl);
+
     this.worldGroup.innerHTML = '';
     this.overlayEl.innerHTML = '';
     this.selectionLayerEl.innerHTML = '';
@@ -129,6 +234,7 @@ export class CanvasRenderer {
       page,
       eventBus: ctx.eventBus,
       i18n: ctx.i18n,
+      registry: ctx.registry,
       rootElement: ctx.rootElement,
       overlayHost: this.overlayEl,
       undoRedoManager: ctx.undoRedoManager,
@@ -139,7 +245,6 @@ export class CanvasRenderer {
       this.frameRenderer.renderFrame(frame, this.worldGroup, this.overlayEl);
     }
 
-    // Render elements
     for (const element of page.elements) {
       if (!ctx.registry.has(element.type)) continue;
       const def = ctx.registry.get(element.type);
@@ -157,6 +262,10 @@ export class CanvasRenderer {
 
     // Render selection handles in the screen-space layer (no world transform)
     renderSelectionOverlay?.(this.selectionLayerEl, page, renderCtx);
+
+    if (shapeTextFocus && page.elements.some(e => e.id === shapeTextFocus.elementId)) {
+      restoreShapeTextOverlayFocus(this.overlayEl, shapeTextFocus);
+    }
   }
 
   destroy(): void {

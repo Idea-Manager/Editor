@@ -23,7 +23,7 @@ function makeRegistry(): GraphicBlockRegistry {
   const def: GraphicBlockDefinition<SimpleData> = {
     type: 'rectangle',
     labelKey: 'graphic.block.rectangle',
-    icon: 'rectangle',
+    icon: '<rect x="4" y="4" width="16" height="16"/>',
     defaultData: () => ({ x: 0, y: 0, width: 100, height: 100 }),
     renderSvg: () => document.createElementNS('http://www.w3.org/2000/svg', 'rect') as SVGElement,
     getBounds: (node) => ({ x: node.data.x, y: node.data.y, width: node.data.width, height: node.data.height }),
@@ -95,6 +95,28 @@ describe('GraphicSelectionManager', () => {
       eventBus.on('selection:change', (p) => changes.push(p));
       sm.setSelection([sel('a')]); // same
       expect(changes).toHaveLength(0);
+    });
+
+    it('syncs focused highlight when selection moves to a different single element', () => {
+      const { ctx } = makeCtx();
+      const sm = new GraphicSelectionManager(ctx);
+      sm.setSelection([sel('a')]);
+      expect(sm.getFocusedHighlightId()).toBe('a');
+
+      sm.setSelection([sel('b')]);
+      expect(sm.getFocusedHighlightId()).toBe('b');
+    });
+
+    it('clears focused highlight for empty or multi selection', () => {
+      const { ctx } = makeCtx();
+      const sm = new GraphicSelectionManager(ctx);
+      sm.setSelection([sel('a')]);
+      sm.setSelection([sel('a'), sel('b')]);
+      expect(sm.getFocusedHighlightId()).toBeNull();
+
+      sm.setSelection([sel('a')]);
+      sm.clear();
+      expect(sm.getFocusedHighlightId()).toBeNull();
     });
   });
 

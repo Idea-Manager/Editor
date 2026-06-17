@@ -1,4 +1,6 @@
 import { DocumentNode, GraphicPageNode } from '../model/interfaces';
+import { createDocument } from '../model/factory';
+import { stripGraphicArrows } from './strip-graphic-arrows';
 
 const KEY_ORDER = [
   'id', 'type', 'schemaVersion', 'name', 'data', 'meta',
@@ -25,10 +27,13 @@ function orderedReplacer(_key: string, value: unknown): unknown {
 
 export class DocumentSerializer {
   export(doc: DocumentNode): string {
-    return JSON.stringify(doc, orderedReplacer, 2);
+    return JSON.stringify(stripGraphicArrows(doc), orderedReplacer, 2);
   }
 
   exportPage(page: GraphicPageNode): string {
-    return JSON.stringify(page, orderedReplacer, 2);
+    const doc = createDocument();
+    doc.graphicPages.push(page);
+    const stripped = stripGraphicArrows(doc);
+    return JSON.stringify(stripped.graphicPages[0], orderedReplacer, 2);
   }
 }

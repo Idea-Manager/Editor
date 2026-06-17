@@ -46,8 +46,6 @@ function makeGroupWindow(): GroupPropertiesWindow {
 function makeConfig(ctx: GraphicContext, groupWindow: GroupPropertiesWindow) {
   const showPropertiesWindow = jest.fn();
   const hidePropertiesWindow = jest.fn();
-  const showArrowToolbar = jest.fn();
-  const hideArrowToolbar = jest.fn();
   const createGroupPropertiesWindow = jest.fn(() => groupWindow);
 
   return {
@@ -55,14 +53,10 @@ function makeConfig(ctx: GraphicContext, groupWindow: GroupPropertiesWindow) {
       ctx,
       showPropertiesWindow,
       hidePropertiesWindow,
-      showArrowToolbar,
-      hideArrowToolbar,
       createGroupPropertiesWindow,
     },
     showPropertiesWindow,
     hidePropertiesWindow,
-    showArrowToolbar,
-    hideArrowToolbar,
     createGroupPropertiesWindow,
   };
 }
@@ -71,46 +65,28 @@ describe('GroupController — selection routing', () => {
   it('closes everything when selection is empty', () => {
     const { ctx, eventBus } = makeCtx();
     const groupWindow = makeGroupWindow();
-    const { config, hidePropertiesWindow, hideArrowToolbar } = makeConfig(ctx, groupWindow);
+    const { config, hidePropertiesWindow } = makeConfig(ctx, groupWindow);
 
     new GroupController(config);
 
     eventBus.emit<SelectionEntry[]>('selection:change', []);
 
     expect(hidePropertiesWindow).toHaveBeenCalled();
-    expect(hideArrowToolbar).toHaveBeenCalled();
   });
 
-  it('opens FloatingPropertiesWindow for a single non-arrow element', () => {
+  it('opens FloatingPropertiesWindow for a single element', () => {
     const { ctx, eventBus } = makeCtx();
     const el = makeEl('rectangle');
     ctx.page.elements.push(el);
 
     const groupWindow = makeGroupWindow();
-    const { config, showPropertiesWindow, hideArrowToolbar } = makeConfig(ctx, groupWindow);
+    const { config, showPropertiesWindow } = makeConfig(ctx, groupWindow);
 
     new GroupController(config);
 
     eventBus.emit<SelectionEntry[]>('selection:change', [{ type: 'element', id: el.id }]);
 
     expect(showPropertiesWindow).toHaveBeenCalledWith(el);
-    expect(hideArrowToolbar).toHaveBeenCalled();
-  });
-
-  it('opens FlyoutArrowToolbar for a single arrow element', () => {
-    const { ctx, eventBus } = makeCtx();
-    const el = makeEl('arrow');
-    ctx.page.elements.push(el);
-
-    const groupWindow = makeGroupWindow();
-    const { config, showArrowToolbar, hidePropertiesWindow } = makeConfig(ctx, groupWindow);
-
-    new GroupController(config);
-
-    eventBus.emit<SelectionEntry[]>('selection:change', [{ type: 'element', id: el.id }]);
-
-    expect(showArrowToolbar).toHaveBeenCalledWith(el);
-    expect(hidePropertiesWindow).toHaveBeenCalled();
   });
 
   it('opens GroupPropertiesWindow for multi-select', () => {
@@ -120,7 +96,7 @@ describe('GroupController — selection routing', () => {
     ctx.page.elements.push(el1, el2);
 
     const groupWindow = makeGroupWindow();
-    const { config, createGroupPropertiesWindow, hidePropertiesWindow, hideArrowToolbar } =
+    const { config, createGroupPropertiesWindow, hidePropertiesWindow } =
       makeConfig(ctx, groupWindow);
 
     new GroupController(config);
@@ -132,7 +108,6 @@ describe('GroupController — selection routing', () => {
     eventBus.emit<SelectionEntry[]>('selection:change', entries);
 
     expect(hidePropertiesWindow).toHaveBeenCalled();
-    expect(hideArrowToolbar).toHaveBeenCalled();
     expect(createGroupPropertiesWindow).toHaveBeenCalledWith(ctx.rootElement);
     expect(groupWindow.setSelection).toHaveBeenCalledWith(entries);
   });
@@ -161,7 +136,6 @@ describe('GroupController — selection routing', () => {
       { type: 'element', id: el3.id },
     ];
     eventBus.emit<SelectionEntry[]>('selection:change', second);
-    // Should reuse existing window, not create a new one
     expect(createGroupPropertiesWindow).toHaveBeenCalledTimes(1);
     expect(groupWindow.setSelection).toHaveBeenLastCalledWith(second);
   });

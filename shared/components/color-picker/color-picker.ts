@@ -12,6 +12,12 @@ export interface ColorPickerShowOptions {
   labels: { select: string; cancel: string };
   onSelect: (color: string) => void;
   onCancel?: () => void;
+  /**
+   * When true, prefer placing the panel above `anchorY` (use the trigger’s top edge as `anchorY`).
+   * If it does not fit, place below `fallbackAnchorY` (e.g. trigger bottom + gap).
+   */
+  preferOpenAbove?: boolean;
+  fallbackAnchorY?: number;
 }
 
 const VIEW_MARGIN = 8;
@@ -115,20 +121,35 @@ export function rgbaToCssString({ r, g, b, a }: Rgba): string {
   return `rgba(${ri}, ${gi}, ${bi}, ${ai})`;
 }
 
+export interface ComputePickerPositionOptions {
+  preferOpenAbove?: boolean;
+  fallbackAnchorY?: number;
+}
+
 export function computePickerPosition(
   width: number,
   height: number,
   anchorX: number,
   anchorY: number,
+  placement?: ComputePickerPositionOptions,
 ): { left: number; top: number } {
   let left = anchorX + CURSOR_OFFSET;
-  let top = anchorY + CURSOR_OFFSET;
+  let top: number;
+
+  if (placement?.preferOpenAbove) {
+    top = anchorY - height - CURSOR_OFFSET;
+    if (top < VIEW_MARGIN && placement.fallbackAnchorY != null) {
+      top = placement.fallbackAnchorY + CURSOR_OFFSET;
+    }
+  } else {
+    top = anchorY + CURSOR_OFFSET;
+    if (top + height > window.innerHeight - VIEW_MARGIN) {
+      top = anchorY - height - CURSOR_OFFSET;
+    }
+  }
 
   if (left + width > window.innerWidth - VIEW_MARGIN) {
     left = anchorX - width - CURSOR_OFFSET;
-  }
-  if (top + height > window.innerHeight - VIEW_MARGIN) {
-    top = anchorY - height - CURSOR_OFFSET;
   }
 
   left = Math.min(Math.max(left, VIEW_MARGIN), window.innerWidth - width - VIEW_MARGIN);
@@ -371,10 +392,30 @@ export class ColorPicker {
     document.body.appendChild(root);
     this.root = root;
 
+    const onOutsidePointerDown = (e: PointerEvent) => {
+      if (!this.root || this.root.contains(e.target as Node)) return;
+      cancel();
+    };
+    const outsideTimer = window.setTimeout(() => {
+      document.addEventListener('pointerdown', onOutsidePointerDown, true);
+    }, 0);
+    this.disposers.push(() => {
+      window.clearTimeout(outsideTimer);
+      document.removeEventListener('pointerdown', onOutsidePointerDown, true);
+    });
+
     requestAnimationFrame(() => {
       if (!this.root) return;
       const rect = panel.getBoundingClientRect();
-      const { left, top } = computePickerPosition(rect.width, rect.height, options.anchorX, options.anchorY);
+      const { left, top } = computePickerPosition(
+        rect.width,
+        rect.height,
+        options.anchorX,
+        options.anchorY,
+        options.preferOpenAbove
+          ? { preferOpenAbove: true, fallbackAnchorY: options.fallbackAnchorY }
+          : undefined,
+      );
       this.root.style.left = `${left}px`;
       this.root.style.top = `${top}px`;
     });

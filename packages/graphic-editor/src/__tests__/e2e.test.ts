@@ -126,6 +126,32 @@ describe('FloatingPropertiesWindow', () => {
     expect(editor.querySelector('.idea-graphic-floating-window')).not.toBeNull();
   });
 
+  it('selects the newly placed block when another block was previously selected', () => {
+    const { editor, ctx, canvas } = makeEnv();
+    const page = ctx.page;
+    const selMgr = priv<GraphicSelectionManager>(editor, 'selectionManager');
+
+    ctx.toolState!.beginPlacement('rectangle');
+    canvas.dispatchEvent(new PointerEvent('pointerdown', {
+      button: 0, clientX: 100, clientY: 100, bubbles: true,
+    }));
+    const first = page.elements[0];
+    expect(selMgr.getSelection()).toEqual([{ type: 'element', id: first.id }]);
+
+    ctx.focusManager!.armPlacement('circle');
+    canvas.dispatchEvent(new PointerEvent('pointerdown', {
+      button: 0, clientX: 300, clientY: 300, bubbles: true,
+    }));
+
+    expect(page.elements).toHaveLength(2);
+    const second = page.elements[1];
+    expect(second.type).toBe('circle');
+    expect(selMgr.getSelection()).toEqual([{ type: 'element', id: second.id }]);
+    expect(selMgr.getSelection()[0].id).not.toBe(first.id);
+    expect(selMgr.getFocusedHighlightId()).toBe(second.id);
+    expect(selMgr.getFocusedHighlightId()).not.toBe(first.id);
+  });
+
   it('is removed when selection is cleared', () => {
     const { editor, ctx, canvas } = makeEnv();
 

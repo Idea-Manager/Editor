@@ -10,7 +10,6 @@ function makeDefinition(overrides: Partial<CustomBlockDefinition> = {}): CustomB
     createdAt: '2024-01-01T00:00:00.000Z',
     source: { width: 100, height: 50 },
     elements: [],
-    arrows: [],
     ...overrides,
   };
 }

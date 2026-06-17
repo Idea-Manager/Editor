@@ -18,7 +18,7 @@ function makeRegistry(
   const def: GraphicBlockDefinition = {
     type: 'rectangle',
     labelKey: 'graphic.block.rectangle',
-    icon: 'square',
+    icon: '<rect x="4" y="4" width="16" height="16"/>',
     defaultData: () => ({ x: 0, y: 0, width: 100, height: 100 }),
     renderSvg: () => document.createElementNS('http://www.w3.org/2000/svg', 'rect'),
     getBounds: (el) => {

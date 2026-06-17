@@ -8,7 +8,7 @@ function makeI18n(): I18nService {
   return { t: (k: string) => k } as unknown as I18nService;
 }
 
-function makeSetup(initialTool: 'selection' | 'frame' | 'arrow' | 'pen' | 'sticker' = 'selection') {
+function makeSetup(initialTool: 'selection' | 'frame' | 'pen' | 'sticker' = 'selection') {
   const eventBus = new EventBus();
   const toolState = new ToolState(eventBus);
   const selected: string[] = [];
@@ -26,8 +26,6 @@ function makeSetup(initialTool: 'selection' | 'frame' | 'arrow' | 'pen' | 'stick
 
   return { eventBus, toolState, toolbar, container, selected };
 }
-
-// ─── Tests ───────────────────────────────────────────────────────────────────
 
 describe('BottomToolbar', () => {
   describe('rendering', () => {
@@ -47,7 +45,7 @@ describe('BottomToolbar', () => {
       const { container } = makeSetup();
       const tools = Array.from(container.querySelectorAll<HTMLButtonElement>('[data-tool]'))
         .map(b => b.dataset.tool);
-      expect(tools).toEqual(['selection', 'frame', 'arrow', 'pen', 'sticker']);
+      expect(tools).toEqual(['selection', 'hand', 'frame', 'pen', 'sticker']);
     });
   });
 
@@ -76,17 +74,6 @@ describe('BottomToolbar', () => {
     });
   });
 
-  describe('arrow button', () => {
-    it('emits graphic:open-arrow-defaults when arrow button is clicked', () => {
-      const { container, eventBus } = makeSetup();
-      const events: unknown[] = [];
-      eventBus.on('graphic:open-arrow-defaults', () => events.push(true));
-      const arrowBtn = container.querySelector<HTMLButtonElement>('[data-tool="arrow"]')!;
-      arrowBtn.click();
-      expect(events).toHaveLength(1);
-    });
-  });
-
   describe('pointer event propagation', () => {
     it('prevents default and stops propagation on pointerdown', () => {
       const { container } = makeSetup();
@@ -112,7 +99,6 @@ describe('BottomToolbar', () => {
 
     it('stops listening to tool:change after destroy', () => {
       const { container, toolbar, eventBus } = makeSetup();
-      // Capture button reference before toolbar removes itself from DOM
       const penBtn = container.querySelector<HTMLButtonElement>('[data-tool="pen"]')!;
       toolbar.destroy();
       eventBus.emit<ToolStateSnapshot>('tool:change', { tool: 'pen' });

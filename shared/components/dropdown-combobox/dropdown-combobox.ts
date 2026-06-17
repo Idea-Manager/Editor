@@ -28,6 +28,11 @@ export interface DropdownComboboxConfig<T extends string> {
    */
   numericMin?: number;
   numericMax?: number;
+  /**
+   * Where to open the list relative to the field (`fixed` to viewport).
+   * @default 'auto' — opens upward when little space below the field.
+   */
+  listPlacement?: 'auto' | 'above' | 'below';
 }
 
 function toRegExp(p: string | RegExp): RegExp {
@@ -91,6 +96,7 @@ export function createDropdownCombobox<T extends string>(config: DropdownCombobo
     unit: unitText,
     numericMin,
     numericMax,
+    listPlacement = 'auto',
   } = config;
   const hasNumericBounds = numericMin != null && numericMax != null;
   const safeValue = nearestOptionValue(options, config.value);
@@ -187,7 +193,10 @@ export function createDropdownCombobox<T extends string>(config: DropdownCombobo
     list.style.left = `${r.left}px`;
     list.style.width = `${r.width}px`;
     list.style.zIndex = '200';
-    if (spaceBelow < 80 && r.top > spaceBelow) {
+    const openAbove =
+      listPlacement === 'above' ||
+      (listPlacement === 'auto' && spaceBelow < 80 && r.top > spaceBelow);
+    if (openAbove) {
       list.style.top = 'auto';
       list.style.bottom = `${window.innerHeight - r.top + gap}px`;
       list.style.maxHeight = `${Math.min(maxH, Math.max(40, r.top - gap * 2))}px`;

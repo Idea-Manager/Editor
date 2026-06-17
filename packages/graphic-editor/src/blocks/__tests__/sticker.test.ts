@@ -1,4 +1,5 @@
 import { StickerBlock, STICKER_DEFAULTS } from '../sticker/sticker';
+import { GraphicBlockRegistry } from '../block-registry';
 import type { GraphicRenderContext } from '../../engine/render-context';
 
 const EXPECTED_PIVOTS = [
@@ -20,6 +21,7 @@ function makeRenderCtx(overlayHost: HTMLElement): GraphicRenderContext {
     page: { id: 'p-1', name: 'Page', elements: [], frames: [], viewport: { x: 0, y: 0, zoom: 1 } },
     eventBus: { emit: jest.fn(), on: jest.fn(() => () => {}) } as never,
     i18n: {} as never,
+    registry: new GraphicBlockRegistry(),
     overlayHost,
     undoRedoManager: {} as never,
   };
@@ -70,13 +72,13 @@ describe('StickerBlock', () => {
       expect((fontSizeProp as { kind: 'fontSize'; min?: number }).min).toBe(14);
     });
 
-    it('does not include border or fill props', () => {
+    it('does not include border or extra color props', () => {
       const props = StickerBlock.properties!(
         { id: 'el-1', type: 'sticker', data: StickerBlock.defaultData() },
         {} as never,
       );
       expect(props.some(p => p.kind === 'border')).toBe(false);
-      expect(props.some(p => p.kind === 'fill')).toBe(false);
+      expect(props.some(p => p.kind === 'strokeColor')).toBe(false);
     });
   });
 

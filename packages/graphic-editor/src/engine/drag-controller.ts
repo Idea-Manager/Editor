@@ -46,9 +46,16 @@ export class DragController {
     if (!target) return;
     if (target.kind !== 'element' && target.kind !== 'frame' && target.kind !== 'grip') return;
 
+    const el = event.target;
+    if (el instanceof Element && el.closest('.idea-graphic-shape__text')) return;
+
     // Don't start a drag if no elements are selected yet (selection update happens first)
     const selection = this.selectionManager.getSelection();
     if (selection.length === 0) return;
+
+    if (target.kind === 'grip' && event.cancelable) {
+      event.preventDefault();
+    }
 
     event.stopPropagation();
 

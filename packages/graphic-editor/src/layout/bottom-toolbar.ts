@@ -5,7 +5,6 @@ import { createIcon } from '@text-editor/icons/create-icon';
 import {
   GRAPHIC_TOOL_SELECTION,
   GRAPHIC_TOOL_FRAME,
-  GRAPHIC_TOOL_ARROW,
   GRAPHIC_TOOL_PEN,
   GRAPHIC_TOOL_STICKER,
   GRAPHIC_TOOL_HAND,
@@ -26,13 +25,12 @@ const TOOL_DEFS: ToolDef[] = [
   { id: 'selection', icon: 'arrow_selector_tool', labelKey: GRAPHIC_TOOL_SELECTION },
   { id: 'hand',      icon: 'pan_tool',             labelKey: GRAPHIC_TOOL_HAND },
   { id: 'frame',     icon: 'crop_landscape',       labelKey: GRAPHIC_TOOL_FRAME },
-  { id: 'arrow',     icon: 'arrow_right_alt',      labelKey: GRAPHIC_TOOL_ARROW },
   { id: 'pen',       icon: 'edit',                 labelKey: GRAPHIC_TOOL_PEN },
   { id: 'sticker',   icon: 'sticky_note_2',        labelKey: GRAPHIC_TOOL_STICKER },
 ];
 
 /**
- * Bottom-centre floating toolbar that shows the five tool buttons.
+ * Bottom-centre floating toolbar that shows the tool buttons.
  * Mounted inside the GraphicEditor element, owned by it.
  */
 export class BottomToolbar {
@@ -71,9 +69,6 @@ export class BottomToolbar {
 
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        if (def.id === 'arrow') {
-          eventBus.emit('graphic:open-arrow-defaults');
-        }
         options.onToolSelect(def.id);
       });
 

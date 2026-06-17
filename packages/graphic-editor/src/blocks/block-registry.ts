@@ -52,11 +52,11 @@ export class GraphicBlockRegistry {
       const def: AnyGraphicBlockDefinition = {
         type: `custom:${cb.id}`,
         staticLabel: cb.name,
-        icon: 'widgets',
+        icon: '<rect x="5" y="5" width="14" height="14" rx="1" stroke-dasharray="3 2"/>',
         groupKey: CUSTOM_BLOCK_GROUP_KEY,
 
         defaultData() {
-          return { x: 0, y: 0, width, height };
+          return { x: 0, y: 0, width, height, freeResize: false };
         },
 
         renderSvg(node) {

@@ -20,10 +20,7 @@ export interface AddElementCommandOptions {
    * Use when the caller manages frame attachment explicitly (e.g. FrameController).
    */
   skipFrameAttach?: boolean;
-  /**
-   * Optional ID prefix passed to `generateId`. Defaults to `'el'`.
-   * Use `'conn'` for arrows (connectors).
-   */
+  /** Optional ID prefix passed to `generateId`. Defaults to `'el'`. */
   idPrefix?: IdPrefix;
   /**
    * When provided, `getEffectiveDefaults` is used instead of raw
