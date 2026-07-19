@@ -59,6 +59,8 @@ export interface TextEditorOptions {
    * @experimental
    */
   clipboard?: TextEditorClipboardOptions;
+  /** When true, document is view-only: no editing, toolbars, or clipboard handling. */
+  readOnly?: boolean;
 }
 
 const STYLE_ID = 'idea-editor-styles';
@@ -110,7 +112,7 @@ export class TextEditor extends HTMLElement {
   private ctx!: EditorContext;
   private blockRenderer!: BlockRenderer;
   private selectionSync!: SelectionSync;
-  private inputInterceptor!: InputInterceptor;
+  private inputInterceptor?: InputInterceptor;
   private slashPalette!: SlashPaletteLike;
   private clipboardHandler!: ClipboardHandler;
   private floatingToolbar!: FloatingToolbarLike;
@@ -147,6 +149,14 @@ export class TextEditor extends HTMLElement {
     ensureGlobalEditorStyles(options);
     setExtraStyleOnHost(this, options?.extraStyleText);
 
+    const readOnly = options?.readOnly === true;
+    this.container.setAttribute('contenteditable', readOnly ? 'false' : 'true');
+    if (readOnly) {
+      this.container.classList.add('idea-text-editor--read-only');
+    } else {
+      this.container.classList.remove('idea-text-editor--read-only');
+    }
+
     const selectionManager = new SelectionManager(eventBus);
     const blockRegistry = new BlockRegistry();
     const i18n = new I18nService(options?.locale ?? 'en', options?.i18nOverrides);
@@ -170,6 +180,17 @@ export class TextEditor extends HTMLElement {
 
     this.blockRenderer = new BlockRenderer(blockRegistry);
     this.selectionSync = new SelectionSync();
+
+    if (readOnly) {
+      this.render();
+      this.eventDisposers.push(
+        eventBus.on('doc:change', () => this.render()),
+        eventBus.on('history:undo', () => this.render()),
+        eventBus.on('history:redo', () => this.render()),
+      );
+      return;
+    }
+
     this.inputInterceptor = new InputInterceptor(this.ctx, this.blockRenderer, this.selectionSync);
 
     const tb = options?.toolbars;

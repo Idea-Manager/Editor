@@ -6,7 +6,7 @@ const Dotenv = require('dotenv-webpack');
 
 const config = {
   entry: {
-    main: './src/main.ts',
+    main: './src/dev/main.ts',
   },
   output: {
     clean: true,

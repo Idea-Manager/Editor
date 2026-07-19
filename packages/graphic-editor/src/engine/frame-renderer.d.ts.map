@@ -1,0 +1,1 @@
+{"version":3,"file":"frame-renderer.d.ts","sourceRoot":"","sources":["frame-renderer.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,YAAY,EAAE,MAAM,wBAAwB,CAAC;AAI3D;;;;;;;;;;GAUG;AACH,qBAAa,aAAa;IACxB;;;;;;OAMG;IACH,WAAW,CACT,KAAK,EAAE,YAAY,EACnB,UAAU,EAAE,WAAW,EACvB,SAAS,EAAE,WAAW,GACrB,IAAI;IAQP,OAAO,CAAC,UAAU;IAkBlB,OAAO,CAAC,YAAY;CAWrB"}

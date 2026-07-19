@@ -1,0 +1,26 @@
+export { generateId } from './id';
+export type { IdPrefix } from './id';
+export type { Node, NodeMeta, DocumentNode, GraphicPageNode, BlockNode, BlockType, TextRun, InlineMark, ParagraphData, HeadingData, ListType, ListItemData, EmbedData, GraphicBlockData, TableData, TableRow, TableCell, CellBorderStyle, BlockSelection, AssetMap, GraphicElement, FrameElement, Point, Size, Rect, } from './model/interfaces';
+export type { GraphicPreferences, CustomBlockDefinition } from './model/graphic-preferences';
+export { getGraphicPreferences, getCustomBlocks, DOCUMENT_DATA_KEYS } from './model/document-data';
+export { createDocument, createParagraph, createHeading, createTextRun, createGraphicPage, createFrame, } from './model/factory';
+export type { OperationType, OperationRecord, OperationPayload, NodeInsertPayload, NodeDeletePayload, NodeUpdatePayload, NodeMovePayload, TextInsertPayload, TextDeletePayload, } from './operation-log/interfaces';
+export { EventBus } from './events/event-bus';
+export type { EditorEvent } from './events/event-bus';
+export type { Command } from './commands/command';
+export { CompositeCommand } from './commands/composite-command';
+export { batchCommands } from './commands/helpers';
+export { UndoRedoManager } from './history/undo-redo-manager';
+export { DocumentSerializer } from './serialization/serializer';
+export { DocumentDeserializer } from './serialization/deserializer';
+export { validateDocument } from './serialization/validator';
+export type { ValidationResult } from './serialization/validator';
+export { migrateDocument, LATEST_SCHEMA_VERSION } from './serialization/migrations';
+export { ShortcutManager, isKeyboardEventFromEditableTarget } from './shortcuts/shortcut-manager';
+export type { ShortcutEntry, ShortcutScope } from './shortcuts/shortcut-manager';
+export { detectOS, isMac } from './platform/os-detection';
+export type { OS } from './platform/os-detection';
+export { formatHotkey, hotkeyLabel } from './platform/hotkey';
+export { I18nService, mergeDictionaries } from './i18n/i18n';
+export type { Locale, TranslationDictionary } from './i18n/types';
+//# sourceMappingURL=index.d.ts.map

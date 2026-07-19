@@ -16,13 +16,19 @@ export interface TopBarConfig {
   onDocReplace: (doc: DocumentNode) => void;
   onModeChange: (mode: ActiveMode) => void;
   initialMode: ActiveMode;
+  visibleModes?: ActiveMode[];
+  showModeSwitcher?: boolean;
+  showImportExport?: boolean;
+  showUndoRedo?: boolean;
+  readOnly?: boolean;
 }
 
 export class TopBar {
   readonly element: HTMLElement;
-  private undoBtn!: HTMLButtonElement;
-  private redoBtn!: HTMLButtonElement;
+  private undoBtn: HTMLButtonElement | null = null;
+  private redoBtn: HTMLButtonElement | null = null;
   private saveDot!: HTMLElement;
+  private titleInput: HTMLInputElement | null = null;
   private modeButtons: HTMLButtonElement[] = [];
   private unsaved = false;
   private readonly disposers: (() => void)[] = [];
@@ -52,13 +58,18 @@ export class TopBar {
   }
 
   private build(): void {
-    const { doc, undoRedoManager, i18n } = this.config;
+    const { undoRedoManager, i18n, readOnly } = this.config;
     const t = i18n.t.bind(i18n);
 
     const titleInput = document.createElement('input');
     titleInput.classList.add('top-bar__title');
     titleInput.value = t('topbar.untitled');
     titleInput.spellcheck = false;
+    if (readOnly) {
+      titleInput.readOnly = true;
+      titleInput.tabIndex = -1;
+    }
+    this.titleInput = titleInput;
     this.element.appendChild(titleInput);
 
     this.saveDot = document.createElement('span');
@@ -69,42 +80,45 @@ export class TopBar {
     spacer.classList.add('top-bar__spacer');
     this.element.appendChild(spacer);
 
-    // Mode segmented control — LEFT of history group
-    const modeGroup = this.buildModeControl(t);
-    this.element.appendChild(modeGroup);
+    if (this.config.showModeSwitcher !== false) {
+      const visibleModes = this.config.visibleModes ?? ['text', 'graphic'];
+      const modeGroup = this.buildModeControl(t, visibleModes);
+      this.element.appendChild(modeGroup);
+      this.element.appendChild(this.createSeparator());
+    }
 
-    this.element.appendChild(this.createSeparator());
+    if (this.config.showUndoRedo !== false && !readOnly) {
+      const historyGroup = document.createElement('div');
+      historyGroup.classList.add('top-bar__group');
 
-    const historyGroup = document.createElement('div');
-    historyGroup.classList.add('top-bar__group');
+      this.undoBtn = this.createButton('undo', hotkeyLabel(t('topbar.undo'), 'mod+z'), () => undoRedoManager.undo(), true);
+      this.redoBtn = this.createButton('redo', hotkeyLabel(t('topbar.redo'), 'mod+shift+z'), () => undoRedoManager.redo(), true);
+      this.undoBtn.disabled = !undoRedoManager.canUndo;
+      this.redoBtn.disabled = !undoRedoManager.canRedo;
 
-    this.undoBtn = this.createButton('undo', hotkeyLabel(t('topbar.undo'), 'mod+z'), () => undoRedoManager.undo(), true);
-    this.redoBtn = this.createButton('redo', hotkeyLabel(t('topbar.redo'), 'mod+shift+z'), () => undoRedoManager.redo(), true);
-    this.undoBtn.disabled = !undoRedoManager.canUndo;
-    this.redoBtn.disabled = !undoRedoManager.canRedo;
+      historyGroup.appendChild(this.undoBtn);
+      historyGroup.appendChild(this.redoBtn);
+      this.element.appendChild(historyGroup);
+      this.element.appendChild(this.createSeparator());
+    }
 
-    historyGroup.appendChild(this.undoBtn);
-    historyGroup.appendChild(this.redoBtn);
-    this.element.appendChild(historyGroup);
+    if (this.config.showImportExport !== false && !readOnly) {
+      const ioGroup = document.createElement('div');
+      ioGroup.classList.add('top-bar__group');
 
-    this.element.appendChild(this.createSeparator());
+      ioGroup.appendChild(this.createButton(t('topbar.import'), t('topbar.importJson'), () => {
+        importJSON(this.config.doc, this.config.eventBus, this.config.onDocReplace, i18n);
+      }));
+      ioGroup.appendChild(this.createButton(t('topbar.export'), t('topbar.exportJson'), () => exportJSON(this.config.doc, i18n)));
+      ioGroup.appendChild(this.createButton(t('topbar.copy'), t('topbar.copyJson'), () => copyJSON(this.config.doc, i18n)));
+      ioGroup.appendChild(this.createButton(t('topbar.preview'), t('topbar.previewJson'), () => showJSONPreview(this.config.doc, i18n)));
 
-    const ioGroup = document.createElement('div');
-    ioGroup.classList.add('top-bar__group');
-
-    ioGroup.appendChild(this.createButton(t('topbar.import'), t('topbar.importJson'), () => {
-      importJSON(this.config.doc, this.config.eventBus, this.config.onDocReplace, i18n);
-    }));
-    ioGroup.appendChild(this.createButton(t('topbar.export'), t('topbar.exportJson'), () => exportJSON(this.config.doc, i18n)));
-    ioGroup.appendChild(this.createButton(t('topbar.copy'), t('topbar.copyJson'), () => copyJSON(this.config.doc, i18n)));
-    ioGroup.appendChild(this.createButton(t('topbar.preview'), t('topbar.previewJson'), () => showJSONPreview(this.config.doc, i18n)));
-
-    this.element.appendChild(ioGroup);
+      this.element.appendChild(ioGroup);
+    }
   }
 
-  private buildModeControl(t: (key: string) => string): HTMLElement {
+  private buildModeControl(t: (key: string) => string, modes: ActiveMode[]): HTMLElement {
     const { initialMode, onModeChange } = this.config;
-    const modes: ActiveMode[] = ['text', 'graphic'];
 
     const group = document.createElement('div');
     group.classList.add('top-bar__group', 'top-bar__mode');
@@ -176,6 +190,7 @@ export class TopBar {
     const { eventBus, undoRedoManager } = this.config;
 
     const updateButtons = () => {
+      if (!this.undoBtn || !this.redoBtn) return;
       this.undoBtn.disabled = !undoRedoManager.canUndo;
       this.redoBtn.disabled = !undoRedoManager.canRedo;
     };

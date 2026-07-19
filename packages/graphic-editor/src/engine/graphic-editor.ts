@@ -62,6 +62,8 @@ export interface GraphicEditorOptions {
   blocks?: GraphicBlockDefinition[];
   /** Options for the left-panel block library. */
   leftPanel?: LeftPanelOptions;
+  /** When true, canvas is view-only: pan/zoom allowed, editing tools disabled. */
+  readOnly?: boolean;
 }
 
 const STYLE_ID = 'idea-graphic-editor-styles';
@@ -114,17 +116,17 @@ export class GraphicEditor extends HTMLElement {
 
   private toolState!: ToolState;
   private selectionManager!: GraphicSelectionManager;
-  private dragController!: DragController;
-  private resizeController!: ResizeController;
-  private lassoController!: LassoController;
-  private placementController!: PlacementController;
-  private frameController!: FrameController;
-  private penController!: PenController;
+  private dragController?: DragController;
+  private resizeController?: ResizeController;
+  private lassoController?: LassoController;
+  private placementController?: PlacementController;
+  private frameController?: FrameController;
+  private penController?: PenController;
   private floatingPropertiesWindow: FloatingPropertiesWindow | null = null;
   private groupController: GroupController | null = null;
-  private bottomToolbar!: BottomToolbar;
-  private leftPanel!: LeftPanel;
-  private shortcutManager!: ShortcutManager;
+  private bottomToolbar?: BottomToolbar;
+  private leftPanel?: LeftPanel;
+  private shortcutManager?: ShortcutManager;
 
   // Mutable reference used by the viewport controller closures so that
   // replaceDocument / setPage can swap pages without rebuilding ViewportController.
@@ -168,6 +170,11 @@ export class GraphicEditor extends HTMLElement {
 
     ensureGlobalStyles(options);
     setExtraStyle(this, options?.extraStyleText);
+
+    const readOnly = options?.readOnly === true;
+    if (readOnly) {
+      this.classList.add('idea-graphic-editor--read-only');
+    }
 
     const i18n = new I18nService(options?.locale ?? 'en', options?.i18nOverrides);
     this.activePage = this.resolvePage(doc, options?.pageId, i18n);
@@ -222,18 +229,21 @@ export class GraphicEditor extends HTMLElement {
     // Selection system
     this.selectionManager = new GraphicSelectionManager(this.ctx);
     this.ctx.focusManager = new GraphicFocusManager(this.selectionManager, this.toolState);
-    this.dragController = new DragController(this.ctx, this.selectionManager);
-    this.resizeController = new ResizeController(this.ctx, this.selectionManager);
-    this.lassoController = new LassoController(this.ctx, this.selectionManager, selectionLayer);
 
-    // Placement controller (ghost + sticker single-click)
-    this.placementController = new PlacementController(this.ctx, this.selectionManager, canvas);
+    if (!readOnly) {
+      this.dragController = new DragController(this.ctx, this.selectionManager);
+      this.resizeController = new ResizeController(this.ctx, this.selectionManager);
+      this.lassoController = new LassoController(this.ctx, this.selectionManager, selectionLayer);
 
-    // Frame controller (drag-to-create frames)
-    this.frameController = new FrameController(this.ctx, canvas, this.canvasRenderer);
+      // Placement controller (ghost + sticker single-click)
+      this.placementController = new PlacementController(this.ctx, this.selectionManager, canvas);
 
-    // Pen controller (freehand path drawing)
-    this.penController = new PenController(this.ctx, canvas, this.canvasRenderer);
+      // Frame controller (drag-to-create frames)
+      this.frameController = new FrameController(this.ctx, canvas, this.canvasRenderer);
+
+      // Pen controller (freehand path drawing)
+      this.penController = new PenController(this.ctx, canvas, this.canvasRenderer);
+    }
 
     // Apply initial viewport and render initial page state
     this.canvasRenderer.applyViewport(viewportController);
@@ -243,22 +253,26 @@ export class GraphicEditor extends HTMLElement {
     this.zoomPanel = new ZoomPanel(viewportController, canvas, eventBus, i18n);
     this.zoomPanel.mount(canvas);
 
-    // Bottom toolbar — mounted inside canvas so it stays in the canvas grid column
-    this.bottomToolbar = new BottomToolbar(eventBus, i18n, {
-      onToolSelect: (tool) => this.ctx.focusManager!.activateTool(tool),
-    });
-    this.bottomToolbar.mount(canvas);
+    if (!readOnly) {
+      // Bottom toolbar — mounted inside canvas so it stays in the canvas grid column
+      this.bottomToolbar = new BottomToolbar(eventBus, i18n, {
+        onToolSelect: (tool) => this.ctx.focusManager!.activateTool(tool),
+      });
+      this.bottomToolbar.mount(canvas);
 
-    // Left panel block library — inserted before canvas (first child) → grid column 1
-    this.leftPanel = new LeftPanel(this, this.ctx, options?.leftPanel);
-    this.leftPanel.mount();
+      // Left panel block library — inserted before canvas (first child) → grid column 1
+      this.leftPanel = new LeftPanel(this, this.ctx, options?.leftPanel);
+      this.leftPanel.mount();
 
-    // Keyboard shortcuts (graphic scope) — attach to host so they work when focus
-    // is outside the canvas (e.g. left panel) and for contenteditable shape text.
-    this.shortcutManager = new ShortcutManager();
-    this.shortcutManager.setScope('graphic');
-    this._registerShortcuts();
-    this.eventDisposers.push(this.shortcutManager.attach(this));
+      // Keyboard shortcuts (graphic scope) — attach to host so they work when focus
+      // is outside the canvas (e.g. left panel) and for contenteditable shape text.
+      this.shortcutManager = new ShortcutManager();
+      this.shortcutManager.setScope('graphic');
+      this._registerShortcuts();
+      this.eventDisposers.push(this.shortcutManager.attach(this));
+    } else {
+      this.ctx.focusManager!.activateTool('hand');
+    }
 
     const onShapeTextFocusIn = (e: FocusEvent) => {
       const t = e.target;
@@ -313,33 +327,35 @@ export class GraphicEditor extends HTMLElement {
       }),
     );
 
-    this.bindPointerEvents(canvas, viewportController);
+    this.bindPointerEvents(canvas, viewportController, readOnly);
 
-    // Sync custom block definitions whenever the document's customBlocks array changes,
-    // then refresh the left panel so new custom blocks appear immediately.
-    this.eventDisposers.push(
-      eventBus.on('doc:change', () => {
-        registry.syncCustomBlocks(this.ctx.document);
-        this.leftPanel.refresh();
-      }),
-    );
-
-    // GroupController — routes selection:change to the correct window
-    this.groupController = new GroupController({
-      ctx: this.ctx,
-      showPropertiesWindow: (el) => this._openPropertiesWindow(el),
-      hidePropertiesWindow: () => this._closePropertiesWindow(),
-      createGroupPropertiesWindow: (host) =>
-        new GroupPropertiesWindow(host, {
-          i18n: this.ctx.i18n,
-          ctx: this.ctx,
-          hostSelector: '.idea-graphic-editor',
-          selection: this.selectionManager.getSelection(),
-          onClose: () => {
-            this.selectionManager?.clear();
-          },
+    if (!readOnly) {
+      // Sync custom block definitions whenever the document's customBlocks array changes,
+      // then refresh the left panel so new custom blocks appear immediately.
+      this.eventDisposers.push(
+        eventBus.on('doc:change', () => {
+          registry.syncCustomBlocks(this.ctx.document);
+          this.leftPanel?.refresh();
         }),
-    });
+      );
+
+      // GroupController — routes selection:change to the correct window
+      this.groupController = new GroupController({
+        ctx: this.ctx,
+        showPropertiesWindow: (el) => this._openPropertiesWindow(el),
+        hidePropertiesWindow: () => this._closePropertiesWindow(),
+        createGroupPropertiesWindow: (host) =>
+          new GroupPropertiesWindow(host, {
+            i18n: this.ctx.i18n,
+            ctx: this.ctx,
+            hostSelector: '.idea-graphic-editor',
+            selection: this.selectionManager.getSelection(),
+            onClose: () => {
+              this.selectionManager?.clear();
+            },
+          }),
+      });
+    }
 
     // ResizeObserver keeps layout fresh whenever the host element's box changes
     // (window resize, side-panel toggle, etc.). Disconnected in disconnectedCallback.
@@ -425,6 +441,8 @@ export class GraphicEditor extends HTMLElement {
   }
 
   private _registerShortcuts(): void {
+    if (!this.shortcutManager) return;
+
     const { i18n, undoRedoManager } = this.ctx;
     const notFromEditableField = (e: KeyboardEvent) => !isKeyboardEventFromEditableTarget(e);
 
@@ -493,13 +511,13 @@ export class GraphicEditor extends HTMLElement {
           } else if (this.toolState.getTool() === 'sticker') {
             this.ctx.focusManager!.activateTool('selection');
           } else if (this.toolState.getTool() === 'frame') {
-            if (this.frameController.isDrawing()) {
+            if (this.frameController?.isDrawing()) {
               this.frameController.cancelDraw();
             } else {
               this.ctx.focusManager!.activateTool('selection');
             }
           } else if (this.toolState.getTool() === 'pen') {
-            if (this.penController.isDrawing()) {
+            if (this.penController?.isDrawing()) {
               this.penController.cancelDraw();
             } else {
               this.ctx.focusManager!.activateTool('selection');
@@ -554,7 +572,7 @@ export class GraphicEditor extends HTMLElement {
     this.floatingPropertiesWindow?.close();
   }
 
-  private bindPointerEvents(canvas: HTMLDivElement, vc: ViewportController): void {
+  private bindPointerEvents(canvas: HTMLDivElement, vc: ViewportController, readOnly = false): void {
     let isPanning = false;
     let isSpaceDown = false;
     let panStartX = 0;
@@ -605,6 +623,8 @@ export class GraphicEditor extends HTMLElement {
         canvas.classList.add('idea-graphic-canvas--panning');
       }
 
+      if (readOnly) return;
+
       // Delete / Backspace — remove selected elements
       if ((e.code === 'Delete' || e.code === 'Backspace') && !isSpaceDown) {
         // Do not intercept when typing inside an input or contenteditable
@@ -636,6 +656,8 @@ export class GraphicEditor extends HTMLElement {
 
     // Pointer-based tool routing: placement/sticker → frame → pen → selection
     const onPointerDown = (e: PointerEvent) => {
+      if (readOnly) return;
+
       // Middle-button / space+left-button handled by panning logic above
       if (e.button !== 0) return;
       if (isSpaceDown) return;
@@ -646,17 +668,17 @@ export class GraphicEditor extends HTMLElement {
       const tool = this.toolState.getTool();
 
       if (tool === 'placement' || tool === 'sticker') {
-        this.placementController.handlePointerDown(e);
+        this.placementController?.handlePointerDown(e);
         return;
       }
 
       if (tool === 'frame') {
-        this.frameController.handlePointerDown(e);
+        this.frameController?.handlePointerDown(e);
         return;
       }
 
       if (tool === 'pen') {
-        this.penController.handlePointerDown(e);
+        this.penController?.handlePointerDown(e);
         return;
       }
 

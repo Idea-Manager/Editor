@@ -46,10 +46,46 @@ function makeEnv(initialMode?: 'text' | 'graphic') {
   const shortcuts = new ShortcutManager();
   jest.spyOn(shortcuts, 'setScope');
 
-  const shell = new AppShell({ doc, eventBus, undoRedoManager, i18n, shortcuts });
+  const shell = new AppShell({
+    doc,
+    eventBus,
+    undoRedoManager,
+    i18n,
+    shortcuts,
+    shellMode: 'both',
+  });
   document.body.appendChild(shell.element);
   // mount() must be called after appendChild so connectedCallback fires for editors
   // before init() runs, and so topBar / graphicEditor / textEditor are available.
+  shell.mount();
+
+  return { shell, doc, eventBus, shortcuts };
+}
+
+function makeInlineEnv(statusBar = false) {
+  const doc = createDocument();
+  const eventBus = new EventBus();
+  const undoRedoManager = new UndoRedoManager(eventBus);
+  const i18n = new I18nService('en');
+  const shortcuts = new ShortcutManager();
+
+  const shell = new AppShell({
+    doc,
+    eventBus,
+    undoRedoManager,
+    i18n,
+    shortcuts,
+    shellMode: 'text',
+    view: 'inline',
+    chrome: {
+      showTopBar: false,
+      showStatusBar: statusBar,
+      showModeSwitcher: false,
+      showImportExport: false,
+      showUndoRedo: false,
+    },
+  });
+  document.body.appendChild(shell.element);
   shell.mount();
 
   return { shell, doc, eventBus, shortcuts };
@@ -175,5 +211,37 @@ describe('AppShell.replaceDocument', () => {
     const newDoc = createDocument();
     shell.replaceDocument(newDoc);
     expect(shell.getDocument()).toBe(newDoc);
+  });
+});
+
+describe('AppShell view modes', () => {
+  it('defaults to full view modifier class', () => {
+    const { shell } = makeEnv();
+    expect(shell.element.classList.contains('app-shell--full')).toBe(true);
+    expect(shell.element.classList.contains('app-shell--inline')).toBe(false);
+  });
+
+  it('mounts top bar and status bar by default in full view', () => {
+    const { shell } = makeEnv();
+    expect(shell.element.querySelector('.top-bar')).not.toBeNull();
+    expect(shell.element.querySelector('.status-bar')).not.toBeNull();
+  });
+
+  it('adds inline view modifier class', () => {
+    const { shell } = makeInlineEnv();
+    expect(shell.element.classList.contains('app-shell--inline')).toBe(true);
+    expect(shell.element.classList.contains('app-shell--full')).toBe(false);
+  });
+
+  it('inline view hides top bar and status bar by default', () => {
+    const { shell } = makeInlineEnv(false);
+    expect(shell.element.querySelector('.top-bar')).toBeNull();
+    expect(shell.element.querySelector('.status-bar')).toBeNull();
+  });
+
+  it('inline view shows status bar when enabled', () => {
+    const { shell } = makeInlineEnv(true);
+    expect(shell.element.querySelector('.top-bar')).toBeNull();
+    expect(shell.element.querySelector('.status-bar')).not.toBeNull();
   });
 });

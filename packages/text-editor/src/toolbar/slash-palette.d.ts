@@ -1,0 +1,44 @@
+import type { BlockType } from '@core/model/interfaces';
+import type { EditorContext } from '../engine/editor-context';
+import type { SlashPaletteOptions } from './toolbar-options';
+export type SlashPaletteMode = 'change' | 'insert';
+export declare class SlashPalette {
+    private readonly ctx;
+    private readonly host;
+    private readonly paletteOptions?;
+    private overlay;
+    private activeIndex;
+    private filterText;
+    private filteredItems;
+    private visible;
+    private blockId;
+    private mode;
+    private anchorRect;
+    private readonly disposers;
+    private tableSizePicker;
+    private boundOnClickOutside;
+    private paletteExcludeTypes;
+    constructor(ctx: EditorContext, host: HTMLElement, paletteOptions?: SlashPaletteOptions | undefined);
+    private applyPaletteFilter;
+    destroy(): void;
+    isVisible(): boolean;
+    private attach;
+    show(blockId: string, mode?: SlashPaletteMode, anchorRect?: DOMRect, excludeTypes?: BlockType[]): void;
+    hide(): void;
+    updateFilter(char: string): void;
+    private handleNavigationKey;
+    private confirm;
+    private applyPaletteItem;
+    private changeBlock;
+    private insertBlock;
+    private showTablePicker;
+    private showEmbedPicker;
+    private changeToTable;
+    private insertTableBlock;
+    private createOverlay;
+    private positionOverlay;
+    private onClickOutside;
+    private updateHighlight;
+    private renderItems;
+}
+//# sourceMappingURL=slash-palette.d.ts.map

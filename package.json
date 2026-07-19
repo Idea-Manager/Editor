@@ -3,10 +3,27 @@
   "version": "0.0.1",
   "private": true,
   "description": "Block text and graphic editor in one workspace—text and graphic modes with embeddable graphic frames in documents",
+  "main": "./dist/idea-editor.umd.cjs",
+  "module": "./dist/idea-editor.esm.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/idea-editor.esm.js",
+      "require": "./dist/idea-editor.umd.cjs",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "sideEffects": false,
   "scripts": {
     "dev": "webpack serve --config webpack/webpack.dev.js",
-    "build": "webpack --config webpack/webpack.prod.js",
-    "build:analyze": "ANALYZE=true webpack --config webpack/webpack.prod.js",
+    "build": "npm run build:lib",
+    "build:lib": "node scripts/build-lib.mjs",
+    "build:analyze": "ANALYZE=true webpack --config webpack/webpack.lib.js",
     "pretest": "npm run check:text-editor-imports && npm run check:graphic-editor-imports && npm run check:graphic-i18n",
     "test": "jest",
     "check:text-editor-imports": "node scripts/check-text-editor-imports.mjs",
@@ -30,6 +47,7 @@
     "html-webpack-plugin": "^5.6.3",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^30.3.0",
+    "mini-css-extract-plugin": "^2.10.2",
     "sass": "^1.87.0",
     "sass-loader": "^16.0.5",
     "style-loader": "^4.0.0",
