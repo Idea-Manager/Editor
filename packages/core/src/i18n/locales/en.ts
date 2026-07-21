@@ -121,7 +121,82 @@ export const en: TranslationDictionary = {
   'io.copyButton': 'Copy',
   'io.jsonCopied': 'JSON copied',
 
+  // Mode toggle
+  'mode.text': 'Text',
+  'mode.graphic': 'Graphic',
+  'mode.toggle.aria': 'Editor mode',
+
   // Shortcut labels
   'shortcut.commandPalette': 'Command Palette',
   'shortcut.exportJson': 'Export JSON',
+
+  // Graphic editor — page & viewport
+  'graphic.page.untitled': 'Untitled page',
+  'graphic.zoom.label': 'Zoom:',
+  'graphic.zoom.in': 'Zoom in',
+  'graphic.zoom.out': 'Zoom out',
+  'graphic.viewport.percent': '{percent}%',
+
+  // Graphic editor — block labels
+  'graphic.block.path': 'Drawing',
+  'graphic.block.rectangle': 'Rectangle',
+  'graphic.block.triangle': 'Triangle',
+  'graphic.block.circle': 'Circle',
+  'graphic.block.sticker': 'Sticker',
+  'graphic.group.shapes': 'Shapes',
+
+  // Graphic editor — frame
+  'graphic.frame.defaultName': 'Frame {n}',
+  'graphic.frame.label': '{name}',
+
+  // Graphic editor — tools
+  'graphic.tool.selection': 'Selection',
+  'graphic.tool.frame': 'Frame',
+  'graphic.tool.pen': 'Pen',
+  'graphic.tool.sticker': 'Sticker',
+  'graphic.tool.hand': 'Hand',
+  'graphic.placement.cancel': 'Press ESC to cancel placement',
+
+  // Graphic editor — selection handles
+  'graphic.handle.move': 'Move',
+  'graphic.handle.resize-nw': 'Resize from top-left',
+  'graphic.handle.resize-ne': 'Resize from top-right',
+  'graphic.handle.resize-se': 'Resize from bottom-right',
+  'graphic.handle.resize-sw': 'Resize from bottom-left',
+
+  // Graphic editor — tools (hints)
+  'graphic.tool.pen.hint': 'Drag to draw a freehand stroke',
+
+  // Graphic editor — block properties
+  'graphic.props.window.title': '{label}',
+  'graphic.props.window.close': 'Close',
+  'graphic.props.text': 'Text',
+  'graphic.props.htmlTemplate': 'Template',
+  'graphic.props.pivots': 'Pivot points',
+  'graphic.props.text.placeholder': 'Type something…',
+  'graphic.props.border': 'Border',
+  'graphic.props.background': 'Background',
+  'graphic.props.strokeColor': 'Stroke color',
+  'graphic.props.textColor': 'Text color',
+  'graphic.props.fontSize': 'Font size',
+  'graphic.props.color': 'Color',
+  'graphic.props.thickness': 'Thickness',
+
+  // Graphic editor — group properties window
+  'graphic.group.title': 'Selection ({count})',
+  'graphic.group.lock': 'Lock',
+  'graphic.group.group': 'Group',
+  'graphic.group.createBlock': 'Create new block',
+  'graphic.group.createBlock.input': 'Name',
+  'graphic.group.createBlock.success': 'Saved "{name}" to Custom',
+  'graphic.group.empty': 'Custom blocks appear here once you create them',
+  'graphic.group.custom': 'Custom',
+  'graphic.block.tile.add': 'Click to place. ESC to cancel.',
+
+  // Graphic editor — left panel toolbar
+  'graphic.leftPanel.sortChapters': 'Sort chapters',
+  'graphic.leftPanel.expandAll': 'Expand all chapters',
+  'graphic.leftPanel.collapseAll': 'Collapse all chapters',
+  'graphic.leftPanel.viewTiles': 'Tile view',
+  'graphic.leftPanel.viewList': 'List view',
 };

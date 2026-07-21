@@ -1,0 +1,86 @@
+@use '../../../../src/styles/variables' as *;
+
+.idea-graphic-block-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 75px;
+  height: 75px;
+  gap: 4px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+  color: $color-text-secondary;
+  padding: $spacing-xs;
+  transition: background-color 0.1s ease, color 0.1s ease;
+  flex-shrink: 0;
+
+  &:hover {
+    background: $gray-100;
+    color: $color-text;
+  }
+
+  &:active {
+    box-shadow: inset 0 1px 3px rgba($black, 0.12);
+  }
+
+  &__icon {
+    line-height: 1;
+    user-select: none;
+
+    &--svg {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      svg {
+        width: 38px;
+        height: 38px;
+        flex-shrink: 0;
+      }
+    }
+  }
+
+  &__label {
+    font-family: $font-family-base;
+    font-size: $font-size-base;
+    line-height: 1.2;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 71px;
+    user-select: none;
+  }
+
+  &--list {
+    flex-direction: row;
+    width: 100%;
+    height: 40px;
+    justify-content: flex-start;
+    gap: $spacing-sm;
+    padding: $spacing-xs $spacing-sm;
+
+    .idea-graphic-block-tile__icon {
+      width: 40px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      &--svg svg {
+        width: 24px;
+        height: 24px;
+      }
+    }
+
+    .idea-graphic-block-tile__label {
+      flex: 1;
+      text-align: left;
+      max-width: none;
+      font-size: $font-size-sm;
+    }
+  }
+}

@@ -39,9 +39,27 @@ $color-error:          #ef4444;
 $color-error-dark:     #991b1b;
 $color-success-dark:   #166534;
 
+// ── Graphic editor accent (lone intentional deviation from monochrome) ──
+// Matches $color-link blue; used exclusively for selection handles and lasso.
+$color-graphic-accent:        #2563eb;
+$color-graphic-selection:     $color-graphic-accent;
+$color-graphic-handle-stroke: $black;
+$color-graphic-handle-fill:   $color-graphic-accent;
+$color-graphic-lasso-bg:      rgba($color-graphic-accent, 0.10);
+
+// ── Graphic editor left panel ──────────────────────────
+$color-graphic-left-panel-bg:        $color-bg-subtle;
+$color-graphic-left-panel-sticky-bg: $white;
+
 // ── Spacing ────────────────────────────────────────────
 $spacing-xs: 4px;
 $spacing-sm: 8px;
 $spacing-md: 16px;
 $spacing-lg: 24px;
 $spacing-xl: 32px;
+
+// ── Border radius ──────────────────────────────────────
+$radius-md: 8px;
+
+// ── Editor inline view ─────────────────────────────────
+$editor-inline-min-height: 100px;

@@ -6,6 +6,7 @@ import { I18nService } from '@core/i18n/i18n';
 import type { EditorContext } from './editor-context';
 import { SelectionManager } from './selection-manager';
 import { SelectionSync } from './selection-sync';
+import { scheduleScrollCaretIntoView } from './scroll-caret-into-view';
 import { BlockRegistry } from '../blocks/block-registry';
 import type { AnyBlockDefinition } from '../blocks/block-registry';
 import { registerDefaultBlocks } from '../blocks/register-default-blocks';
@@ -59,6 +60,8 @@ export interface TextEditorOptions {
    * @experimental
    */
   clipboard?: TextEditorClipboardOptions;
+  /** When true, document is view-only: no editing, toolbars, or clipboard handling. */
+  readOnly?: boolean;
 }
 
 const STYLE_ID = 'idea-editor-styles';
@@ -110,7 +113,7 @@ export class TextEditor extends HTMLElement {
   private ctx!: EditorContext;
   private blockRenderer!: BlockRenderer;
   private selectionSync!: SelectionSync;
-  private inputInterceptor!: InputInterceptor;
+  private inputInterceptor?: InputInterceptor;
   private slashPalette!: SlashPaletteLike;
   private clipboardHandler!: ClipboardHandler;
   private floatingToolbar!: FloatingToolbarLike;
@@ -120,6 +123,8 @@ export class TextEditor extends HTMLElement {
   private readonly eventDisposers: (() => void)[] = [];
 
   connectedCallback(): void {
+    // Idempotent: safe to call more than once (e.g. HMR remount, or called defensively from init()).
+    if (this.container) return;
     this.classList.add('idea-editor');
 
     this.container = document.createElement('div');
@@ -131,9 +136,27 @@ export class TextEditor extends HTMLElement {
     this.appendChild(this.container);
   }
 
+  /**
+   * Called by the host after this element transitions from display:none to visible.
+   * No-op for TextEditor — layout is handled by the browser without re-measuring.
+   * Exists for API symmetry with GraphicEditor so AppShell can call it uniformly.
+   */
+  onHostResize(): void {}
+
   init(doc: DocumentNode, eventBus: EventBus, undoRedoManager: UndoRedoManager, options?: TextEditorOptions): void {
+    // init() may be called before connectedCallback if the host inserts us off-tree.
+    // Calling connectedCallback() directly is safe because it is idempotent.
+    if (!this.container) this.connectedCallback();
     ensureGlobalEditorStyles(options);
     setExtraStyleOnHost(this, options?.extraStyleText);
+
+    const readOnly = options?.readOnly === true;
+    this.container.setAttribute('contenteditable', readOnly ? 'false' : 'true');
+    if (readOnly) {
+      this.container.classList.add('idea-text-editor--read-only');
+    } else {
+      this.container.classList.remove('idea-text-editor--read-only');
+    }
 
     const selectionManager = new SelectionManager(eventBus);
     const blockRegistry = new BlockRegistry();
@@ -158,6 +181,17 @@ export class TextEditor extends HTMLElement {
 
     this.blockRenderer = new BlockRenderer(blockRegistry);
     this.selectionSync = new SelectionSync();
+
+    if (readOnly) {
+      this.render();
+      this.eventDisposers.push(
+        eventBus.on('doc:change', () => this.render()),
+        eventBus.on('history:undo', () => this.render()),
+        eventBus.on('history:redo', () => this.render()),
+      );
+      return;
+    }
+
     this.inputInterceptor = new InputInterceptor(this.ctx, this.blockRenderer, this.selectionSync);
 
     const tb = options?.toolbars;
@@ -266,6 +300,7 @@ export class TextEditor extends HTMLElement {
       this.selectionSync.syncToDOM(sel, this.container);
     }
     this.updateActiveBlock();
+    scheduleScrollCaretIntoView(this.container);
   }
 
   private updateActiveBlock(): void {

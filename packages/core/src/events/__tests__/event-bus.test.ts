@@ -86,4 +86,5 @@ describe('EventBus', () => {
     expect(h1).not.toHaveBeenCalled();
     expect(h2).not.toHaveBeenCalled();
   });
+
 });

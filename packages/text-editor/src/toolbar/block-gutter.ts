@@ -7,9 +7,10 @@ import { TableSizePicker, type TableSizePickerResult } from './table-size-picker
 import { InsertBlockCommand } from '../engine/commands/insert-block-command';
 import { ChangeBlockTypeCommand } from '../engine/commands/change-block-type-command';
 import { DeleteBlockCommand } from '../engine/commands/delete-block-command';
+import { DeleteListGroupCommand } from '../engine/commands/delete-list-group-command';
 import { MoveBlockCommand } from '../engine/commands/move-block-command';
 import { createIcon } from '../icons/create-icon';
-import { findBlockLocation, findTableCell, getFirstTableCellFirstBlockId, type BlockLocation } from '../engine/block-locator';
+import { findBlockLocation, findListGroupSpan, findTableCell, getFirstTableCellFirstBlockId, type BlockLocation } from '../engine/block-locator';
 import { buildTableDataFromSizePicker } from '../blocks/table-data-factory';
 import { Modal } from '@shared/components/modal';
 
@@ -196,6 +197,20 @@ export class BlockGutter {
       () => this.host.removeEventListener('dragover', onDragover),
       () => this.host.removeEventListener('drop', onDrop),
     );
+
+    const onDocChange = () => {
+      requestAnimationFrame(() => this.syncGutter());
+    };
+    const onSelectionChange = () => {
+      if (this.hoveredBlockId) {
+        this.syncGutter();
+      }
+    };
+
+    this.disposers.push(
+      this.ctx.eventBus.on('doc:change', onDocChange),
+      this.ctx.eventBus.on('selection:change', onSelectionChange),
+    );
   }
 
   private findBlockElement(target: HTMLElement): HTMLElement | null {
@@ -230,6 +245,10 @@ export class BlockGutter {
   }
 
   private updateGutter(): void {
+    this.syncGutter();
+  }
+
+  private syncGutter(): void {
     const blockId = this.hoveredBlockId;
     if (!blockId) {
       this.hideGutter();
@@ -240,6 +259,7 @@ export class BlockGutter {
       `[data-block-id="${blockId}"], [data-list-wrapper="${blockId}"]`,
     );
     if (!blockEl) {
+      this.hoveredBlockId = null;
       this.hideGutter();
       return;
     }
@@ -265,6 +285,14 @@ export class BlockGutter {
 
     this.gutterEl.style.top = `${blockRect.top - hostRect.top}px`;
     this.gutterEl.style.left = `${leftRef - hostRect.left - gutterWidth - 4}px`;
+
+    const isHeading = blockEl.classList.contains('idea-block--heading');
+    this.gutterEl.classList.toggle('idea-block-gutter--heading', isHeading);
+    if (isHeading) {
+      this.gutterEl.style.setProperty('--gutter-block-height', `${blockRect.height}px`);
+    } else {
+      this.gutterEl.style.removeProperty('--gutter-block-height');
+    }
 
     if (this.dragBtn) {
       this.dragBtn.setAttribute('draggable', 'true');
@@ -353,6 +381,20 @@ export class BlockGutter {
     const loc = findBlockLocation(this.ctx.document, blockId);
     if (!loc) return;
     if (loc.block.type === 'paragraph' || loc.block.type === 'heading') return;
+
+    if (loc.block.type === 'list_item' && loc.parentKind === 'document') {
+      const span = findListGroupSpan(this.ctx.document, blockId);
+      if (span) {
+        this.ctx.undoRedoManager.push(
+          new DeleteListGroupCommand(this.ctx.document, span.start, span.end),
+        );
+        this.focusAfterRemove(span.start);
+        this.hoveredBlockId = null;
+        this.hideGutter();
+        this.ctx.eventBus.emit('doc:change', { document: this.ctx.document });
+        return;
+      }
+    }
 
     const docIdx =
       loc.parentKind === 'document'

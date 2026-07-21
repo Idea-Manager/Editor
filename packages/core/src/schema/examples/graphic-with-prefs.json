@@ -1,0 +1,50 @@
+{
+  "id": "doc_example_graphic_prefs",
+  "type": "document",
+  "schemaVersion": 1,
+  "data": {
+    "graphicPreferences": {
+      "rectangle": {
+        "fill": "#ffffff",
+        "stroke": "#000000",
+        "strokeWidth": 2,
+        "cornerRadius": 4
+      }
+    },
+    "customBlocks": [
+      {
+        "id": "blk_custom_001",
+        "name": "My Button",
+        "createdAt": "2024-01-01T00:00:00.000Z",
+        "source": { "width": 200, "height": 80 },
+        "elements": [
+          {
+            "type": "rectangle",
+            "data": {
+              "x": 0,
+              "y": 0,
+              "width": 200,
+              "height": 80,
+              "fill": "#ffffff",
+              "stroke": "#000000",
+              "strokeWidth": 1,
+              "cornerRadius": 8
+            },
+            "placeholderId": "cb-0"
+          }
+        ]
+      }
+    ]
+  },
+  "children": [],
+  "graphicPages": [
+    {
+      "id": "page_001",
+      "name": "Page 1",
+      "viewport": { "x": 0, "y": 0, "zoom": 1 },
+      "frames": [],
+      "elements": []
+    }
+  ],
+  "assets": {}
+}

@@ -6,5 +6,6 @@ export {
   rgbToHsv,
   rgbaToCssString,
   type ColorPickerShowOptions,
+  type ComputePickerPositionOptions,
   type Rgba,
 } from './color-picker';

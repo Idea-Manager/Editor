@@ -31,6 +31,10 @@ export type {
   Rect,
 } from './model/interfaces';
 
+// Graphic preferences & custom blocks
+export type { GraphicPreferences, CustomBlockDefinition } from './model/graphic-preferences';
+export { getGraphicPreferences, getCustomBlocks, DOCUMENT_DATA_KEYS } from './model/document-data';
+
 // Factory functions
 export {
   createDocument,
@@ -74,7 +78,7 @@ export type { ValidationResult } from './serialization/validator';
 export { migrateDocument, LATEST_SCHEMA_VERSION } from './serialization/migrations';
 
 // Shortcuts
-export { ShortcutManager } from './shortcuts/shortcut-manager';
+export { ShortcutManager, isKeyboardEventFromEditableTarget } from './shortcuts/shortcut-manager';
 export type { ShortcutEntry, ShortcutScope } from './shortcuts/shortcut-manager';
 
 // Platform

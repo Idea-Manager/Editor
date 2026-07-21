@@ -6,6 +6,7 @@ export interface NodeMeta {
   createdBy?: string;   // [CRDT] actorId for attribution
   locked?: boolean;
   version?: number;     // [CRDT] monotonic per-node version counter
+  groupId?: string;     // shared across all elements belonging to the same group
 }
 
 export interface Node {

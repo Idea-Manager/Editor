@@ -52,6 +52,7 @@ export { ToggleCellBorderSelectionCommand } from './engine/commands/toggle-cell-
 export { SetEmbedUrlCommand } from './engine/commands/set-embed-url-command';
 export { InsertBlockCommand } from './engine/commands/insert-block-command';
 export { DeleteBlockCommand } from './engine/commands/delete-block-command';
+export { DeleteListGroupCommand } from './engine/commands/delete-list-group-command';
 export { MoveBlockCommand } from './engine/commands/move-block-command';
 export { SetCellBackgroundCommand } from './engine/commands/set-cell-background-command';
 export { SetCellsBackgroundCommand } from './engine/commands/set-cells-background-command';
@@ -59,6 +60,8 @@ export { SetCellsBackgroundCommand } from './engine/commands/set-cells-backgroun
 export { ClipboardHandler } from './engine/clipboard-handler';
 export type { PasteDataSource, TextEditorClipboardOptions } from './engine/clipboard-options';
 export { DEFAULT_PASTE_DATA_SOURCES } from './engine/clipboard-options';
+export { findListGroupSpan } from './engine/block-locator';
+export type { ListGroupSpan } from './engine/block-locator';
 
 export { SlashPalette } from './toolbar/slash-palette';
 export type { SlashPaletteMode } from './toolbar/slash-palette';

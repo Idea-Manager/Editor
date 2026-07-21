@@ -1,0 +1,1 @@
+{"version":3,"file":"custom-property.d.ts","sourceRoot":"","sources":["custom-property.ts"],"names":[],"mappings":"AAAA,OAAO,KAAK,EAAE,oBAAoB,EAAE,MAAM,yBAAyB,CAAC;AAEpE,OAAO,KAAK,EAAE,cAAc,EAAE,MAAM,SAAS,CAAC;AAE9C,KAAK,UAAU,GAAG,OAAO,CAAC,oBAAoB,EAAE;IAAE,IAAI,EAAE,QAAQ,CAAA;CAAE,CAAC,CAAC;AAEpE,wBAAgB,oBAAoB,CAAC,QAAQ,EAAE,UAAU,GAAG,cAAc,CAOzE"}

@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### @graphic-editor
+
+- Full graphic editing mode: rectangle, triangle, circle, ellipse, sticker, arrow, path, custom blocks.
+- Frame tool, pen tool, arrow tool with flyout toolbar, lasso selection.
+- Floating properties window and group properties window.
+- Viewport with pan/zoom; persisted graphic preferences and custom-block store.
+- CRDT-ready: all mutations via `Command` → `OperationRecord` → `OperationLog`.
+- Import guard (`npm run check:graphic-editor-imports`) and i18n audit (`npm run check:graphic-i18n`).
+
 ### @text-editor
 
 - **`TextEditorOptions`**: optional `blocks` and `includeDefaultBlocks` for registering custom `BlockDefinition`s in `init()`.

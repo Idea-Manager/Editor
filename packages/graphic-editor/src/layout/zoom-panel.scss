@@ -1,0 +1,61 @@
+@use '../../../../src/styles/variables' as *;
+
+.idea-graphic-canvas__zoom-panel {
+  position: absolute;
+  bottom: $spacing-md;
+  right: $spacing-md;
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-xs $spacing-sm;
+  background-color: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba($black, 0.1);
+  font-family: $font-family-base;
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  user-select: none;
+  z-index: 10;
+}
+
+.idea-graphic-zoom-panel__label {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  white-space: nowrap;
+}
+
+.idea-graphic-zoom-panel__percent {
+  font-size: $font-size-sm;
+  color: $color-text;
+  min-width: 3em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.idea-graphic-zoom-panel__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: $color-text;
+  padding: 0;
+
+  &:hover {
+    background-color: $color-bg-subtle;
+  }
+
+  &:active {
+    background-color: $gray-100;
+  }
+
+  .material-symbols-outlined {
+    font-size: 16px;
+    line-height: 1;
+  }
+}

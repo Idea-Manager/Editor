@@ -2,6 +2,7 @@ import type {
   BlockNode,
   BlockSelection,
   DocumentNode,
+  ListItemData,
   TableCell,
   TableData,
 } from '@core/model/interfaces';
@@ -58,6 +59,40 @@ function findBlockInTableData(
     }
   }
   return null;
+}
+
+export interface ListGroupSpan {
+  start: number;
+  end: number;
+}
+
+/**
+ * Index range of consecutive top-level `list_item` blocks with the same `listType`
+ * that render as one root `ul`/`ol` (see `buildListGroup` in block-renderer).
+ */
+export function findListGroupSpan(doc: DocumentNode, blockId: string): ListGroupSpan | null {
+  const loc = findBlockLocation(doc, blockId);
+  if (!loc || loc.parentKind !== 'document' || loc.block.type !== 'list_item') return null;
+
+  const listType = (loc.block.data as ListItemData).listType;
+  let start = loc.index;
+  let end = loc.index;
+
+  while (start > 0) {
+    const prev = doc.children[start - 1];
+    if (prev.type !== 'list_item') break;
+    if ((prev.data as ListItemData).listType !== listType) break;
+    start--;
+  }
+
+  while (end < doc.children.length - 1) {
+    const next = doc.children[end + 1];
+    if (next.type !== 'list_item') break;
+    if ((next.data as ListItemData).listType !== listType) break;
+    end++;
+  }
+
+  return { start, end };
 }
 
 export function findBlockLocation(doc: DocumentNode, blockId: string): BlockLocation | null {

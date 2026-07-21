@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200');
+
 *,
 *::before,
 *::after {
@@ -24,6 +26,7 @@ body {
 }
 
 .material-symbols-outlined {
+  font-family: 'Material Symbols Outlined', sans-serif;
   font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 20;
   user-select: none;
   vertical-align: middle;

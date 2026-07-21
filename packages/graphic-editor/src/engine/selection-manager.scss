@@ -1,0 +1,84 @@
+@use '../../../../src/styles/variables' as *;
+
+// ── Selection overlay container ─────────────────────────────────────────────
+// Lives in the screen-space selectionLayer (no world transform applied),
+// so all positions and sizes are in screen pixels.
+
+.idea-graphic-selection {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+
+// ── Bounding rect ───────────────────────────────────────────────────────────
+
+.idea-graphic-selection__rect {
+  position: absolute;
+  border: 1px dashed $color-graphic-selection;
+  box-sizing: border-box;
+  pointer-events: none;
+
+  &--focused {
+    outline: 2px solid rgba($color-graphic-selection, 0.5);
+    outline-offset: 2px;
+  }
+}
+
+// ── Corner resize handles ───────────────────────────────────────────────────
+
+.idea-graphic-selection__handle {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px dashed $color-graphic-handle-stroke;
+  background: $color-graphic-handle-fill;
+  box-sizing: border-box;
+  transform: translate(-50%, -50%);
+  cursor: default;
+  pointer-events: auto;
+
+  &--corner-nw { cursor: nw-resize; }
+  &--corner-ne { cursor: ne-resize; }
+  &--corner-se { cursor: se-resize; }
+  &--corner-sw { cursor: sw-resize; }
+
+}
+
+// ── Grip (drag-to-move) icon ────────────────────────────────────────────────
+
+.idea-graphic-selection__grip {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  transform: translateY(0);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Material Symbols Outlined', sans-serif;
+  font-size: $font-size-lg;
+  line-height: 1;
+  color: $color-text;
+  background: $color-bg;
+  border: 1px solid $color-border;
+  border-radius: 4px;
+  cursor: grab;
+  pointer-events: auto;
+  padding: 0;
+  transform: translate(-100%, 0);
+
+  &:active {
+    cursor: grabbing;
+  }
+}
+
+// ── Lasso selection rectangle ───────────────────────────────────────────────
+
+.idea-graphic-lasso {
+  position: absolute;
+  background: $color-graphic-lasso-bg;
+  border: 1px dashed $color-graphic-selection;
+  box-sizing: border-box;
+  pointer-events: none;
+}

@@ -1,0 +1,14 @@
+@use '../../../../../src/styles/variables' as *;
+
+// Live preview path rendered in the SVG world group while the user is drawing.
+// Uses pointer-events:none so the canvas hit-tester ignores it.
+.idea-graphic-pen-preview {
+  pointer-events: none;
+
+  path {
+    fill: none;
+    stroke: $color-text-secondary;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+}

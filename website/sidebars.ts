@@ -5,7 +5,12 @@ const sidebars: SidebarsConfig = {
     {
       type: 'category',
       label: 'Getting started',
-      items: ['getting-started/intro', 'getting-started/architecture'],
+      items: [
+        'getting-started/intro',
+        'getting-started/build-and-embed',
+        'getting-started/api-reference',
+        'getting-started/architecture',
+      ],
     },
     {
       type: 'category',
@@ -22,7 +27,18 @@ const sidebars: SidebarsConfig = {
     {
       type: 'category',
       label: 'Graphic editor',
-      items: ['graphic-editor/roadmap'],
+      items: [
+        'graphic-editor/overview',
+        'graphic-editor/architecture',
+        'graphic-editor/blocks',
+        'graphic-editor/tools',
+        'graphic-editor/custom-blocks',
+        'graphic-editor/properties',
+        'graphic-editor/keyboard-and-mouse',
+        'graphic-editor/extensibility',
+        'graphic-editor/i18n',
+        'graphic-editor/roadmap',
+      ],
     },
     {
       type: 'category',

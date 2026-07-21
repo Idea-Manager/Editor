@@ -17,6 +17,7 @@ import { OutdentListCommand } from './commands/outdent-list-command';
 import { ChangeBlockTypeCommand } from './commands/change-block-type-command';
 import { findBlockLocation, getSelectionStartAfterDelete } from './block-locator';
 import { tryTableCellHorizontalNavigation } from '../blocks/table-cell-navigation';
+import { scheduleScrollCaretIntoView } from './scroll-caret-into-view';
 
 export class InputInterceptor {
   private readonly classifier = new IntentClassifier();
@@ -106,6 +107,7 @@ export class InputInterceptor {
     if (sel) {
       this.ctx.selectionManager.set(sel);
     }
+    scheduleScrollCaretIntoView(this.ctx.rootElement);
   }
 
   private dispatch(intent: EditIntent): void {

@@ -3,13 +3,77 @@
 .app-shell {
   display: flex;
   flex-direction: column;
-  height: 100vh;
   overflow: hidden;
 
-  &__editor {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
+  &--full {
+    height: 100%;
+    min-height: 0;
+  }
+
+  &--inline {
+    height: 100%;
+    min-height: $editor-inline-min-height;
+    border: 1px solid $color-border;
+    border-radius: $radius-md;
     background: $color-bg;
+  }
+
+  &__editor-area {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+
+    > .app-shell__editor {
+      flex: 1 1 auto;
+      width: 100%;
+      min-height: 0;
+    }
+  }
+
+  &__editor {
+    display: block;
+
+    &--graphic {
+      display: none;
+    }
+  }
+
+  &:not(.app-shell--graphic-mode):not(.app-shell--graphic-only) {
+    .app-shell__editor--graphic {
+      display: none;
+    }
+  }
+
+  &--graphic-mode {
+    .app-shell__editor--text {
+      display: none;
+    }
+
+    .app-shell__editor--graphic {
+      display: grid;
+    }
+  }
+
+  &--text-only {
+    .app-shell__editor--text {
+      display: block;
+    }
+
+    .app-shell__editor--graphic {
+      display: none;
+    }
+  }
+
+  &--graphic-only {
+    .app-shell__editor--text {
+      display: none;
+    }
+
+    .app-shell__editor--graphic {
+      display: grid;
+    }
   }
 }
