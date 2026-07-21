@@ -1,5 +1,5 @@
 /**
- * Renders a Material Symbols Outlined glyph. The host page should load the matching font / stylesheet.
+ * Renders a Material Symbols Outlined glyph. Base styles load the matching font.
  */
 export function createIcon(name: string): HTMLSpanElement {
   const el = document.createElement('span');

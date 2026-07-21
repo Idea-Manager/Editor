@@ -19,6 +19,10 @@
     opacity: 1;
   }
 
+  &--heading {
+    transform: translateY(calc(var(--gutter-block-height, 0px) / 2 - 50%));
+  }
+
   &__row {
     display: flex;
     flex-direction: row;

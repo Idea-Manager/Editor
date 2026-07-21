@@ -51,7 +51,6 @@ The page includes three sections:
 |---------|-----|
 | Blank page or module import error | Run `npm run build:lib` again to rebuild `dist/` |
 | Inline editor appears collapsed | Set an explicit height on the container (e.g. `height: 200px`) |
-| Editor UI icons missing | Ensure the Material Symbols font link is present (included in `index.html`) |
 
 ## Optional: dev app with HMR
 
