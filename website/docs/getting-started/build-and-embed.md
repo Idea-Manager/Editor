@@ -6,7 +6,12 @@ sidebar_position: 2
 
 This guide walks through building the IdeaEditor SDK bundle from the monorepo and mounting it in your own HTML or application.
 
-For a complete list of configuration fields and types, see the [API reference](./api-reference.md). For a live demo, open [examples/embed-smoke](../../../examples/embed-smoke/) after following the steps below.
+:::warning[Active development]
+
+IdeaEditor is in **active development** (`0.0.x`). For production or customer-facing embeds, use **`mode: 'text'`** only. The **graphic editor is not ready for production use** — `mode: 'graphic'` and `mode: 'both'` are for preview and internal testing until a stable major release.
+:::
+
+For a complete list of configuration fields and types, see the [API reference](./api-reference.md). For a live demo, see the [embed-smoke example](https://github.com/Idea-Manager/Editor/tree/master/examples/embed-smoke) in the repository (`examples/embed-smoke/`).
 
 ## Prerequisites
 
@@ -121,12 +126,25 @@ Common patterns:
 
 | Pattern | `mode` | `view` | Notes |
 | ------- | ------ | ------ | ----- |
-| Full workspace | `'both'` | `'full'` (default) | Top bar, mode switcher, status bar |
+| **Text embed (recommended)** | `'text'` | `'full'` or `'inline'` | Production-oriented early embed; text editor only |
 | Text-only inline | `'text'` | `'inline'` | Compact shell; set `config.statusBar: true` for a footer |
-| Graphic-only | `'graphic'` | `'full'` | Canvas editor only; no text mode switcher |
+| Full workspace (preview) | `'both'` | `'full'` (default) | Includes graphic mode — **not stable**; preview only |
+| Graphic-only (preview) | `'graphic'` | `'full'` | **Not ready for production** — active development |
 | Read-only | `'read-only'` | `'full'` or `'inline'` | Viewing only; editing and import/export disabled |
 
-**Full view example:**
+**Recommended text-only example:**
+
+```js
+createIdeaEditor({
+  mode: 'text',
+  container: '#editor-host',
+  config: {
+    locale: 'en',
+  },
+});
+```
+
+**Full workspace preview** (graphic editor not production-ready):
 
 ```js
 createIdeaEditor({
@@ -200,7 +218,7 @@ Useful instance methods:
 - **`getEventBus()`** — subscribe to internal events for custom integrations
 - **`exportJSON()` / `importJSON()`** — trigger built-in JSON dialogs (when chrome allows)
 
-See [API reference — IdeaEditorInstance](./api-reference.md#ideaeditorinstance).
+See [API reference — IdeaEditorInstance](./api-reference.md).
 
 ## Troubleshooting
 

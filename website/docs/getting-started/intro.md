@@ -5,7 +5,19 @@ sidebar_position: 1
 
 # IdeaEditor
 
-IdeaEditor is a **single workspace** that merges the strengths of a **block-based text editor** and a **graphic editor**. The experience is organized around **two modes**—one for writing and structuring prose, one for creating and editing visuals—so you can switch focus without leaving the project. **Graphic content can be brought into a text document as a frame**: embedded graphic regions live inside the same structured document as your blocks, not only as flat images. The text editor is implemented today; the graphic editor and full frame workflow are on the roadmap and will share the same document model and core abstractions.
+IdeaEditor is a **single workspace** that merges a **block-based text editor** and a **graphic editor**, organized around two modes so you can switch focus without leaving the project. Both surfaces share the same **document model** and **core** primitives (commands, undo/redo, events).
+
+:::warning[Active development — not a stable release]
+
+IdeaEditor is in **active development** (`0.0.x`). APIs, bundled CSS, and behavior **may change without notice** until the first **stable major version** is published.
+
+- **Text editor** — the primary surface for early integrations and embed experiments. Expect iteration, but this is the recommended starting point today.
+- **Graphic editor** — **not ready for production use**. It is under heavy development; features, UX, and APIs change frequently. Documentation in the **Graphic editor** section describes work in progress and **may be outdated** relative to the code.
+
+**For production embeds, use `mode: 'text'`** and wait for a stable major release before relying on the graphic editor or `mode: 'both'`. See [Build and embed](./build-and-embed.md).
+:::
+
+You can embed the text editor (or the full workspace for preview) in your own app via the **`createIdeaEditor` SDK**. See [Build and embed](./build-and-embed.md).
 
 ## Repository
 
@@ -15,8 +27,8 @@ IdeaEditor is a **single workspace** that merges the strengths of a **block-base
 
 | Surface | Status | Documentation |
 | -------- | ------ | --------------- |
-| **Text editor** | Available (`packages/text-editor`) | [Text editor overview](../text-editor/overview.md) |
-| **Graphic editor** | Coming soon (path reserved in TypeScript) | [Graphic editor roadmap](../graphic-editor/roadmap.md) |
+| **Text editor** | In active development — suitable for early embeds | [Text editor overview](../text-editor/overview.md) |
+| **Graphic editor** | In active development — **not ready to use** in production | [Graphic editor overview](../graphic-editor/overview.md) (preview docs) |
 
 ## Concepts
 
@@ -24,6 +36,8 @@ Cross-cutting design (commands, undo/redo, operation log, events, document JSON)
 
 ## Next steps
 
-- [Architecture](./architecture.md) — monorepo layout and packages that exist today
+- [Build and embed](./build-and-embed.md) — build `dist/`, import the bundle, mount in your page
+- [API reference](./api-reference.md) — every public option, type, and default
+- [Architecture](./architecture.md) — monorepo layout and SDK bundle
 - [Contributing](../project/contributing.md) — how to participate; full guide in the repo root
 - [License](../project/license.md) — MIT

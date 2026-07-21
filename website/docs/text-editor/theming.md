@@ -13,6 +13,33 @@ sidebar_position: 5
 
 `init()` is responsible for applying these options. Call `init()` soon after the custom element is connected so the editor has the expected classes as early as possible.
 
+## Layout and scrolling
+
+The `<idea-text-editor>` host uses class **`.idea-editor`**. It is the vertical scroll container when content exceeds the available height:
+
+```css
+.idea-editor {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+}
+```
+
+**Embed hosts must define a bounded height** on the mount container (full view: e.g. `100vh` or fixed px; inline view: e.g. `200px`). Without it, the editor may grow with content instead of scrolling internally.
+
+Caret **scroll-into-view** is handled automatically during editing (after render and on selection changes).
+
+## SDK shell styles
+
+When mounted via **`createIdeaEditor`**, two style injections apply:
+
+| Style node id | Injected by | Contents |
+| ------------- | ----------- | -------- |
+| `#idea-editor-shell-styles` | App shell (SDK) | Top bar, status bar, app-shell layout |
+| `#idea-editor-styles` | Text editor `init()` | Block editor, toolbars, tables |
+
+Both are created once per page on first use. See [Build and embed](../getting-started/build-and-embed.md).
+
 ## Global default bundle (important)
 
 Bundled editor styles are written **once** to `document.head` with id **`idea-editor-styles`**. The **first** `TextEditor` instance whose `init()` runs while that node is still missing, and for which `includeDefaultStyles` is not `false`, will populate it. A later `init` with different `includeDefaultStyles` will **not** replace an existing node (by design, to avoid repainting the whole app). In practice, avoid two editors on one page with conflicting `includeDefaultStyles` values unless you own the first `init` order.

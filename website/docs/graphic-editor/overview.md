@@ -4,6 +4,15 @@ sidebar_position: 1
 
 # Graphic editor overview
 
+:::danger[Not ready for production use]
+
+The graphic editor is in **active development**. It is **not ready to use** in production or customer-facing products.
+
+Everything in this **Graphic editor** section — workflows, tools, options, and architecture — describes work in progress and **changes frequently**. Documentation may be **outdated** relative to the current codebase.
+
+**Do not rely on the graphic editor or `mode: 'graphic'` / `mode: 'both'` until a stable major version is released.** For embeds today, use **`mode: 'text'`** only. See [Build and embed](../getting-started/build-and-embed.md).
+:::
+
 The graphic editor is a **canvas-based drawing surface** built in TypeScript as a Web Component. It lets you create diagrams and illustrations using a familiar drag-and-drop interface — shapes, freehand paths, sticky notes, and reusable custom blocks — all stored in the shared document model alongside text content.
 
 ## What it is

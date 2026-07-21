@@ -2,6 +2,8 @@
 
 Interactive cheatsheet and live demos for embedding IdeaEditor via the ESM bundle.
 
+> **Active development:** IdeaEditor is in active development (`0.0.x`). For production embeds, use **`mode: 'text'`** only. The graphic editor is **not ready for production** — the full-view demo (`mode: 'both'`) is for preview only until a stable major version is released.
+
 ## Prerequisites
 
 - Node.js and npm installed
@@ -35,14 +37,16 @@ Visit:
 http://localhost:4173/examples/embed-smoke/
 ```
 
+Full documentation: [Build and embed](https://github.com/Idea-Manager/Editor/blob/master/website/docs/getting-started/build-and-embed.md) and [API reference](https://github.com/Idea-Manager/Editor/blob/master/website/docs/getting-started/api-reference.md) (or run `npm run docs:dev` locally).
+
 ## What you should see
 
 The page includes three sections:
 
 1. **Cheatsheet** — copy-paste snippets for full and inline embed patterns
 2. **Live examples** — two mounted editors:
-   - **Full view** — `mode: 'both'`, fills a 420px container with top bar and status bar
-   - **Inline view** — `mode: 'text'`, `view: 'inline'`, 200px textarea-like box with status bar
+   - **Full view** — `mode: 'both'` (preview only; graphic editor not production-ready), fills a 420px container with top bar and status bar
+   - **Inline view** — `mode: 'text'`, `view: 'inline'` (recommended embed pattern), 200px textarea-like box with status bar
 3. **Config reference** — short descriptions of all public SDK options
 
 ## Troubleshooting
