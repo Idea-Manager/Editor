@@ -45,6 +45,11 @@ import frameRendererStyles from './frame-renderer.scss?inline';
 import pathBlockStyles from '../blocks/path/path-block.scss?inline';
 import leftPanelStyles from '../layout/left-panel.scss?inline';
 import blockTileStyles from '../layout/block-tile.scss?inline';
+import accordionStyles from '@shared/components/accordion/accordion.scss?inline';
+import floatingWindowStyles from '@shared/components/floating-window/floating-window.scss?inline';
+import colorPickerStyles from '@shared/components/color-picker/color-picker.scss?inline';
+import dropdownComboboxStyles from '@shared/components/dropdown-combobox/dropdown-combobox.scss?inline';
+import toastStyles from '@shared/components/toast/toast.scss?inline';
 
 export interface GraphicEditorOptions {
   locale?: Locale;
@@ -82,6 +87,11 @@ const DEFAULT_STYLE_BUNDLES: string[] = [
   groupPropertiesWindowStyles,
   leftPanelStyles,
   blockTileStyles,
+  accordionStyles,
+  floatingWindowStyles,
+  colorPickerStyles,
+  dropdownComboboxStyles,
+  toastStyles,
 ];
 
 function ensureGlobalStyles(options: GraphicEditorOptions | undefined): void {

@@ -6,6 +6,7 @@ import { I18nService } from '@core/i18n/i18n';
 import type { EditorContext } from './editor-context';
 import { SelectionManager } from './selection-manager';
 import { SelectionSync } from './selection-sync';
+import { scheduleScrollCaretIntoView } from './scroll-caret-into-view';
 import { BlockRegistry } from '../blocks/block-registry';
 import type { AnyBlockDefinition } from '../blocks/block-registry';
 import { registerDefaultBlocks } from '../blocks/register-default-blocks';
@@ -299,6 +300,7 @@ export class TextEditor extends HTMLElement {
       this.selectionSync.syncToDOM(sel, this.container);
     }
     this.updateActiveBlock();
+    scheduleScrollCaretIntoView(this.container);
   }
 
   private updateActiveBlock(): void {

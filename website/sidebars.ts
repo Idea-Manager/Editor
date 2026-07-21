@@ -5,7 +5,12 @@ const sidebars: SidebarsConfig = {
     {
       type: 'category',
       label: 'Getting started',
-      items: ['getting-started/intro', 'getting-started/architecture'],
+      items: [
+        'getting-started/intro',
+        'getting-started/build-and-embed',
+        'getting-started/api-reference',
+        'getting-started/architecture',
+      ],
     },
     {
       type: 'category',

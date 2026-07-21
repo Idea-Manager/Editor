@@ -244,4 +244,37 @@ describe('AppShell view modes', () => {
     expect(shell.element.querySelector('.top-bar')).toBeNull();
     expect(shell.element.querySelector('.status-bar')).not.toBeNull();
   });
+
+  it('editor area scss clips overflow so the text editor host scrolls', () => {
+    const fs = require('fs') as typeof import('fs');
+    const path = require('path') as typeof import('path');
+    const scss = fs.readFileSync(path.join(__dirname, '../app-shell.scss'), 'utf8');
+    expect(scss).toMatch(/&__editor-area[\s\S]*min-height:\s*0/);
+    expect(scss).toMatch(/&__editor-area[\s\S]*overflow:\s*hidden/);
+  });
+
+  it('hides graphic editor in text mode with specificity over bundled graphic styles', () => {
+    const style = document.createElement('style');
+    style.textContent = `
+      .idea-graphic-editor { display: grid; }
+      .app-shell:not(.app-shell--graphic-mode):not(.app-shell--graphic-only) .app-shell__editor--graphic { display: none; }
+      .app-shell--graphic-mode .app-shell__editor--graphic { display: grid; }
+    `;
+    document.head.appendChild(style);
+
+    const shell = document.createElement('div');
+    shell.className = 'app-shell app-shell--full';
+    const area = document.createElement('div');
+    area.className = 'app-shell__editor-area';
+    const graphic = document.createElement('idea-graphic-editor');
+    graphic.className = 'app-shell__editor app-shell__editor--graphic idea-graphic-editor';
+    area.appendChild(graphic);
+    shell.appendChild(area);
+    document.body.appendChild(shell);
+
+    expect(getComputedStyle(graphic).display).toBe('none');
+
+    shell.classList.add('app-shell--graphic-mode');
+    expect(getComputedStyle(graphic).display).toBe('grid');
+  });
 });
