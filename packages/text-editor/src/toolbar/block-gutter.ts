@@ -13,6 +13,7 @@ import { createIcon } from '../icons/create-icon';
 import { findBlockLocation, findListGroupSpan, findTableCell, getFirstTableCellFirstBlockId, type BlockLocation } from '../engine/block-locator';
 import { buildTableDataFromSizePicker } from '../blocks/table-data-factory';
 import { Modal } from '@shared/components/modal';
+import { blockGutterContentPosition } from './block-gutter-position';
 
 export class BlockGutter {
   private gutterEl: HTMLDivElement | null = null;
@@ -28,6 +29,7 @@ export class BlockGutter {
   private trashRowEl: HTMLDivElement | null = null;
   private readonly disposers: (() => void)[] = [];
   private readonly gutterConfig: ResolvedBlockGutterConfig;
+  private scrollSyncFrame: number | null = null;
 
   constructor(
     private readonly ctx: EditorContext,
@@ -207,9 +209,32 @@ export class BlockGutter {
       }
     };
 
+    const onScroll = () => {
+      if (!this.hoveredBlockId) return;
+      const win = this.host.ownerDocument.defaultView;
+      if (!win) return;
+      if (this.scrollSyncFrame != null) {
+        win.cancelAnimationFrame(this.scrollSyncFrame);
+      }
+      this.scrollSyncFrame = win.requestAnimationFrame(() => {
+        this.scrollSyncFrame = null;
+        this.syncGutter();
+      });
+    };
+
+    this.host.addEventListener('scroll', onScroll, { passive: true });
+
     this.disposers.push(
       this.ctx.eventBus.on('doc:change', onDocChange),
       this.ctx.eventBus.on('selection:change', onSelectionChange),
+      () => {
+        const win = this.host.ownerDocument.defaultView;
+        if (this.scrollSyncFrame != null && win) {
+          win.cancelAnimationFrame(this.scrollSyncFrame);
+          this.scrollSyncFrame = null;
+        }
+        this.host.removeEventListener('scroll', onScroll);
+      },
     );
   }
 
@@ -275,7 +300,6 @@ export class BlockGutter {
 
     const blockRect = blockEl.getBoundingClientRect();
     const hostRect = this.host.getBoundingClientRect();
-    const gutterWidth = 49;
 
     let leftRef = blockRect.left;
     const rootList = blockEl.closest<HTMLElement>('.idea-list-group:not(.idea-list-group--nested)');
@@ -283,8 +307,15 @@ export class BlockGutter {
       leftRef = rootList.getBoundingClientRect().left;
     }
 
-    this.gutterEl.style.top = `${blockRect.top - hostRect.top}px`;
-    this.gutterEl.style.left = `${leftRef - hostRect.left - gutterWidth - 4}px`;
+    const { top, left } = blockGutterContentPosition(
+      blockRect,
+      leftRef,
+      hostRect,
+      this.host.scrollTop,
+      this.host.scrollLeft,
+    );
+    this.gutterEl.style.top = `${top}px`;
+    this.gutterEl.style.left = `${left}px`;
 
     const isHeading = blockEl.classList.contains('idea-block--heading');
     this.gutterEl.classList.toggle('idea-block-gutter--heading', isHeading);
