@@ -10,6 +10,8 @@ import { embedDataFromUrl } from '../blocks/embed-url';
 import { findBlockLocation, getFirstTableCellFirstBlockId } from '../engine/block-locator';
 import { buildTableDataFromSizePicker } from '../blocks/table-data-factory';
 import type { SlashPaletteOptions } from './toolbar-options';
+import { getCollapsedCaretRect } from '../engine/scroll-caret-into-view';
+import { overlayViewportPositionNearRect } from './block-gutter-position';
 
 export type SlashPaletteMode = 'change' | 'insert';
 
@@ -26,6 +28,13 @@ export class SlashPalette {
   private tableSizePicker: TableSizePicker;
   private boundOnClickOutside = (e: MouseEvent) => this.onClickOutside(e);
   private paletteExcludeTypes: BlockType[] | undefined;
+  private scrollHost: HTMLElement | null = null;
+  private scrollSyncFrame: number | null = null;
+  private scrollResizeObserver: ResizeObserver | null = null;
+  private boundOnReposition = () => this.onScrollHostScroll();
+  private boundOnWindowScroll: ((e: Event) => void) | null = null;
+  private boundOnDocumentScroll: ((e: Event) => void) | null = null;
+  private boundOnWindowResize: (() => void) | null = null;
 
   constructor(
     private readonly ctx: EditorContext,
@@ -82,14 +91,16 @@ export class SlashPalette {
 
     this.filteredItems = this.applyPaletteFilter(this.ctx.blockRegistry.getPaletteItems(effectiveExclude));
     this.createOverlay();
-    this.positionOverlay();
+    this.attachScrollListener();
     this.renderItems();
+    this.positionOverlay();
 
     document.addEventListener('mousedown', this.boundOnClickOutside, true);
   }
 
   hide(): void {
     document.removeEventListener('mousedown', this.boundOnClickOutside, true);
+    this.detachScrollListener();
     if (this.overlay) {
       this.overlay.remove();
       this.overlay = null;
@@ -120,6 +131,7 @@ export class SlashPalette {
 
     this.activeIndex = Math.min(this.activeIndex, Math.max(0, this.filteredItems.length - 1));
     this.renderItems();
+    this.positionOverlay();
   }
 
   private handleNavigationKey(e: KeyboardEvent): void {
@@ -346,53 +358,129 @@ export class SlashPalette {
       e.stopPropagation();
     });
 
-    this.host.appendChild(this.overlay);
+    this.host.ownerDocument.body.appendChild(this.overlay);
+  }
+
+  private attachScrollListener(): void {
+    this.scrollHost = this.host;
+    const doc = this.scrollHost.ownerDocument;
+    const win = doc.defaultView;
+    if (!win) return;
+
+    this.scrollHost.addEventListener('scroll', this.boundOnReposition, { passive: true });
+    this.boundOnWindowScroll = () => this.onScrollHostScroll();
+    this.boundOnDocumentScroll = () => this.onScrollHostScroll();
+    this.boundOnWindowResize = () => this.onScrollHostScroll();
+    win.addEventListener('scroll', this.boundOnWindowScroll, true);
+    doc.addEventListener('scroll', this.boundOnDocumentScroll, true);
+    win.addEventListener('resize', this.boundOnWindowResize);
+
+    if (typeof ResizeObserver !== 'undefined') {
+      this.scrollResizeObserver = new ResizeObserver(() => this.onScrollHostScroll());
+      this.scrollResizeObserver.observe(this.scrollHost);
+    }
+  }
+
+  private detachScrollListener(): void {
+    const doc = this.scrollHost?.ownerDocument;
+    const win = doc?.defaultView;
+    if (this.scrollSyncFrame != null && win) {
+      win.cancelAnimationFrame(this.scrollSyncFrame);
+      this.scrollSyncFrame = null;
+    }
+    this.scrollResizeObserver?.disconnect();
+    this.scrollResizeObserver = null;
+    this.scrollHost?.removeEventListener('scroll', this.boundOnReposition);
+    if (win && this.boundOnWindowScroll) {
+      win.removeEventListener('scroll', this.boundOnWindowScroll, true);
+    }
+    if (doc && this.boundOnDocumentScroll) {
+      doc.removeEventListener('scroll', this.boundOnDocumentScroll, true);
+    }
+    if (win && this.boundOnWindowResize) {
+      win.removeEventListener('resize', this.boundOnWindowResize);
+    }
+    this.boundOnWindowScroll = null;
+    this.boundOnDocumentScroll = null;
+    this.boundOnWindowResize = null;
+    this.scrollHost = null;
+  }
+
+  private onScrollHostScroll(): void {
+    if (!this.visible) return;
+    const win = this.scrollHost?.ownerDocument.defaultView;
+    if (!win) return;
+    if (this.scrollSyncFrame != null) {
+      win.cancelAnimationFrame(this.scrollSyncFrame);
+    }
+    this.scrollSyncFrame = win.requestAnimationFrame(() => {
+      this.scrollSyncFrame = null;
+      this.positionOverlay();
+    });
+  }
+
+  private isCaretInTriggerBlock(): boolean {
+    const win = this.ctx.rootElement.ownerDocument.defaultView;
+    const sel = win?.getSelection();
+    if (!sel || sel.rangeCount === 0 || !sel.isCollapsed) return false;
+
+    const range = sel.getRangeAt(0);
+    if (!this.ctx.rootElement.contains(range.startContainer)) return false;
+
+    const blockEl = (
+      range.startContainer.nodeType === Node.ELEMENT_NODE
+        ? (range.startContainer as Element)
+        : range.startContainer.parentElement
+    )?.closest<HTMLElement>('[data-block-id]');
+
+    return blockEl?.getAttribute('data-block-id') === this.blockId;
+  }
+
+  private resolveAnchorRect(): DOMRect | null {
+    if (this.isCaretInTriggerBlock()) {
+      const caretRect = getCollapsedCaretRect(this.ctx.rootElement);
+      if (caretRect) return caretRect;
+    }
+
+    const blockEl = this.ctx.rootElement.querySelector(
+      `[data-block-id="${this.blockId}"]`,
+    );
+    if (blockEl) {
+      return blockEl.getBoundingClientRect();
+    }
+
+    return this.anchorRect;
+  }
+
+  private applyOverlayPosition(): void {
+    if (!this.overlay) return;
+
+    const scrollHost = this.scrollHost ?? this.host;
+    const overlay = this.overlay;
+
+    const place = () => {
+      if (!overlay.isConnected) return;
+      const anchorRect = this.resolveAnchorRect();
+      if (!anchorRect) return;
+
+      const scrollHostRect = scrollHost.getBoundingClientRect();
+      const overlayRect = overlay.getBoundingClientRect();
+      const { top, left } = overlayViewportPositionNearRect(
+        anchorRect,
+        overlayRect,
+        scrollHostRect,
+      );
+      overlay.style.top = `${top}px`;
+      overlay.style.left = `${left}px`;
+    };
+
+    place();
+    requestAnimationFrame(place);
   }
 
   private positionOverlay(): void {
     if (!this.overlay) return;
-
-    let rect: DOMRect | null = this.anchorRect;
-
-    if (!rect) {
-      const sel = window.getSelection();
-      if (sel && sel.rangeCount > 0) {
-        rect = sel.getRangeAt(0).getBoundingClientRect();
-      }
-
-      if (!rect || rect.height === 0) {
-        const blockEl = this.ctx.rootElement.querySelector(
-          `[data-block-id="${this.blockId}"]`,
-        );
-        if (blockEl) {
-          rect = blockEl.getBoundingClientRect();
-        }
-      }
-    }
-
-    if (!rect) {
-      return;
-    }
-
-    const overlay = this.overlay;
-    overlay.style.top = `${rect.bottom + 4}px`;
-    overlay.style.left = `${rect.left}px`;
-
-    requestAnimationFrame(() => {
-      if (!overlay.isConnected) return;
-      const overlayRect = overlay.getBoundingClientRect();
-
-      let top = rect!.bottom + 4;
-      if (top + overlayRect.height > window.innerHeight) {
-        top = rect!.top - overlayRect.height - 4;
-      }
-
-      let left = rect!.left;
-      left = Math.max(8, Math.min(left, window.innerWidth - overlayRect.width - 8));
-
-      overlay.style.top = `${top}px`;
-      overlay.style.left = `${left}px`;
-    });
+    this.applyOverlayPosition();
   }
 
   private onClickOutside(e: MouseEvent): void {

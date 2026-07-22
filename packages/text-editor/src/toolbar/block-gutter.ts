@@ -476,16 +476,15 @@ export class BlockGutter {
     }
   }
 
-  private openSlashPalette(anchorBtn: HTMLElement): void {
+  private openSlashPalette(_anchorBtn: HTMLElement): void {
     const blockId = this.hoveredBlockId;
     if (!blockId || !this.slashPalette) return;
 
-    const anchorRect = anchorBtn.getBoundingClientRect();
     const el = this.ctx.rootElement.querySelector(
       `[data-block-id="${blockId}"], [data-list-wrapper="${blockId}"]`,
     );
     const insideCell = !!el?.closest('[data-cell-id]');
-    this.slashPalette.show(blockId, 'insert', anchorRect, insideCell ? ['table'] : undefined);
+    this.slashPalette.show(blockId, 'insert', undefined, insideCell ? ['table'] : undefined);
   }
 
   private openMenu(mode: 'insert' | 'change', anchorBtn: HTMLElement): void {
